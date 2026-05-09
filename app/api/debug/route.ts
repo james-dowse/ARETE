@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   const tursoUrl = process.env.TURSO_DATABASE_URL
@@ -18,14 +19,36 @@ export async function GET() {
     return NextResponse.json({ ...info, error: 'TURSO_DATABASE_URL is missing or empty' }, { status: 500 })
   }
 
+  // Test 1: raw libsql HTTP client
+  let rawOk = false
+  let rawError = ''
+  let rawCount = 0
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createClient } = require('@libsql/client/http')
     const url = tursoUrl.startsWith('libsql://') ? tursoUrl.replace('libsql://', 'https://') : tursoUrl
     const client = createClient({ url, authToken: tursoToken })
     const result = await client.execute('SELECT count(*) as c FROM Movement')
-    return NextResponse.json({ ...info, ok: true, movementCount: result.rows[0]?.c })
+    rawCount = result.rows[0]?.c
+    rawOk = true
   } catch (err: unknown) {
-    return NextResponse.json({ ...info, ok: false, error: String(err) }, { status: 500 })
+    rawError = String(err)
   }
+
+  // Test 2: Prisma client
+  let prismaOk = false
+  let prismaError = ''
+  let prismaCount = 0
+  try {
+    prismaCount = await prisma.movement.count()
+    prismaOk = true
+  } catch (err: unknown) {
+    prismaError = String(err)
+  }
+
+  return NextResponse.json({
+    ...info,
+    raw: { ok: rawOk, count: rawCount, error: rawError },
+    prisma: { ok: prismaOk, count: prismaCount, error: prismaError },
+  }, { status: rawOk && prismaOk ? 200 : 500 })
 }
