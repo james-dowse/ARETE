@@ -3,13 +3,21 @@ import { PrismaLibSql } from '@prisma/adapter-libsql'
 import path from 'path'
 
 function createPrismaClient() {
-  const url = process.env.TURSO_DATABASE_URL
-    ? process.env.TURSO_DATABASE_URL
-    : `file:${path.resolve(process.cwd(), 'prisma/dev.db')}`
+  // Production Turso : client HTTP (pas de binaire natif — compatible Vercel)
+  if (process.env.TURSO_DATABASE_URL) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { createClient } = require('@libsql/client/http')
+    const client = createClient({
+      url: process.env.TURSO_DATABASE_URL,
+      authToken: process.env.TURSO_AUTH_TOKEN,
+    })
+    const adapter = new PrismaLibSql(client)
+    return new PrismaClient({ adapter })
+  }
 
-  const authToken = process.env.TURSO_AUTH_TOKEN || undefined
-
-  const adapter = new PrismaLibSql({ url, authToken })
+  // Local : fichier SQLite
+  const url = `file:${path.resolve(process.cwd(), 'prisma/dev.db')}`
+  const adapter = new PrismaLibSql({ url })
   return new PrismaClient({ adapter })
 }
 
