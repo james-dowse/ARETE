@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const blocks: Block[] = body.blocks || []
 
-  const result = []
+  const result: { id: string; name: string; bioType: string; complexity: string; videoUrl: string | null; blockIndex: number }[] = []
 
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx]
