@@ -11,7 +11,7 @@ export default async function AdminPage() {
   ])
 
   const usageMap: Record<string, number> = {}
-  usageCounts.forEach(u => { usageMap[u.movementId] = u._count._all })
+  usageCounts.forEach((u: { movementId: string; _count: { _all: number } }) => { usageMap[u.movementId] = u._count._all })
 
   return (
     <AppShell>
