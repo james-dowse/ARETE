@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.db"
+}
+
+model Movement {
+  id               String            @id
+  name             String
+  bioType          String
+  complexity       String
+  description      String?
+  imageUrl         String?
+  videoUrl         String?
+  workoutMovements WorkoutMovement[]
+}
+
+model Workout {
+  id          String            @id @default(cuid())
+  name        String
+  createdAt   DateTime          @default(now())
+  duration    Int?
+  notes       String?
+  description String?
+  imageUrl    String?
+  templateId  String?
+  userId      String?
+  movements   WorkoutMovement[]
+  blocks      WorkoutBlock[]
+  template    WorkoutTemplate?  @relation(fields: [templateId], references: [id])
+  user        InvitedUser?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model WorkoutBlock {
+  id           String            @id @default(cuid())
+  workoutId    String
+  order        Int
+  bioType      String?
+  instructions String?
+  workout      Workout           @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  movements    WorkoutMovement[]
+}
+
+model WorkoutMovement {
+  id         String        @id @default(cuid())
+  workoutId  String
+  movementId String
+  order      Int
+  sets       Int?
+  reps       String?
+  duration   Int?
+  blockId    String?
+  movement   Movement      @relation(fields: [movementId], references: [id])
+  workout    Workout       @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  block      WorkoutBlock? @relation(fields: [blockId], references: [id])
+}
+
+model WorkoutTemplate {
+  id        String          @id @default(cuid())
+  name      String
+  createdAt DateTime        @default(now())
+  userId    String?
+  blocks    TemplateBlock[]
+  workouts  Workout[]
+  user      InvitedUser?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model TemplateBlock {
+  id         String          @id @default(cuid())
+  templateId String
+  bioType    String?
+  complexity String?
+  count      Int
+  order      Int
+  template   WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+model InvitedUser {
+  id         String            @id @default(cuid())
+  email      String            @unique
+  token      String            @unique @default(cuid())
+  status     String            @default("pending")
+  invitedAt  DateTime          @default(now())
+  acceptedAt DateTime?
+  workouts   Workout[]
+  templates  WorkoutTemplate[]
+}

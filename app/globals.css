@@ -1,26 +1,155 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ── Canvas (dark elite) ─────────────────────────────────────── */
+  --bg-primary:   #0D0C0A;   /* fond global — anthracite chaud */
+  --bg-card:      #1A1814;   /* cartes — plaque métallique chaude */
+  --bg-elevated:  #221F1A;   /* modales, inputs, dropdowns */
+  --border:       #302C24;   /* bordure visible — ton chaud */
+  --border-plus:  #3E3A30;   /* hover, emphasis */
+  --shadow-sm:    0 0 0 1px rgba(0,0,0,0.5);
+  --shadow-md:    0 8px 32px rgba(0,0,0,0.6);
+
+  /* ── Gold — vieilli, pas chrome ──────────────────────────────── */
+  --gold:         #C8A951;
+  --gold-bright:  #D4B45A;
+  --gold-dim:     #C0A040;   /* or secondaire, bien lisible */
+  --gold-ghost:   rgba(200,169,81,0.10);
+  --gold-border:  rgba(200,169,81,0.25);
+
+  /* ── Rétro-compat ────────────────────────────────────────────── */
+  --accent:       var(--gold);
+  --accent-dim:   var(--gold-ghost);
+  --on-accent:    #080808;
+
+  /* ── Sidebar (plus sombre que le canvas) ─────────────────────── */
+  --sidebar-bg:           #080808;
+  --sidebar-border:       rgba(200,169,81,0.10);
+  --sidebar-text:         rgba(255,255,255,0.68);
+  --sidebar-text-hover:   rgba(255,255,255,0.95);
+  --sidebar-text-active:  #C8A951;
+  --sidebar-active-bg:    rgba(200,169,81,0.09);
+
+  /* ── Texte ───────────────────────────────────────────────────── */
+  --text-primary: #F4F4EE;   /* blanc chaud, presque pur */
+  --text-muted:   #C2C2B8;   /* secondaire bien lisible */
+  --text-dim:     #888880;   /* tertiaire — séparateurs, métadonnées */
+
+  /* ── Dirty / warning ─────────────────────────────────────────── */
+  --dirty:        rgba(200,169,81,0.10);
+  --dirty-border: rgba(200,169,81,0.30);
+  --dirty-text:   #C8A951;
+
+  /* ── Status ──────────────────────────────────────────────────── */
+  --red:    #c0392b;
+  --green:  #27ae60;
+  --blue:   #2980b9;
+  --orange: #e67e22;
+  --purple: #8e44ad;
+  --teal:   #16a085;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ── Reset ─────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* ── Inputs & selects (dark) ──────────────────────────────────── */
+input, select, textarea {
+  color-scheme: dark;
+}
+
+/* ── Dot grid — fond zone principale ────────────────────────────── */
+.main-grid {
+  background-color: #0F0E0C;
+  position: relative;
+}
+
+.main-grid::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.09;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar         { width: 5px; height: 5px; }
+::-webkit-scrollbar-track   { background: transparent; }
+::-webkit-scrollbar-thumb   { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* Sidebar scrollbar (dark) */
+aside::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
+
+/* ── Tailwind bridge ────────────────────────────────────────────── */
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+}
+
+/* ── Card / panel — plaque surélevée sur fond texturé ───────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    0 2px 16px rgba(0,0,0,0.5);
+}
+
+/* ── Rich text editor & display ─────────────────────────────────── */
+.rich-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.rich-editor b, .rich-editor strong,
+.rich-content b, .rich-content strong { font-weight: 700; }
+
+.rich-editor i, .rich-editor em,
+.rich-content i, .rich-content em { font-style: italic; }
+
+.rich-editor u, .rich-content u { text-decoration: underline; }
+
+.rich-editor ul, .rich-content ul {
+  list-style: disc;
+  padding-left: 1.4em;
+  margin: 4px 0;
+}
+.rich-editor ol, .rich-content ol {
+  list-style: decimal;
+  padding-left: 1.4em;
+  margin: 4px 0;
+}
+.rich-editor li, .rich-content li { margin: 1px 0; }
+.rich-editor p,  .rich-content p  { margin: 2px 0; }
+
+/* ── Nav link hover (injected by Sidebar) ───────────────────────── */
+.nav-link { transition: color 0.12s, background 0.12s; }
+.nav-link:hover:not(.nav-active) {
+  background: rgba(255,255,255,0.04) !important;
+  color: var(--sidebar-text-hover) !important;
+}
+
+/* ── Panneaux inline (sans border-radius) ───────────────────────── */
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    0 2px 16px rgba(0,0,0,0.5);
 }
