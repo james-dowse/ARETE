@@ -3,24 +3,25 @@ import { PrismaLibSql } from '@prisma/adapter-libsql'
 import path from 'path'
 
 function createPrismaClient() {
-  // Production Turso : client HTTP (pas de binaire natif — compatible Vercel)
-  if (process.env.TURSO_DATABASE_URL) {
+  const tursoUrl = process.env.TURSO_DATABASE_URL?.trim()
+
+  if (tursoUrl) {
+    // Production Turso: HTTP client (no native binary — works on Vercel Linux)
+    // Convert libsql:// → https:// because @libsql/client/http requires https://
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createClient } = require('@libsql/client/http')
-    // @libsql/client/http needs https://, not libsql://
-    const rawUrl = process.env.TURSO_DATABASE_URL
-    const url = rawUrl.startsWith('libsql://') ? rawUrl.replace('libsql://', 'https://') : rawUrl
-    const client = createClient({
-      url,
-      authToken: process.env.TURSO_AUTH_TOKEN,
-    })
+    const url = tursoUrl.startsWith('libsql://') ? tursoUrl.replace('libsql://', 'https://') : tursoUrl
+    const client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN })
     const adapter = new PrismaLibSql(client)
     return new PrismaClient({ adapter })
   }
 
-  // Local : fichier SQLite
+  // Local development: full libsql client supports file: protocol
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createClient } = require('@libsql/client')
   const url = `file:${path.resolve(process.cwd(), 'prisma/dev.db')}`
-  const adapter = new PrismaLibSql({ url })
+  const client = createClient({ url })
+  const adapter = new PrismaLibSql(client)
   return new PrismaClient({ adapter })
 }
 
