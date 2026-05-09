@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { type Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 interface Block {
@@ -22,9 +23,10 @@ export async function POST(req: NextRequest) {
 
   const result: { id: string; name: string; bioType: string; complexity: string; videoUrl: string | null; blockIndex: number }[] = []
 
+
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx]
-    const where: Record<string, unknown> = {}
+    const where: Prisma.MovementWhereInput = {}
     if (block.bioType) where.bioType = block.bioType
     if (block.complexity) where.complexity = block.complexity
 
