@@ -1,8 +1,7 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function sendInvitationEmail(email: string, token: string) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3030'
   const inviteUrl = `${appUrl}/invite/${token}`
   const from = process.env.RESEND_FROM || 'ARETE <onboarding@resend.dev>'
