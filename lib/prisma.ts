@@ -7,8 +7,11 @@ function createPrismaClient() {
   if (process.env.TURSO_DATABASE_URL) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createClient } = require('@libsql/client/http')
+    // @libsql/client/http needs https://, not libsql://
+    const rawUrl = process.env.TURSO_DATABASE_URL
+    const url = rawUrl.startsWith('libsql://') ? rawUrl.replace('libsql://', 'https://') : rawUrl
     const client = createClient({
-      url: process.env.TURSO_DATABASE_URL,
+      url,
       authToken: process.env.TURSO_AUTH_TOKEN,
     })
     const adapter = new PrismaLibSql(client)
