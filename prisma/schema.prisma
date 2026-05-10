@@ -29,6 +29,8 @@ model Workout {
   userId      String?
   movements   WorkoutMovement[]
   blocks      WorkoutBlock[]
+  shares      WorkoutShare[]
+  savedBy     SavedWorkout[]
   template    WorkoutTemplate?  @relation(fields: [templateId], references: [id])
   user        InvitedUser?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
@@ -78,12 +80,42 @@ model TemplateBlock {
 }
 
 model InvitedUser {
-  id         String            @id @default(cuid())
-  email      String            @unique
-  token      String            @unique @default(cuid())
-  status     String            @default("pending")
-  invitedAt  DateTime          @default(now())
-  acceptedAt DateTime?
-  workouts   Workout[]
-  templates  WorkoutTemplate[]
+  id             String            @id @default(cuid())
+  email          String            @unique
+  token          String            @unique @default(cuid())
+  status         String            @default("pending")
+  invitedAt      DateTime          @default(now())
+  acceptedAt     DateTime?
+  workouts       Workout[]
+  templates      WorkoutTemplate[]
+  sharesSent     WorkoutShare[]    @relation("SharesSent")
+  sharesReceived WorkoutShare[]    @relation("SharesReceived")
+  savedWorkouts  SavedWorkout[]
+}
+
+model SavedWorkout {
+  id        String      @id @default(cuid())
+  workoutId String
+  workout   Workout     @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  userId    String
+  user      InvitedUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedAt   DateTime    @default(now())
+  source    String      @default("manual") // "manual" | "shared"
+
+  @@unique([workoutId, userId])
+}
+
+model WorkoutShare {
+  id             String       @id @default(cuid())
+  workoutId      String
+  workout        Workout      @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  sharedByUserId String
+  sharedByUser   InvitedUser  @relation("SharesSent", fields: [sharedByUserId], references: [id])
+  sharedToEmail  String
+  sharedToUserId String?
+  sharedToUser   InvitedUser? @relation("SharesReceived", fields: [sharedToUserId], references: [id])
+  token          String       @unique @default(cuid())
+  status         String       @default("pending")
+  createdAt      DateTime     @default(now())
+  acceptedAt     DateTime?
 }

@@ -2,29 +2,80 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserId } from '@/lib/session'
 
+const WORKOUT_INCLUDE = {
+  movements: { include: { movement: true }, orderBy: { order: 'asc' } },
+  user: { select: { id: true, email: true } },
+} as const
+
 export async function GET(req: NextRequest) {
   const currentUserId = await getCurrentUserId()
-  const filter = req.nextUrl.searchParams.get('filter') // 'mine' | 'community'
+  const filter = req.nextUrl.searchParams.get('filter') // 'mine' | 'saved' | 'community'
+
+  // ── Workouts importés (SavedWorkout) ──────────────────────────────────────
+  if (filter === 'saved') {
+    // Si non authentifié → liste vide
+    if (!currentUserId) return NextResponse.json([])
+
+    const rows = await prisma.savedWorkout.findMany({
+      where: {
+        userId: currentUserId,
+        workout: { NOT: { userId: currentUserId } }, // jamais ses propres créations
+      },
+      orderBy: { savedAt: 'desc' },
+      include: {
+        workout: {
+          include: WORKOUT_INCLUDE,
+        },
+      },
+    })
+    // Aplatir : retourner les workouts avec metadata source/savedAt
+    const result = rows.map(r => ({
+      ...r.workout,
+      _savedSource: r.source,
+      _savedAt: r.savedAt,
+    }))
+    return NextResponse.json(result)
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let where: Record<string, any> = {}
-  if (filter === 'mine' && currentUserId) {
-    where = { userId: currentUserId }
-  } else if (filter === 'community' && currentUserId) {
-    // Tous les workouts qui ne sont PAS de l'utilisateur courant
-    where = { NOT: { userId: currentUserId } }
+
+  if (filter === 'mine') {
+    // Authentifié → ses workouts ; pas de session → workouts sans propriétaire (données legacy)
+    where = currentUserId
+      ? { userId: currentUserId }
+      : { userId: null }
+  } else if (filter === 'community') {
+    // Workouts d'autres utilisateurs identifiés — jamais les siens, jamais les anonymes
+    if (!currentUserId) {
+      // Pas de session : communauté = workouts avec un userId (pas les anonymes qui sont "les siens")
+      where = { userId: { not: null } }
+    } else {
+      where = { userId: { not: null }, NOT: { userId: currentUserId } }
+    }
   }
 
   const workouts = await prisma.workout.findMany({
     where,
     orderBy: { createdAt: 'desc' },
     include: {
-      movements: { include: { movement: true }, orderBy: { order: 'asc' } },
-      user: { select: { id: true, email: true } },
+      ...WORKOUT_INCLUDE,
+      // Pour la communauté : on sait si ce workout est déjà importé
+      savedBy: currentUserId
+        ? { where: { userId: currentUserId }, select: { id: true } }
+        : false,
     },
     take: 100,
   })
-  return NextResponse.json(workouts)
+
+  // Transformer savedBy → isSaved (booléen)
+  const result = workouts.map(w => ({
+    ...w,
+    isSaved: Array.isArray(w.savedBy) && w.savedBy.length > 0,
+    savedBy: undefined,
+  }))
+
+  return NextResponse.json(result)
 }
 
 export async function POST(req: NextRequest) {

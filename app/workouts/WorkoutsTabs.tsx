@@ -1,24 +1,136 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { BIO_TYPE_COLORS } from '@/lib/types'
 import WorkoutActions from './DeleteButton'
-import { Zap, Users, User } from 'lucide-react'
+import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers } from 'lucide-react'
 
 interface WorkoutUser { id: string; email: string }
 interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string } }
 interface Workout {
-  id: string; name: string; createdAt: string; duration?: number | null
+  id: string
+  name: string
+  createdAt: string
+  duration?: number | null
   movements: WorkoutMovementItem[]
   user?: WorkoutUser | null
+  isSaved?: boolean
+  _savedSource?: string
+  _savedAt?: string
 }
 
 const fmtMin = (min: number) => min < 60 ? `~${min}min` : `~${Math.floor(min / 60)}h${min % 60 > 0 ? `${min % 60}min` : ''}`
 
-function WorkoutCard({ w, isOwn, canDelete }: { w: Workout; isOwn: boolean; canDelete: boolean }) {
+// ── Modale de partage ────────────────────────────────────────────────────────
+function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => void }) {
+  const [email, setEmail] = useState('')
+  const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
+  const [errorMsg, setErrorMsg] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { inputRef.current?.focus() }, [])
+
+  async function handleShare() {
+    if (!email.trim()) return
+    setStatus('sending')
+    setErrorMsg('')
+    try {
+      const res = await fetch(`/api/workouts/${workout.id}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErrorMsg(data.error || 'Erreur'); setStatus('error') }
+      else setStatus('done')
+    } catch { setErrorMsg('Erreur réseau'); setStatus('error') }
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: 24 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 420, padding: '24px 24px 20px', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Share2 size={16} color="var(--gold,#C9A535)" />
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Recommander ce workout</span>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workout.name}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)' }}><X size={16} /></button>
+        </div>
+
+        {status === 'done' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '16px 0 8px' }}>
+            <CheckCircle2 size={40} color="#22c55e" />
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Recommandation envoyée !</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
+              <strong style={{ color: 'var(--text-primary)' }}>{email}</strong> recevra un email. S'il l'accepte, le workout sera sauvegardé dans ses <em>Sauvegardés</em>.
+            </div>
+            <button onClick={onClose} style={{ marginTop: 8, padding: '9px 24px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Fermer</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>
+              Recommande ce workout à un autre utilisateur ARETE. S'il accepte, il sera automatiquement ajouté à ses <strong style={{ color: 'var(--text-primary)' }}>Sauvegardés</strong>.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                ref={inputRef}
+                type="email"
+                value={email}
+                onChange={e => { setEmail(e.target.value); setStatus('idle'); setErrorMsg('') }}
+                onKeyDown={e => e.key === 'Enter' && handleShare()}
+                placeholder="email@exemple.com"
+                style={{ flex: 1, background: 'var(--bg-elevated)', border: `1px solid ${status === 'error' ? '#ef4444' : 'var(--border)'}`, borderRadius: 8, padding: '9px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
+              />
+              <button
+                onClick={handleShare}
+                disabled={status === 'sending' || !email.trim()}
+                style={{ padding: '9px 16px', background: 'var(--gold,#C9A535)', color: '#000', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: status === 'sending' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: (!email.trim() || status === 'sending') ? 0.6 : 1 }}
+              >
+                <Send size={13} />
+                {status === 'sending' ? '…' : 'Envoyer'}
+              </button>
+            </div>
+            {status === 'error' && (
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#ef4444' }}>
+                <AlertCircle size={13} />{errorMsg}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Workout card ─────────────────────────────────────────────────────────────
+function WorkoutCard({
+  w, context, onShare, onToggleSave,
+}: {
+  w: Workout
+  context: 'mine' | 'saved' | 'community'
+  onShare?: () => void
+  onToggleSave?: (saved: boolean) => void
+}) {
+  const [saving, setSaving] = useState(false)
+  const [isSaved, setIsSaved] = useState(w.isSaved ?? false)
   const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
   const estMin = Math.round(w.movements.reduce((sum, wm) => sum + (wm.sets ?? 2), 0))
   const initiale = w.user?.email?.[0]?.toUpperCase() ?? '?'
+
+  async function handleToggleSave() {
+    setSaving(true)
+    const method = isSaved ? 'DELETE' : 'POST'
+    await fetch(`/api/workouts/${w.id}/save`, { method })
+    const next = !isSaved
+    setIsSaved(next)
+    setSaving(false)
+    onToggleSave?.(next)
+  }
+
+  const showFooter = context === 'mine' || context === 'saved' || context === 'community'
 
   return (
     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
@@ -26,10 +138,10 @@ function WorkoutCard({ w, isOwn, canDelete }: { w: Workout; isOwn: boolean; canD
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>{w.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               {new Date(w.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
               {w.duration ? ` · ${w.duration} min cible` : ''}
-              {!isOwn && w.user && (
+              {context !== 'mine' && w.user && (
                 <>
                   <span>·</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -37,6 +149,9 @@ function WorkoutCard({ w, isOwn, canDelete }: { w: Workout; isOwn: boolean; canD
                     {w.user.email.split('@')[0]}
                   </span>
                 </>
+              )}
+              {context === 'saved' && w._savedSource === 'shared' && (
+                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(201,165,53,0.12)', color: '#C9A535', border: '1px solid rgba(201,165,53,0.25)', fontWeight: 600 }}>recommandé</span>
               )}
             </div>
           </div>
@@ -54,42 +169,115 @@ function WorkoutCard({ w, isOwn, canDelete }: { w: Workout; isOwn: boolean; canD
               <span style={{ fontSize: 10, color: BIO_TYPE_COLORS[wm.movement.bioType] || 'var(--text-muted)', marginLeft: 'auto' }}>{wm.movement.bioType}</span>
             </div>
           ))}
-          {w.movements.length > 3 && (
-            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>+{w.movements.length - 3} autres</div>
-          )}
+          {w.movements.length > 3 && <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>+{w.movements.length - 3} autres</div>}
         </div>
 
         <div style={{ marginTop: 10, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {bioTypes.map(bt => (
-            <span key={bt} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${BIO_TYPE_COLORS[bt] || '#fff'}15`, color: BIO_TYPE_COLORS[bt] || 'var(--text-muted)', border: `1px solid ${BIO_TYPE_COLORS[bt] || '#fff'}28` }}>
-              {bt}
-            </span>
+            <span key={bt} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${BIO_TYPE_COLORS[bt] || '#fff'}15`, color: BIO_TYPE_COLORS[bt] || 'var(--text-muted)', border: `1px solid ${BIO_TYPE_COLORS[bt] || '#fff'}28` }}>{bt}</span>
           ))}
         </div>
       </Link>
 
-      {canDelete && (
-        <div style={{ borderTop: '1px solid var(--border)', padding: '8px 20px', display: 'flex', justifyContent: 'flex-end' }}>
-          <WorkoutActions workoutId={w.id} />
+      {showFooter && (
+        <div style={{ borderTop: '1px solid var(--border)', padding: '8px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {/* Bouton sauvegarder (communauté) ou retirer (sauvegardés) */}
+            {context === 'community' && (
+              <button
+                onClick={e => { e.preventDefault(); handleToggleSave() }}
+                disabled={saving}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: isSaved ? 'rgba(201,165,53,0.1)' : 'none', border: `1px solid ${isSaved ? 'rgba(201,165,53,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 10px', color: isSaved ? '#C9A535' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: saving ? 'default' : 'pointer', transition: 'all 0.15s' }}
+              >
+                {isSaved ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
+                {isSaved ? 'Sauvegardé' : 'Sauvegarder'}
+              </button>
+            )}
+            {/* Bouton retirer (sauvegardés) */}
+            {context === 'saved' && (
+              <button
+                onClick={e => { e.preventDefault(); handleToggleSave() }}
+                disabled={saving}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
+              >
+                <X size={11} />
+                Retirer
+              </button>
+            )}
+            {/* Bouton recommander (mes créations) */}
+            {context === 'mine' && onShare && (
+              <button
+                onClick={e => { e.preventDefault(); onShare() }}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold,#C9A535)'; e.currentTarget.style.color = 'var(--gold,#C9A535)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              >
+                <Share2 size={12} />
+                Recommander
+              </button>
+            )}
+          </div>
+          {context === 'mine' && <WorkoutActions workoutId={w.id} />}
         </div>
       )}
     </div>
   )
 }
 
+// ── Section label ────────────────────────────────────────────────────────────
+function SectionLabel({ icon, label, count }: { icon: React.ReactNode; label: string; count: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, marginTop: 4 }}>
+      <span style={{ color: 'var(--text-dim)', display: 'flex' }}>{icon}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.6, textTransform: 'uppercase' }}>{label}</span>
+      <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{count}</span>
+    </div>
+  )
+}
+
+// ── Tabs principal ───────────────────────────────────────────────────────────
 export default function WorkoutsTabs({ currentUserId }: { currentUserId: string | null }) {
   const [tab, setTab] = useState<'mine' | 'community'>('mine')
-  const [workouts, setWorkouts] = useState<Workout[]>([])
+  const [myWorkouts, setMyWorkouts] = useState<Workout[]>([])
+  const [savedWorkouts, setSavedWorkouts] = useState<Workout[]>([])
+  const [communityWorkouts, setCommunityWorkouts] = useState<Workout[]>([])
   const [loading, setLoading] = useState(true)
+  const [sharingWorkout, setSharingWorkout] = useState<Workout | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
 
-  const load = useCallback(async (t: 'mine' | 'community') => {
-    setLoading(true)
-    const res = await fetch(`/api/workouts?filter=${t}`)
-    setWorkouts(await res.json())
-    setLoading(false)
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search)
+    if (p.get('imported') === '1') {
+      setToast('Workout sauvegardé ✓ ✓')
+      window.history.replaceState({}, '', '/workouts')
+    }
   }, [])
 
-  useEffect(() => { load(tab) }, [tab, load])
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 4000)
+    return () => clearTimeout(t)
+  }, [toast])
+
+  const loadMine = useCallback(async () => {
+    const [rMine, rSaved] = await Promise.all([
+      fetch('/api/workouts?filter=mine').then(r => r.json()),
+      fetch('/api/workouts?filter=saved').then(r => r.json()),
+    ])
+    setMyWorkouts(rMine)
+    setSavedWorkouts(rSaved)
+  }, [])
+
+  const loadCommunity = useCallback(async () => {
+    const data = await fetch('/api/workouts?filter=community').then(r => r.json())
+    setCommunityWorkouts(data)
+  }, [])
+
+  useEffect(() => {
+    setLoading(true)
+    const p = tab === 'mine' ? loadMine() : loadCommunity()
+    p.finally(() => setLoading(false))
+  }, [tab, loadMine, loadCommunity])
 
   const tabStyle = (t: 'mine' | 'community'): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: 7,
@@ -100,16 +288,14 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
     transition: 'all 0.15s',
   })
 
+  const hasAnything = myWorkouts.length > 0 || savedWorkouts.length > 0
+
   return (
     <>
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, marginBottom: 24, width: 'fit-content', boxShadow: 'var(--shadow-sm)' }}>
-        <button style={tabStyle('mine')} onClick={() => setTab('mine')}>
-          <User size={14} /> Mes workouts
-        </button>
-        <button style={tabStyle('community')} onClick={() => setTab('community')}>
-          <Users size={14} /> Communauté
-        </button>
+        <button style={tabStyle('mine')} onClick={() => setTab('mine')}><User size={14} /> Mes workouts</button>
+        <button style={tabStyle('community')} onClick={() => setTab('community')}><Users size={14} /> Communauté</button>
       </div>
 
       {/* Skeleton */}
@@ -119,11 +305,11 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
         </div>
       )}
 
-      {/* Empty state */}
-      {!loading && workouts.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)' }}>
-          {tab === 'mine' ? (
-            <>
+      {/* ── Onglet MES WORKOUTS ── */}
+      {!loading && tab === 'mine' && (
+        <>
+          {!hasAnything && (
+            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)' }}>
               <div style={{ fontSize: 44, marginBottom: 14 }}>📭</div>
               <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucun workout</div>
               <div style={{ fontSize: 13, marginBottom: 24 }}>Génère et sauvegarde ton premier workout</div>
@@ -132,28 +318,79 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                   <Zap size={14} /> Générer
                 </button>
               </Link>
-            </>
-          ) : (
-            <>
-              <div style={{ fontSize: 44, marginBottom: 14 }}>👥</div>
-              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucun workout partagé</div>
-              <div style={{ fontSize: 13 }}>Les workouts de tes coéquipiers apparaîtront ici</div>
-            </>
+            </div>
           )}
-        </div>
+
+          {myWorkouts.length > 0 && (
+            <div style={{ marginBottom: 32 }}>
+              <SectionLabel icon={<Zap size={13} />} label="Mes créations" count={myWorkouts.length} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {myWorkouts.map(w => (
+                  <WorkoutCard
+                    key={w.id}
+                    w={w}
+                    context="mine"
+                    onShare={() => setSharingWorkout(w)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {savedWorkouts.length > 0 && (
+            <div>
+              <SectionLabel icon={<Layers size={13} />} label="Sauvegardés" count={savedWorkouts.length} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {savedWorkouts.map(w => (
+                  <WorkoutCard
+                    key={w.id}
+                    w={w}
+                    context="saved"
+                    onToggleSave={() => setSavedWorkouts(prev => prev.filter(x => x.id !== w.id))}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {/* List */}
-      {!loading && workouts.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {workouts.map(w => (
-            <WorkoutCard
-              key={w.id}
-              w={w}
-              isOwn={tab === 'mine'}
-              canDelete={tab === 'mine' || w.user?.id === currentUserId}
-            />
-          ))}
+      {/* ── Onglet COMMUNAUTÉ ── */}
+      {!loading && tab === 'community' && (
+        <>
+          {communityWorkouts.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 44, marginBottom: 14 }}>👥</div>
+              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucun workout</div>
+              <div style={{ fontSize: 13 }}>Les workouts de tes coéquipiers apparaîtront ici</div>
+            </div>
+          )}
+          {communityWorkouts.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {communityWorkouts.map(w => (
+                <WorkoutCard
+                  key={w.id}
+                  w={w}
+                  context="community"
+                  onToggleSave={saved => {
+                    setCommunityWorkouts(prev => prev.map(x => x.id === w.id ? { ...x, isSaved: saved } : x))
+                    if (saved) setToast('Workout sauvegardé ✓ ✓')
+                  }}
+                  onShare={() => setSharingWorkout(w)}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Modale recommandation */}
+      {sharingWorkout && <ShareModal workout={sharingWorkout} onClose={() => setSharingWorkout(null)} />}
+
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#22c55e', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, whiteSpace: 'nowrap' }}>
+          {toast}
         </div>
       )}
 
