@@ -242,6 +242,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const [savedWorkouts, setSavedWorkouts] = useState<Workout[]>([])
   const [communityWorkouts, setCommunityWorkouts] = useState<Workout[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [sharingWorkout, setSharingWorkout] = useState<Workout | null>(null)
   const [toast, setToast] = useState<string | null>(null)
 
@@ -260,12 +261,25 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   }, [toast])
 
   const loadMine = useCallback(async () => {
-    const [rMine, rSaved] = await Promise.all([
-      fetch('/api/workouts?filter=mine').then(r => r.json()),
-      fetch('/api/workouts?filter=saved').then(r => r.json()),
-    ])
-    setMyWorkouts(rMine)
-    setSavedWorkouts(rSaved)
+    setFetchError(null)
+    try {
+      const [rMine, rSaved] = await Promise.all([
+        fetch('/api/workouts?filter=mine').then(async r => {
+          const data = await r.json()
+          if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`)
+          return Array.isArray(data) ? data : []
+        }),
+        fetch('/api/workouts?filter=saved').then(async r => {
+          const data = await r.json()
+          if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`)
+          return Array.isArray(data) ? data : []
+        }),
+      ])
+      setMyWorkouts(rMine)
+      setSavedWorkouts(rSaved)
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Erreur de chargement')
+    }
   }, [])
 
   const loadCommunity = useCallback(async () => {
@@ -297,6 +311,13 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
         <button style={tabStyle('mine')} onClick={() => setTab('mine')}><User size={14} /> Mes workouts</button>
         <button style={tabStyle('community')} onClick={() => setTab('community')}><Users size={14} /> Communauté</button>
       </div>
+
+      {/* Erreur de chargement */}
+      {fetchError && (
+        <div style={{ padding: '12px 16px', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.25)', borderRadius: 10, fontSize: 13, color: '#ef4444', marginBottom: 16 }}>
+          ⚠ Erreur : {fetchError}
+        </div>
+      )}
 
       {/* Skeleton */}
       {loading && (

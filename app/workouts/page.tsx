@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Zap } from 'lucide-react'
 import { getCurrentUserId } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
+
 import WorkoutsTabs from './WorkoutsTabs'
 
 export const dynamic = 'force-dynamic'

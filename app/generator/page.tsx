@@ -115,6 +115,9 @@ export default function GeneratorPage() {
         return
       }
       setSavedId(data.id)
+      if (!data.userId) {
+        setSaveError('⚠ Workout sauvegardé mais non lié à ton compte — tu n\'es pas connecté. Il n\'apparaîtra pas dans "Mes workouts".')
+      }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Erreur réseau')
     } finally {

@@ -43,7 +43,7 @@ function LibraryPicker({ current, onPick, onClose }: {
 }) {
   const [search, setSearch] = useState('')
   const [bioFilter, setBioFilter] = useState(current.movement.bioType)
-  const [complexityFilter, setComplexityFilter] = useState(current.movement.complexity)
+  const [complexityFilter, setComplexityFilter] = useState('')
   const [results, setResults] = useState<Movement[]>([])
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)

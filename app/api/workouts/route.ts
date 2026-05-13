@@ -8,6 +8,7 @@ const WORKOUT_INCLUDE = {
 } as const
 
 export async function GET(req: NextRequest) {
+  try {
   const currentUserId = await getCurrentUserId()
   const filter = req.nextUrl.searchParams.get('filter') // 'mine' | 'saved' | 'community'
 
@@ -61,9 +62,9 @@ export async function GET(req: NextRequest) {
     include: {
       ...WORKOUT_INCLUDE,
       // Pour la communauté : on sait si ce workout est déjà importé
-      savedBy: currentUserId
-        ? { where: { userId: currentUserId }, select: { id: true } }
-        : false,
+      ...(currentUserId
+        ? { savedBy: { where: { userId: currentUserId }, select: { id: true } } }
+        : {}),
     },
     take: 100,
   })
@@ -71,11 +72,15 @@ export async function GET(req: NextRequest) {
   // Transformer savedBy → isSaved (booléen)
   const result = workouts.map(w => ({
     ...w,
-    isSaved: Array.isArray(w.savedBy) && w.savedBy.length > 0,
+    isSaved: Array.isArray((w as { savedBy?: { id: string }[] }).savedBy) && (w as { savedBy?: { id: string }[] }).savedBy!.length > 0,
     savedBy: undefined,
   }))
 
   return NextResponse.json(result)
+  } catch (err) {
+    console.error('[GET /api/workouts]', err)
+    return NextResponse.json({ error: 'Erreur serveur', details: err instanceof Error ? err.message : String(err) }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
