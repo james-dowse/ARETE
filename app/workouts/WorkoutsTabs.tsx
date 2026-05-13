@@ -307,10 +307,20 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
 
   return (
     <>
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, marginBottom: 24, width: 'fit-content', boxShadow: 'var(--shadow-sm)' }}>
-        <button style={tabStyle('mine')} onClick={() => setTab('mine')}><User size={14} /> Mes workouts</button>
-        <button style={tabStyle('community')} onClick={() => setTab('community')}><Users size={14} /> Communauté</button>
+      {/* Tabs + compteur dynamique */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, boxShadow: 'var(--shadow-sm)' }}>
+          <button style={tabStyle('mine')} onClick={() => setTab('mine')}><User size={14} /> Mes workouts</button>
+          <button style={tabStyle('community')} onClick={() => setTab('community')}><Users size={14} /> Communauté</button>
+        </div>
+        {!loading && (
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+            {tab === 'mine'
+              ? `${myWorkouts.length + savedWorkouts.length} entraînement${myWorkouts.length + savedWorkouts.length !== 1 ? 's' : ''}`
+              : `${communityWorkouts.length} entraînement${communityWorkouts.length !== 1 ? 's' : ''} dans la communauté`
+            }
+          </span>
+        )}
       </div>
 
       {/* Erreur de chargement */}
