@@ -22,7 +22,7 @@ interface Movement {
 }
 interface WorkoutMovement {
   id: string; movementId: string; order: number
-  sets?: number | null; reps?: string | null; movement: Movement
+  sets?: number | null; reps?: string | null; rest?: number | null; movement: Movement
   blockId?: string | null
 }
 interface WorkoutBlock {
@@ -32,6 +32,7 @@ interface Workout {
   id: string; name: string; createdAt: string
   duration?: number | null
   notes?: string | null; description?: string | null; imageUrl?: string | null
+  blockRest?: number | null
   movements: WorkoutMovement[]
   blocks: WorkoutBlock[]
 }
@@ -226,6 +227,12 @@ function MovementRowView({ wm, index, onMovementClick }: { wm: WorkoutMovement; 
                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '1px 8px' }}>
                   {wm.sets ?? '—'} × {wm.reps ?? '—'}
                 </span>
+                {wm.rest != null && (
+                  <>
+                    <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>·</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>⏱ {wm.rest} min repos</span>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -746,6 +753,16 @@ export default function WorkoutDetailClient({ workout: initial }: { workout: Wor
                       : blockMovements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
                     }
                   </div>
+                  {/* Inter-block rest */}
+                  {!editMode && initial.blockRest != null && bi < initial.blocks.length - 1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+                      <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                        ⏸ {initial.blockRest} min · repos entre blocs
+                      </span>
+                      <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                    </div>
+                  )}
                 </div>
               )
             })

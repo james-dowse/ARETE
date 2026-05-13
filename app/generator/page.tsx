@@ -3,11 +3,12 @@ import AppShell from '@/components/AppShell'
 import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, type TemplateBlockInput, type GeneratedMovement } from '@/lib/types'
 import RichEditor from '@/components/RichEditor'
 import { useState } from 'react'
-import { Plus, Trash2, Zap, Save, RefreshCw, Clock, Minus, ChevronDown, ChevronUp, Dices } from 'lucide-react'
+import { Plus, Trash2, Zap, Save, RefreshCw, Clock, Minus, ChevronDown, ChevronUp, Dices, Search } from 'lucide-react'
 import MovementModal from '@/components/MovementModal'
+import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
 
 interface Block extends TemplateBlockInput { id: string; instructions: string }
-interface MovementParams { sets: number; reps: string }
+interface MovementParams { sets: number; reps: string; rest: number }
 
 function uid() { return Math.random().toString(36).slice(2) }
 
@@ -52,6 +53,19 @@ export default function GeneratorPage() {
   // Movement detail modal
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
 
+  // Library substitution
+  const [substitutingIndex, setSubstitutingIndex] = useState<number | null>(null)
+
+  const handleLibraryPick = (m: PickableMovement) => {
+    if (substitutingIndex === null) return
+    setGenerated(prev => prev!.map((gm, i) =>
+      i === substitutingIndex
+        ? { id: m.id, name: m.name, bioType: m.bioType, complexity: m.complexity, videoUrl: m.videoUrl ?? null, blockIndex: gm.blockIndex }
+        : gm
+    ))
+    setSubstitutingIndex(null)
+  }
+
   const addBlock = () => setBlocks(prev => [...prev, { id: uid(), bioType: null, complexity: null, count: 3, order: prev.length, instructions: '' }])
   const removeBlock = (id: string) => setBlocks(prev => prev.filter(b => b.id !== id))
   const updateBlock = (id: string, field: keyof Block, value: string | number | null) =>
@@ -73,7 +87,7 @@ export default function GeneratorPage() {
       })
       const data = await res.json()
       setGenerated(data.movements)
-      setParams(data.movements.map(() => ({ sets: globalSets, reps: globalReps })))
+      setParams(data.movements.map(() => ({ sets: globalSets, reps: globalReps, rest: globalRest })))
       if (!workoutName) {
         const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
         setWorkoutName(`Workout ${date}`)
@@ -95,11 +109,13 @@ export default function GeneratorPage() {
           name: workoutName,
           duration: duration ? Number(duration) : null,
           description: workoutDescription || null,
+          blockRest: globalBlockRest,
           movements: generated.map((m, i) => ({
             movementId: m.id,
             order: i,
             sets: params[i]?.sets ?? globalSets,
             reps: params[i]?.reps ?? globalReps,
+            rest: params[i]?.rest ?? globalRest,
             blockIndex: m.blockIndex,
           })),
           blocks: blocks.map((b, i) => ({
@@ -251,7 +267,7 @@ export default function GeneratorPage() {
       })
       const data = await res.json()
       setGenerated(data.movements)
-      setParams(data.movements.map(() => ({ sets, reps: globalReps })))
+      setParams(data.movements.map(() => ({ sets, reps: globalReps, rest: globalRest })))
       const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
       setWorkoutName(`Workout ${label} ${date}`)
     } finally {
@@ -627,25 +643,46 @@ export default function GeneratorPage() {
                                       </div>
                                     </div>
                                   </div>
-                                  <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 700, flexShrink: 0 }}>#{i + 1}</span>
+                                  <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                                    <button
+                                      onClick={() => setSubstitutingIndex(i)}
+                                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}
+                                    >
+                                      <Search size={11} /> Biblio
+                                    </button>
+                                    <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 700 }}>#{i + 1}</span>
+                                  </div>
                                 </div>
 
-                                {/* Séries × Reps inline editor */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                                    <span style={{ fontSize: 13, color: 'var(--text-muted)', width: 52, flexShrink: 0 }}>Séries</span>
+                                {/* Séries · Reps · Repos */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Séries</span>
                                     <Stepper value={params[i]?.sets ?? globalSets} min={1} max={10} onChange={v => setParam(i, 'sets', v)} />
                                   </div>
-                                  <span style={{ fontSize: 14, color: 'var(--text-dim)', fontWeight: 700 }}>×</span>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                                    <span style={{ fontSize: 13, color: 'var(--text-muted)', width: 52, flexShrink: 0 }}>Reps</span>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Reps</span>
                                     <RepsInput value={params[i]?.reps ?? globalReps} onChange={v => setParam(i, 'reps', v)} />
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Repos (min)</span>
+                                    <Stepper value={params[i]?.rest ?? globalRest} min={0} max={10} onChange={v => setParam(i, 'rest', v)} />
                                   </div>
                                 </div>
                               </div>
                             )
                           })}
                         </div>
+                        {/* Inter-block rest */}
+                        {generatedByBlock.slice(bi + 1).some(g => g.length > 0) && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+                            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                              ⏸ {globalBlockRest} min · repos entre blocs
+                            </span>
+                            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                          </div>
+                        )}
                       </div>
                     )
                   })}
@@ -683,6 +720,14 @@ export default function GeneratorPage() {
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
       <MovementModal movementId={selectedMovementId} onClose={() => setSelectedMovementId(null)} />
+
+      {substitutingIndex !== null && generated && (
+        <LibraryPicker
+          currentName={generated[substitutingIndex]?.name ?? ''}
+          onPick={handleLibraryPick}
+          onClose={() => setSubstitutingIndex(null)}
+        />
+      )}
     </AppShell>
   )
 }

@@ -27,6 +27,7 @@ model Workout {
   imageUrl    String?
   templateId  String?
   userId      String?
+  blockRest   Int?
   movements   WorkoutMovement[]
   blocks      WorkoutBlock[]
   shares      WorkoutShare[]
@@ -52,6 +53,7 @@ model WorkoutMovement {
   order      Int
   sets       Int?
   reps       String?
+  rest       Int?
   duration   Int?
   blockId    String?
   movement   Movement      @relation(fields: [movementId], references: [id])

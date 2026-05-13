@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
   try {
     const currentUserId = await getCurrentUserId()
     const body = await req.json()
-    const { name, duration, notes, description, movements, templateId, blocks } = body
+    const { name, duration, notes, description, movements, templateId, blocks, blockRest } = body
 
     const workout = await prisma.workout.create({
       data: {
@@ -99,6 +99,7 @@ export async function POST(req: NextRequest) {
         description: description || null,
         templateId: templateId || null,
         userId: currentUserId || null,
+        blockRest: blockRest != null ? Number(blockRest) : null,
       },
     })
 
@@ -113,12 +114,13 @@ export async function POST(req: NextRequest) {
     }
 
     await prisma.workoutMovement.createMany({
-      data: (movements as { movementId: string; order: number; sets?: number; reps?: string; blockIndex?: number }[]).map((m) => ({
+      data: (movements as { movementId: string; order: number; sets?: number; reps?: string; rest?: number; blockIndex?: number }[]).map((m) => ({
         workoutId: workout.id,
         movementId: m.movementId,
         order: m.order,
         sets: m.sets || null,
         reps: m.reps || null,
+        rest: m.rest != null ? Number(m.rest) : null,
         blockId: m.blockIndex !== undefined ? (blockIdMap[m.blockIndex] ?? null) : null,
       })),
     })
