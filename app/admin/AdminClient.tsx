@@ -370,7 +370,7 @@ export default function AdminClient({
   const bioStats = BIO_TYPES.map(bt => ({ bt, count: movements.filter(m => m.bioType === bt).length }))
 
   return (
-    <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', maxWidth: usagePanel ? 1600 : 1200 }}><div style={{ flex: 1, minWidth: 0 }}>
+    <div style={{ maxWidth: 1200, paddingRight: usagePanel ? 364 : 0, transition: 'padding-right 0.2s' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
         <div>
@@ -725,13 +725,13 @@ export default function AdminClient({
         tr:hover .row-actions { opacity: 1 !important; transition: opacity 0.15s; }
         .row-actions { transition: opacity 0.15s; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .usage-row:hover { background: var(--bg-elevated) !important; }
       `}</style>
-    </div>{/* end flex:1 main content */}
 
-    {/* ── Usage panel ── */}
-    {usagePanel && (
-      <div style={{ width: 340, flexShrink: 0, position: 'sticky', top: 24 }}>
+      {/* ── Usage panel (fixed right) ── */}
+      {usagePanel && (
+      <div style={{ position: 'fixed', top: 0, right: 0, width: 340, height: '100vh', zIndex: 40, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', borderLeft: '1px solid var(--border)', boxShadow: '-8px 0 32px rgba(0,0,0,0.25)', animation: 'slideInRight 0.2s ease' }}>
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
           {/* Header */}
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -787,8 +787,8 @@ export default function AdminClient({
           )}
         </div>
       </div>
-    )}
+      )}
 
-    </div>{/* end outer flex wrapper */}
+    </div>
   )
 }
