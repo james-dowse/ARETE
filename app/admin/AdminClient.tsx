@@ -195,6 +195,8 @@ export default function AdminClient({
   const [bulkWorking, setBulkWorking] = useState(false)
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
   const [pendingBulkUpdate, setPendingBulkUpdate] = useState<{ field: 'bioType' | 'complexity'; value: string } | null>(null)
+  const [stagedBioType, setStagedBioType] = useState('')
+  const [stagedComplexity, setStagedComplexity] = useState('')
   const selectAllRef = useRef<HTMLInputElement>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2800) }
@@ -419,28 +421,44 @@ export default function AdminClient({
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>TYPE</span>
             <select
-              value=""
-              onChange={e => { if (e.target.value) setPendingBulkUpdate({ field: 'bioType', value: e.target.value }) }}
+              value={stagedBioType}
+              onChange={e => setStagedBioType(e.target.value)}
               disabled={bulkWorking}
-              style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-primary)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+              style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedBioType ? 'var(--gold,#C9A535)' : 'var(--border)'}`, borderRadius: 7, color: stagedBioType ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
             >
-              <option value="" disabled>Changer…</option>
+              <option value="">Changer…</option>
               {BIO_TYPES.map(bt => <option key={bt} value={bt}>{BIO_TYPE_ICONS[bt]} {bt}</option>)}
             </select>
+            {stagedBioType && (
+              <button
+                onClick={() => setPendingBulkUpdate({ field: 'bioType', value: stagedBioType })}
+                style={{ padding: '4px 10px', background: 'var(--gold,#C9A535)', border: 'none', borderRadius: 6, color: '#000', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Appliquer
+              </button>
+            )}
           </div>
 
           {/* Complexity */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>COMPLEXITÉ</span>
             <select
-              value=""
-              onChange={e => { if (e.target.value) setPendingBulkUpdate({ field: 'complexity', value: e.target.value }) }}
+              value={stagedComplexity}
+              onChange={e => setStagedComplexity(e.target.value)}
               disabled={bulkWorking}
-              style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-primary)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+              style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedComplexity ? 'var(--gold,#C9A535)' : 'var(--border)'}`, borderRadius: 7, color: stagedComplexity ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
             >
-              <option value="" disabled>Changer…</option>
+              <option value="">Changer…</option>
               {COMPLEXITIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+            {stagedComplexity && (
+              <button
+                onClick={() => setPendingBulkUpdate({ field: 'complexity', value: stagedComplexity })}
+                style={{ padding: '4px 10px', background: 'var(--gold,#C9A535)', border: 'none', borderRadius: 6, color: '#000', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Appliquer
+              </button>
+            )}
           </div>
 
           <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
@@ -618,7 +636,7 @@ export default function AdminClient({
       )}
       {pendingBulkUpdate && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div onClick={() => setPendingBulkUpdate(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
+          <div onClick={() => { setPendingBulkUpdate(null); setStagedBioType(''); setStagedComplexity('') }} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
           <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px', width: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.6)', textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>✏️</div>
             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
@@ -637,6 +655,8 @@ export default function AdminClient({
                 onClick={async () => {
                   const { field, value } = pendingBulkUpdate
                   setPendingBulkUpdate(null)
+                  setStagedBioType('')
+                  setStagedComplexity('')
                   await handleBulkUpdate(field, value)
                 }}
                 disabled={bulkWorking}
