@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendInvitationEmail, sendRelayEmail } from '@/lib/email'
+import { getCurrentUser } from '@/lib/session'
+import { isAdmin } from '@/lib/admin'
 
 const appUrl = () => process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3040'
 
+async function requireAdmin() {
+  const user = await getCurrentUser()
+  if (!isAdmin(user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  return null
+}
+
 // GET — liste des utilisateurs invités
 export async function GET() {
+  const deny = await requireAdmin()
+  if (deny) return deny
   const users = await prisma.invitedUser.findMany({
     orderBy: { invitedAt: 'desc' },
   })
@@ -14,6 +24,8 @@ export async function GET() {
 
 // POST — inviter un nouvel utilisateur (ou renvoyer l'invitation)
 export async function POST(req: NextRequest) {
+  const deny = await requireAdmin()
+  if (deny) return deny
   const { email } = await req.json()
 
   if (!email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {

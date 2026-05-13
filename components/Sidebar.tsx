@@ -5,20 +5,21 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 
-const nav = [
-  { href: '/',            label: 'Dashboard',    icon: LayoutDashboard },
-  { href: '/generator',   label: 'Générateur',   icon: Zap },
-  { href: '/library',     label: 'Bibliothèque', icon: Library },
-  { href: '/admin',       label: 'Mouvements',   icon: Settings2, sub: true },
-  { href: '/admin/users', label: 'Utilisateurs', icon: Users,     sub: true },
-  { href: '/workouts',    label: 'Workouts',     icon: BookOpen },
+const allNav = [
+  { href: '/',            label: 'Dashboard',    icon: LayoutDashboard, admin: false },
+  { href: '/generator',   label: 'Générateur',   icon: Zap,             admin: false },
+  { href: '/library',     label: 'Bibliothèque', icon: Library,         admin: false },
+  { href: '/admin',       label: 'Mouvements',   icon: Settings2,       admin: true, sub: true },
+  { href: '/admin/users', label: 'Utilisateurs', icon: Users,           admin: true, sub: true },
+  { href: '/workouts',    label: 'Workouts',     icon: BookOpen,        admin: false },
 ]
 
 const EXPANDED_WIDTH = 224
 const COLLAPSED_WIDTH = 56
 
-export default function Sidebar() {
+export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const path = usePathname()
+  const nav = allNav.filter(item => !item.admin || isAdmin)
   const [collapsed, setCollapsed] = useState(false)
 
   // Replié par défaut sur mobile

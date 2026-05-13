@@ -1,9 +1,14 @@
 import Sidebar from './Sidebar'
+import { getCurrentUser } from '@/lib/session'
+import { isAdmin as checkAdmin } from '@/lib/admin'
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default async function AppShell({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser()
+  const admin = checkAdmin(user?.email)
+
   return (
     <div style={{ display: 'flex', width: '100%', minHeight: '100vh', background: 'var(--bg-primary)' }}>
-      <Sidebar />
+      <Sidebar isAdmin={admin} />
       <main className="main-grid" style={{
         flex: 1,
         marginLeft: 'var(--sidebar-w, 224px)',
