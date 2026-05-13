@@ -17,10 +17,18 @@ const allNav = [
 const EXPANDED_WIDTH = 224
 const COLLAPSED_WIDTH = 56
 
-export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
+export default function Sidebar() {
   const path = usePathname()
-  const nav = allNav.filter(item => !item.admin || isAdmin)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/me').then(r => r.json()).then(data => {
+      if (data?.isAdmin) setIsAdmin(true)
+    }).catch(() => {})
+  }, [])
+
+  const nav = allNav.filter(item => !item.admin || isAdmin)
 
   // Replié par défaut sur mobile
   useEffect(() => {
