@@ -7,7 +7,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <main className="main-grid" style={{
         flex: 1,
         overflowY: 'auto',
-        padding: '36px 48px',
+        padding: '36px 40px',
         minHeight: '100vh',
         minWidth: 0,
       }}>

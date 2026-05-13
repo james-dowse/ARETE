@@ -83,7 +83,7 @@ export default async function DashboardPage() {
         <div style={{ marginBottom: 48 }}>
           <p style={{ ...SECTION_LABEL, marginBottom: 16 }}>{dateStr}</p>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 16 }}>
-            <h1 style={{ margin: 0, fontSize: 60, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--text-primary)' }}>
+            <h1 className="r-h1" style={{ margin: 0, fontSize: 60, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--text-primary)' }}>
               {greeting}
               {displayName && (
                 <span style={{ color: 'var(--gold)', marginLeft: 16 }}>{displayName}</span>
@@ -95,19 +95,19 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Stats ────────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, marginBottom: 2, background: 'var(--border)' }}>
+        <div className="r-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, marginBottom: 2, background: 'var(--border)' }}>
           {[
             { value: workoutCount,   label: 'Workouts sauvegardés' },
             { value: movementCount,  label: 'Mouvements' },
             { value: templateCount,  label: 'Templates' },
           ].map(({ value, label }, i) => (
-            <div key={label} style={{
+            <div key={label} className="r-stat-cell" style={{
               background: 'var(--bg-card)',
               padding: '28px 32px',
               borderTop: i === 1 ? `2px solid var(--gold)` : '2px solid transparent',
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)',
             }}>
-              <div style={{ fontSize: 56, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1, color: i === 1 ? 'var(--gold)' : 'var(--text-primary)' }}>
+              <div className="r-stat-num" style={{ fontSize: 56, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1, color: i === 1 ? 'var(--gold)' : 'var(--text-primary)' }}>
                 {value}
               </div>
               <div style={{ ...SECTION_LABEL, marginTop: 10, color: 'var(--text-muted)' }}>
@@ -146,7 +146,7 @@ export default async function DashboardPage() {
         </Link>
 
         {/* ── Distribution ─────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 40 }}>
+        <div className="r-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 40 }}>
 
           {/* Bio types */}
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '24px 28px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>

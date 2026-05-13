@@ -134,7 +134,7 @@ export default function LibraryPage() {
                 <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: BIO_TYPE_COLORS[bt] || 'var(--text-primary)' }}>{bt}</h2>
                 <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{mvts.length}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
+              <div className="r-lib-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
                 {mvts.map(m => <MovementCard key={m.id} movement={m} onClick={() => setSelectedMovementId(m.id)} />)}
               </div>
             </div>

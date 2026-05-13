@@ -153,3 +153,49 @@ aside::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
     inset 0 1px 0 rgba(255,255,255,0.07),
     0 2px 16px rgba(0,0,0,0.5);
 }
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Layout principal */
+  .main-grid {
+    padding: 20px 14px !important;
+  }
+
+  /* Grilles → colonne unique */
+  .r-grid-3 { grid-template-columns: 1fr !important; }
+  .r-grid-2 { grid-template-columns: 1fr !important; }
+
+  /* Typographie */
+  .r-h1    { font-size: 34px !important; letter-spacing: -0.02em !important; }
+  .r-h2    { font-size: 22px !important; }
+
+  /* Flexbox utilitaires */
+  .r-stack  { flex-direction: column !important; align-items: flex-start !important; }
+  .r-hide   { display: none !important; }
+  .r-full   { width: 100% !important; max-width: 100% !important; }
+
+  /* Padding réduit */
+  .r-p-sm   { padding: 16px !important; }
+  .r-p-xs   { padding: 12px !important; }
+
+  /* Generator — colonnes hero/structuré → stack */
+  .r-gen-layout { flex-direction: column !important; gap: 24px !important; }
+  .r-gen-divider { display: none !important; }
+
+  /* Workout rows — réduire padding */
+  .workout-row { padding: 12px 14px !important; }
+
+  /* Biblio — minmax plus petit sur mobile */
+  .r-lib-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; }
+
+  /* Stat block — padding réduit */
+  .r-stat-cell { padding: 18px 18px !important; }
+  .r-stat-num  { font-size: 36px !important; }
+}
+
+@media (max-width: 480px) {
+  .main-grid { padding: 16px 12px !important; }
+  .r-h1 { font-size: 28px !important; }
+  .r-grid-3 { grid-template-columns: 1fr !important; }
+  .r-lib-grid { grid-template-columns: 1fr !important; }
+}
