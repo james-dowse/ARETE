@@ -1,7 +1,8 @@
 'use client'
 import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
 import { useState, useMemo } from 'react'
-import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown, Upload } from 'lucide-react'
+import { useRef } from 'react'
 
 interface Movement {
   id: string; name: string; bioType: string; complexity: string
@@ -187,6 +188,8 @@ export default function AdminClient({
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [importing, setImporting] = useState(false)
+  const importRef = useRef<HTMLInputElement>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2800) }
 
@@ -245,6 +248,27 @@ export default function AdminClient({
     setDeletingId(null)
   }
 
+  // ── Import XLS ──
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    const form = new FormData()
+    form.append('file', file)
+    try {
+      const res = await fetch('/api/movements/import', { method: 'POST', body: form })
+      const data = await res.json()
+      if (!res.ok) { showToast(`Erreur : ${data.error}`); return }
+      const freshRes = await fetch('/api/movements')
+      const freshData = await freshRes.json()
+      if (Array.isArray(freshData)) setMovements(freshData)
+      showToast(`Import terminé — ${data.imported} ajoutés/mis à jour, ${data.skipped} ignorés`)
+    } finally {
+      setImporting(false)
+      if (importRef.current) importRef.current.value = ''
+    }
+  }
+
   // ── New ──
   const handleCreated = (m: Movement) => {
     setMovements(prev => [...prev, m].sort((a, b) => a.bioType.localeCompare(b.bioType) || a.name.localeCompare(b.name)))
@@ -264,10 +288,17 @@ export default function AdminClient({
             {movements.length} mouvements · {filtered.length} affichés
           </p>
         </div>
-        <button onClick={() => setShowNew(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
-          <Plus size={16} /> Nouveau mouvement
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <input ref={importRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: 'none' }} />
+          <button onClick={() => importRef.current?.click()} disabled={importing}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: importing ? 'wait' : 'pointer', opacity: importing ? 0.6 : 1 }}>
+            <Upload size={15} /> {importing ? 'Import...' : 'Importer XLS'}
+          </button>
+          <button onClick={() => setShowNew(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+            <Plus size={16} /> Nouveau mouvement
+          </button>
+        </div>
       </div>
 
       {/* Mini stats bar */}
