@@ -51,6 +51,7 @@
 
 /* ── Reset ─────────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
+html, body { overflow-x: hidden; }
 
 body {
   background: var(--bg-primary);
@@ -178,9 +179,8 @@ aside::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
   .r-p-sm   { padding: 16px !important; }
   .r-p-xs   { padding: 12px !important; }
 
-  /* Generator — colonnes hero/structuré → stack */
-  .r-gen-layout { flex-direction: column !important; gap: 24px !important; }
-  .r-gen-divider { display: none !important; }
+  /* Generator — colonnes → colonne unique */
+  .r-gen-layout { grid-template-columns: 1fr !important; gap: 20px !important; }
 
   /* Workout rows — réduire padding */
   .workout-row { padding: 12px 14px !important; }

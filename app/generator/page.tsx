@@ -260,11 +260,11 @@ export default function GeneratorPage() {
     <AppShell>
       <div style={{ maxWidth: 1060 }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 40, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>Générateur</h1>
+          <h1 className="r-h1" style={{ fontSize: 40, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>Générateur</h1>
           <p style={{ color: 'var(--text-muted)', marginTop: 8, fontSize: 16 }}>Définis ta structure, génère ton entraînement</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '420px 1fr', gap: 32 }}>
+        <div className="r-gen-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 420px) 1fr', gap: 32 }}>
 
           {/* ── Left: Builder ── */}
           <div>
