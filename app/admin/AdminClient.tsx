@@ -194,6 +194,7 @@ export default function AdminClient({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkWorking, setBulkWorking] = useState(false)
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+  const [pendingBulkUpdate, setPendingBulkUpdate] = useState<{ field: 'bioType' | 'complexity'; value: string } | null>(null)
   const selectAllRef = useRef<HTMLInputElement>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2800) }
@@ -418,8 +419,8 @@ export default function AdminClient({
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>TYPE</span>
             <select
-              defaultValue=""
-              onChange={e => { handleBulkUpdate('bioType', e.target.value); e.target.value = '' }}
+              value=""
+              onChange={e => { if (e.target.value) setPendingBulkUpdate({ field: 'bioType', value: e.target.value }) }}
               disabled={bulkWorking}
               style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-primary)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
             >
@@ -432,8 +433,8 @@ export default function AdminClient({
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>COMPLEXITÉ</span>
             <select
-              defaultValue=""
-              onChange={e => { handleBulkUpdate('complexity', e.target.value); e.target.value = '' }}
+              value=""
+              onChange={e => { if (e.target.value) setPendingBulkUpdate({ field: 'complexity', value: e.target.value }) }}
               disabled={bulkWorking}
               style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-primary)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
             >
@@ -615,6 +616,39 @@ export default function AdminClient({
           onCancel={() => setDeletingId(null)}
         />
       )}
+      {pendingBulkUpdate && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={() => setPendingBulkUpdate(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
+          <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px', width: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.6)', textAlign: 'center' }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>✏️</div>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
+              Modifier {selected.size} mouvement{selected.size > 1 ? 's' : ''} ?
+            </div>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 6 }}>
+              {pendingBulkUpdate.field === 'bioType' ? 'Type biomécanique' : 'Complexité'} →{' '}
+              <span style={{ fontWeight: 700, color: pendingBulkUpdate.field === 'bioType' ? BIO_TYPE_COLORS[pendingBulkUpdate.value] : 'var(--text-primary)' }}>
+                {pendingBulkUpdate.field === 'bioType' && BIO_TYPE_ICONS[pendingBulkUpdate.value]} {pendingBulkUpdate.value}
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 22 }}>Cette action modifiera tous les mouvements sélectionnés.</div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button onClick={() => setPendingBulkUpdate(null)} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
+              <button
+                onClick={async () => {
+                  const { field, value } = pendingBulkUpdate
+                  setPendingBulkUpdate(null)
+                  await handleBulkUpdate(field, value)
+                }}
+                disabled={bulkWorking}
+                style={{ padding: '8px 22px', background: 'var(--accent)', border: 'none', borderRadius: 8, color: 'var(--on-accent)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showBulkDeleteConfirm && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div onClick={() => setShowBulkDeleteConfirm(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
