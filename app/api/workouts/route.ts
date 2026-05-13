@@ -56,14 +56,16 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // savedBy n'est utile que pour la communauté (savoir si l'utilisateur a déjà sauvegardé)
+  const needsSavedBy = filter === 'community' && !!currentUserId
+
   const workouts = await prisma.workout.findMany({
     where,
     orderBy: { createdAt: 'desc' },
     include: {
       ...WORKOUT_INCLUDE,
-      // Pour la communauté : on sait si ce workout est déjà importé
-      ...(currentUserId
-        ? { savedBy: { where: { userId: currentUserId }, select: { id: true } } }
+      ...(needsSavedBy
+        ? { savedBy: { where: { userId: currentUserId! }, select: { id: true } } }
         : {}),
     },
     take: 100,
@@ -72,7 +74,7 @@ export async function GET(req: NextRequest) {
   // Transformer savedBy → isSaved (booléen)
   const result = workouts.map(w => ({
     ...w,
-    isSaved: Array.isArray((w as { savedBy?: { id: string }[] }).savedBy) && (w as { savedBy?: { id: string }[] }).savedBy!.length > 0,
+    isSaved: needsSavedBy && Array.isArray((w as { savedBy?: { id: string }[] }).savedBy) && (w as { savedBy?: { id: string }[] }).savedBy!.length > 0,
     savedBy: undefined,
   }))
 

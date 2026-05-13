@@ -266,12 +266,12 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
       const [rMine, rSaved] = await Promise.all([
         fetch('/api/workouts?filter=mine').then(async r => {
           const data = await r.json()
-          if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`)
+          if (!r.ok) throw new Error(data?.details ?? data?.error ?? `HTTP ${r.status}`)
           return Array.isArray(data) ? data : []
         }),
         fetch('/api/workouts?filter=saved').then(async r => {
           const data = await r.json()
-          if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`)
+          if (!r.ok) throw new Error(data?.details ?? data?.error ?? `HTTP ${r.status}`)
           return Array.isArray(data) ? data : []
         }),
       ])
