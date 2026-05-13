@@ -194,7 +194,7 @@ export default function AdminClient({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkWorking, setBulkWorking] = useState(false)
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
-  const [pendingBulkUpdate, setPendingBulkUpdate] = useState<{ field: 'bioType' | 'complexity'; value: string } | null>(null)
+  const [pendingBulkUpdate, setPendingBulkUpdate] = useState<{ bioType?: string; complexity?: string } | null>(null)
   const [stagedBioType, setStagedBioType] = useState('')
   const [stagedComplexity, setStagedComplexity] = useState('')
   const selectAllRef = useRef<HTMLInputElement>(null)
@@ -239,14 +239,14 @@ export default function AdminClient({
   }
   const clearSelection = () => setSelected(new Set())
 
-  const handleBulkUpdate = async (field: 'bioType' | 'complexity', value: string) => {
-    if (!value || selected.size === 0) return
+  const handleBulkUpdate = async (patch: { bioType?: string; complexity?: string }) => {
+    if (selected.size === 0) return
     setBulkWorking(true)
     const ids = [...selected]
     const res = await fetch('/api/movements/bulk', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids, [field]: value }),
+      body: JSON.stringify({ ids, ...patch }),
     })
     const data = await res.json()
     if (res.ok && data.updated) {
@@ -429,14 +429,6 @@ export default function AdminClient({
               <option value="">Changer…</option>
               {BIO_TYPES.map(bt => <option key={bt} value={bt}>{BIO_TYPE_ICONS[bt]} {bt}</option>)}
             </select>
-            {stagedBioType && (
-              <button
-                onClick={() => setPendingBulkUpdate({ field: 'bioType', value: stagedBioType })}
-                style={{ padding: '4px 10px', background: 'var(--gold,#C9A535)', border: 'none', borderRadius: 6, color: '#000', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-              >
-                Appliquer
-              </button>
-            )}
           </div>
 
           {/* Complexity */}
@@ -451,15 +443,17 @@ export default function AdminClient({
               <option value="">Changer…</option>
               {COMPLEXITIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            {stagedComplexity && (
-              <button
-                onClick={() => setPendingBulkUpdate({ field: 'complexity', value: stagedComplexity })}
-                style={{ padding: '4px 10px', background: 'var(--gold,#C9A535)', border: 'none', borderRadius: 6, color: '#000', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-              >
-                Appliquer
-              </button>
-            )}
           </div>
+
+          {/* Single apply button */}
+          {(stagedBioType || stagedComplexity) && (
+            <button
+              onClick={() => setPendingBulkUpdate({ bioType: stagedBioType || undefined, complexity: stagedComplexity || undefined })}
+              style={{ padding: '5px 12px', background: 'var(--gold,#C9A535)', border: 'none', borderRadius: 7, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Appliquer
+            </button>
+          )}
 
           <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
 
@@ -639,25 +633,31 @@ export default function AdminClient({
           <div onClick={() => { setPendingBulkUpdate(null); setStagedBioType(''); setStagedComplexity('') }} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
           <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px', width: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.6)', textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>✏️</div>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>
               Modifier {selected.size} mouvement{selected.size > 1 ? 's' : ''} ?
             </div>
-            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 6 }}>
-              {pendingBulkUpdate.field === 'bioType' ? 'Type biomécanique' : 'Complexité'} →{' '}
-              <span style={{ fontWeight: 700, color: pendingBulkUpdate.field === 'bioType' ? BIO_TYPE_COLORS[pendingBulkUpdate.value] : 'var(--text-primary)' }}>
-                {pendingBulkUpdate.field === 'bioType' && BIO_TYPE_ICONS[pendingBulkUpdate.value]} {pendingBulkUpdate.value}
-              </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16, alignItems: 'center' }}>
+              {pendingBulkUpdate.bioType && (
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  Type → <span style={{ fontWeight: 700, color: BIO_TYPE_COLORS[pendingBulkUpdate.bioType] }}>{BIO_TYPE_ICONS[pendingBulkUpdate.bioType]} {pendingBulkUpdate.bioType}</span>
+                </div>
+              )}
+              {pendingBulkUpdate.complexity && (
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  Complexité → <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{pendingBulkUpdate.complexity}</span>
+                </div>
+              )}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 22 }}>Cette action modifiera tous les mouvements sélectionnés.</div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button onClick={() => setPendingBulkUpdate(null)} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={() => { setPendingBulkUpdate(null); setStagedBioType(''); setStagedComplexity('') }} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
               <button
                 onClick={async () => {
-                  const { field, value } = pendingBulkUpdate
+                  const patch = pendingBulkUpdate
                   setPendingBulkUpdate(null)
                   setStagedBioType('')
                   setStagedComplexity('')
-                  await handleBulkUpdate(field, value)
+                  await handleBulkUpdate(patch)
                 }}
                 disabled={bulkWorking}
                 style={{ padding: '8px 22px', background: 'var(--accent)', border: 'none', borderRadius: 8, color: 'var(--on-accent)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
