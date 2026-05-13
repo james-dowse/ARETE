@@ -22,6 +22,9 @@
   --accent-dim:   var(--gold-ghost);
   --on-accent:    #080808;
 
+  /* ── Sidebar width (mis à jour par JS au toggle) ─────────────── */
+  --sidebar-w: 224px;
+
   /* ── Sidebar (plus sombre que le canvas) ─────────────────────── */
   --sidebar-bg:           #080808;
   --sidebar-border:       rgba(200,169,81,0.10);
