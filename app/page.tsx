@@ -84,13 +84,35 @@ export default async function DashboardPage() {
         {/* ── Hero ─────────────────────────────────────────────── */}
         <div style={{ marginBottom: 48 }}>
           <p style={{ ...SECTION_LABEL, marginBottom: 16 }}>{dateStr}</p>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
             <h1 className="r-h1" style={{ margin: 0, fontSize: 60, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--text-primary)' }}>
               {greeting}
               {displayName && (
                 <span style={{ color: 'var(--gold)', marginLeft: 16 }}>{displayName}</span>
               )}
             </h1>
+            {user && (
+              <Link href="/profile" title="Mon profil" style={{ textDecoration: 'none', flexShrink: 0 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: '50%',
+                  overflow: 'hidden',
+                  background: 'var(--bg-elevated)',
+                  border: '2px solid var(--border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16, fontWeight: 700, color: 'var(--gold)',
+                  cursor: 'pointer',
+                  transition: 'border-color 0.15s, box-shadow 0.15s',
+                  boxShadow: '0 0 0 0px var(--gold)',
+                }}
+                  className="avatar-btn"
+                >
+                  {user.avatarUrl
+                    ? <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : ((user.firstName?.[0] ?? '') + (user.lastName?.[0] ?? '')).toUpperCase() || user.email[0].toUpperCase()
+                  }
+                </div>
+              </Link>
+            )}
           </div>
           {/* Ligne séparatrice or */}
           <div style={{ marginTop: 20, height: 1, background: 'linear-gradient(90deg, var(--gold-border) 0%, transparent 70%)' }} />
@@ -292,6 +314,7 @@ export default async function DashboardPage() {
       <style>{`
         .cta-generate:hover { filter: brightness(1.12); }
         .workout-row:hover { background: var(--bg-elevated) !important; }
+        .avatar-btn:hover { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(200,169,81,0.18) !important; }
       `}</style>
     </AppShell>
   )
