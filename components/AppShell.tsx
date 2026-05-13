@@ -9,7 +9,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         overflowY: 'auto',
         padding: '36px 48px',
         minHeight: '100vh',
-        maxWidth: 'calc(100vw - 224px)',
+        minWidth: 0,
       }}>
         {children}
       </main>
