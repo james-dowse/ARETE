@@ -230,7 +230,7 @@ function MovementRowView({ wm, index, onMovementClick }: { wm: WorkoutMovement; 
                 {wm.rest != null && (
                   <>
                     <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>·</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>⏱ {wm.rest} min repos</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>⏱ {wm.rest} min repos entre chaque série</span>
                   </>
                 )}
               </>
