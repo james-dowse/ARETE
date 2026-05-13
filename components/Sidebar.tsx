@@ -66,8 +66,8 @@ export default function Sidebar() {
       {/* ── Séparateur ── */}
       <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(200,169,81,0.15) 0%, transparent 80%)', margin: collapsed ? '0 8px' : '0 20px', transition: 'margin 0.22s', flexShrink: 0 }} />
 
-      {/* ── Main nav ── */}
-      <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: collapsed ? '20px 8px 0' : '20px 12px 0', transition: 'padding 0.22s', overflowY: 'auto' }}>
+      {/* ── Main nav — hauteur naturelle (pas flex:1) ── */}
+      <nav style={{ display: 'flex', flexDirection: 'column', padding: collapsed ? '20px 8px 0' : '20px 12px 0', transition: 'padding 0.22s' }}>
         {!collapsed && (
           <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.14em', padding: '0 10px', marginBottom: 10, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
             Navigation
@@ -110,8 +110,8 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* ── Bouton plier/déplier — juste sous les liens ── */}
-      <div style={{ padding: collapsed ? '12px 8px' : '12px 12px', flexShrink: 0 }}>
+      {/* ── Bouton toggle — collé sous les liens ── */}
+      <div style={{ padding: collapsed ? '10px 8px' : '10px 12px', flexShrink: 0 }}>
         <button
           onClick={() => setCollapsed(c => !c)}
           title={collapsed ? 'Déplier le menu' : 'Replier le menu'}
@@ -120,7 +120,7 @@ export default function Sidebar() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: collapsed ? 0 : 8,
+            gap: 8,
             background: 'rgba(200,169,81,0.08)',
             border: '1px solid rgba(200,169,81,0.22)',
             borderRadius: 8,
@@ -128,7 +128,6 @@ export default function Sidebar() {
             cursor: 'pointer',
             color: 'rgba(200,169,81,0.7)',
             transition: 'color 0.15s, background 0.15s, border-color 0.15s',
-            whiteSpace: 'nowrap',
             overflow: 'hidden',
           }}
           onMouseEnter={e => {
@@ -144,21 +143,21 @@ export default function Sidebar() {
             b.style.color = 'rgba(200,169,81,0.7)'
           }}
         >
-          {collapsed
-            ? <ChevronRight size={16} strokeWidth={2.5} />
-            : <><ChevronLeft size={16} strokeWidth={2.5} /><span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.04em', maxWidth: collapsed ? 0 : 100, opacity: collapsed ? 0 : 1, transition: 'max-width 0.22s, opacity 0.15s', overflow: 'hidden' }}>Replier</span></>
-          }
+          {collapsed ? <ChevronRight size={16} strokeWidth={2.5} /> : <ChevronLeft size={16} strokeWidth={2.5} />}
+          <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.04em', maxWidth: collapsed ? 0 : 80, opacity: collapsed ? 0 : 1, transition: 'max-width 0.22s, opacity 0.15s', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            Replier
+          </span>
         </button>
       </div>
 
-      {/* ── Footer ── */}
-      {!collapsed && (
-        <div style={{ padding: '8px 20px 16px', flexShrink: 0 }}>
+      {/* ── Footer — poussé en bas ── */}
+      <div style={{ marginTop: 'auto', padding: collapsed ? '16px 0' : '16px 20px', flexShrink: 0 }}>
+        {!collapsed && (
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.10)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             © 2026 ARETE
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </aside>
   )
 }
