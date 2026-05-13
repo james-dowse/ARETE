@@ -1,8 +1,7 @@
 'use client'
 import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
-import { useState, useMemo } from 'react'
-import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown, Upload } from 'lucide-react'
-import { useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown, Upload, CheckSquare } from 'lucide-react'
 
 interface Movement {
   id: string; name: string; bioType: string; complexity: string
@@ -191,6 +190,12 @@ export default function AdminClient({
   const [importing, setImporting] = useState(false)
   const importRef = useRef<HTMLInputElement>(null)
 
+  // ── Bulk selection state ──
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkWorking, setBulkWorking] = useState(false)
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+  const selectAllRef = useRef<HTMLInputElement>(null)
+
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2800) }
 
   // ── Filter + sort ──
@@ -207,6 +212,70 @@ export default function AdminClient({
 
   const toggleSort = (key: SortKey) => {
     setSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' })
+  }
+
+  // ── Bulk selection helpers (defined after filtered) ──
+  const allFilteredSelected = filtered.length > 0 && filtered.every(m => selected.has(m.id))
+  const someSelected = filtered.some(m => selected.has(m.id))
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someSelected && !allFilteredSelected
+    }
+  }, [someSelected, allFilteredSelected])
+
+  const toggleOne = (id: string) => {
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  const toggleAll = () => {
+    if (allFilteredSelected) {
+      setSelected(prev => { const n = new Set(prev); filtered.forEach(m => n.delete(m.id)); return n })
+    } else {
+      setSelected(prev => { const n = new Set(prev); filtered.forEach(m => n.add(m.id)); return n })
+    }
+  }
+  const clearSelection = () => setSelected(new Set())
+
+  const handleBulkUpdate = async (field: 'bioType' | 'complexity', value: string) => {
+    if (!value || selected.size === 0) return
+    setBulkWorking(true)
+    const ids = [...selected]
+    const res = await fetch('/api/movements/bulk', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, [field]: value }),
+    })
+    const data = await res.json()
+    if (res.ok && data.updated) {
+      const updMap: Record<string, Movement> = {}
+      data.updated.forEach((m: Movement) => { updMap[m.id] = m })
+      setMovements(prev => prev.map(m => updMap[m.id] ?? m))
+      showToast(`${ids.length} mouvement${ids.length > 1 ? 's' : ''} mis à jour ✓`)
+      clearSelection()
+    }
+    setBulkWorking(false)
+  }
+
+  const handleBulkDelete = async () => {
+    setBulkWorking(true)
+    const ids = [...selected]
+    const res = await fetch('/api/movements/bulk', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      const deletedSet = new Set(ids.filter((id: string) => !data.skippedIds?.includes(id)))
+      setMovements(prev => prev.filter(m => !deletedSet.has(m.id)))
+      const msg = data.skipped > 0
+        ? `${data.deleted} supprimé${data.deleted > 1 ? 's' : ''} · ${data.skipped} ignoré${data.skipped > 1 ? 's' : ''} (utilisés dans des workouts)`
+        : `${data.deleted} mouvement${data.deleted > 1 ? 's' : ''} supprimé${data.deleted > 1 ? 's' : ''} ✓`
+      showToast(msg)
+      clearSelection()
+    }
+    setBulkWorking(false)
+    setShowBulkDeleteConfirm(false)
   }
 
   // ── Edit ──
@@ -332,12 +401,77 @@ export default function AdminClient({
         )}
       </div>
 
+      {/* ── Bulk action bar ── */}
+      {selected.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '10px 16px', background: 'rgba(200,169,81,0.08)', border: '1px solid rgba(200,169,81,0.25)', borderRadius: 10, flexWrap: 'wrap' }}>
+          <CheckSquare size={15} color="var(--gold,#C9A535)" />
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold,#C9A535)', marginRight: 4 }}>
+            {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
+          </span>
+          <button onClick={clearSelection} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
+            Désélectionner
+          </button>
+
+          <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+
+          {/* BioType */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>TYPE</span>
+            <select
+              defaultValue=""
+              onChange={e => { handleBulkUpdate('bioType', e.target.value); e.target.value = '' }}
+              disabled={bulkWorking}
+              style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-primary)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="" disabled>Changer…</option>
+              {BIO_TYPES.map(bt => <option key={bt} value={bt}>{BIO_TYPE_ICONS[bt]} {bt}</option>)}
+            </select>
+          </div>
+
+          {/* Complexity */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>COMPLEXITÉ</span>
+            <select
+              defaultValue=""
+              onChange={e => { handleBulkUpdate('complexity', e.target.value); e.target.value = '' }}
+              disabled={bulkWorking}
+              style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-primary)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="" disabled>Changer…</option>
+              {COMPLEXITIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+
+          <button
+            onClick={() => setShowBulkDeleteConfirm(true)}
+            disabled={bulkWorking}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 7, color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+          >
+            <Trash2 size={12} /> Supprimer
+          </button>
+
+          {bulkWorking && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>En cours…</span>}
+        </div>
+      )}
+
       {/* Table */}
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+                <th style={{ padding: '10px 8px 10px 14px', width: 36 }}>
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    onChange={toggleAll}
+                    title={allFilteredSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+                    style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--gold,#C9A535)' }}
+                  />
+                </th>
                 <SortTh label="ID" field="id" sort={sort} onSort={toggleSort} />
                 <SortTh label="NOM" field="name" sort={sort} onSort={toggleSort} />
                 <SortTh label="TYPE" field="bioType" sort={sort} onSort={toggleSort} />
@@ -354,7 +488,16 @@ export default function AdminClient({
                 const usage = usageMap[m.id] || 0
                 const rowBg = isEditing ? 'var(--dirty)' : idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.025)'
                 return (
-                  <tr key={m.id} onDoubleClick={() => { if (!isEditing) startEdit(m) }} style={{ borderBottom: '1px solid var(--border)', background: rowBg, transition: 'background 0.1s', cursor: isEditing ? 'default' : 'pointer' }}>
+                  <tr key={m.id} onDoubleClick={() => { if (!isEditing) startEdit(m) }} style={{ borderBottom: '1px solid var(--border)', background: selected.has(m.id) ? 'rgba(200,169,81,0.06)' : rowBg, transition: 'background 0.1s', cursor: isEditing ? 'default' : 'pointer' }}>
+                    {/* Checkbox */}
+                    <td style={{ padding: '8px 8px 8px 14px' }} onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(m.id)}
+                        onChange={() => toggleOne(m.id)}
+                        style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--gold,#C9A535)' }}
+                      />
+                    </td>
                     {/* ID */}
                     <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: 'var(--text-dim)', fontSize: 12, whiteSpace: 'nowrap' }}>{m.id}</td>
 
@@ -471,6 +614,23 @@ export default function AdminClient({
           onConfirm={() => confirmDelete(deletingId)}
           onCancel={() => setDeletingId(null)}
         />
+      )}
+      {showBulkDeleteConfirm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={() => setShowBulkDeleteConfirm(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
+          <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px', width: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.6)', textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Supprimer {selected.size} mouvements ?</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6 }}>Les mouvements utilisés dans des workouts seront ignorés.</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 22 }}>Cette action est irréversible.</div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button onClick={() => setShowBulkDeleteConfirm(false)} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={handleBulkDelete} disabled={bulkWorking} style={{ padding: '8px 22px', background: '#ef4444', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: bulkWorking ? 'wait' : 'pointer', opacity: bulkWorking ? 0.7 : 1 }}>
+                {bulkWorking ? 'Suppression…' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Toast */}
