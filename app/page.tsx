@@ -57,7 +57,9 @@ export default async function DashboardPage() {
   const dateStr = formatDate()
 
   const user = await getCurrentUser()
-  const displayName = user ? getDisplayName(user.email) : null
+  const displayName = user
+    ? (user.firstName?.trim() || getDisplayName(user.email))
+    : null
 
   const [movementCount, workoutCount, templateCount, recentWorkouts, bioStats, complexityStats] = await Promise.all([
     prisma.movement.count(),

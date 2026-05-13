@@ -1,7 +1,7 @@
 'use client'
 import AppShell from '@/components/AppShell'
-import { useState, useEffect } from 'react'
-import { Mail, Trash2, RefreshCw, UserPlus, CheckCircle, Clock, Copy, Check, Link2, AlertTriangle, Pencil, X, Save } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Mail, Trash2, RefreshCw, UserPlus, CheckCircle, Clock, Copy, Check, Link2, AlertTriangle, Pencil, X, Save, Camera } from 'lucide-react'
 
 interface InvitedUser {
   id: string
@@ -281,6 +281,8 @@ function AdminProfileModal({ profile, onClose, onSaved }: { profile: UserProfile
   const [avatarUrl, setAvatarUrl] = useState<string | null>(profile.avatarUrl)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const initials = ((firstName[0] ?? '') + (lastName[0] ?? '')).toUpperCase() || profile.email[0].toUpperCase()
 
@@ -295,6 +297,28 @@ function AdminProfileModal({ profile, onClose, onSaved }: { profile: UserProfile
     setSaving(false); setSaved(true)
     onSaved({ ...profile, ...updated })
     setTimeout(() => setSaved(false), 2500)
+  }
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    const resized = await resizeImage(file, 400)
+    // Convert to base64 data URL
+    const dataUrl = await new Promise<string>(resolve => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.readAsDataURL(resized)
+    })
+    await fetch(`/api/admin/users/${profile.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatarUrl: dataUrl }),
+    })
+    setAvatarUrl(dataUrl)
+    onSaved({ ...profile, avatarUrl: dataUrl })
+    setUploading(false)
+    if (fileRef.current) fileRef.current.value = ''
   }
 
   async function handleRemoveAvatar() {
@@ -325,23 +349,37 @@ function AdminProfileModal({ profile, onClose, onSaved }: { profile: UserProfile
 
         {/* Avatar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-elevated)', border: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
-            {avatarUrl
-              ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : initials}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-elevated)', border: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: 'var(--accent)' }}>
+              {avatarUrl
+                ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : initials}
+            </div>
+            {uploading && (
+              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 18, height: 18, border: '2.5px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              </div>
+            )}
           </div>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>{(firstName || lastName) ? `${firstName} ${lastName}`.trim() : profile.email}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{(firstName || lastName) ? `${firstName} ${lastName}`.trim() : profile.email}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => fileRef.current?.click()}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+              >
+                <Camera size={11} /> {avatarUrl ? 'Changer' : 'Ajouter une photo'}
+              </button>
+              {avatarUrl && (
+                <button onClick={handleRemoveAvatar} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid var(--border)', borderRadius: 7, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}>
+                  <Trash2 size={10} /> Supprimer
+                </button>
+              )}
               <span style={{ padding: '2px 8px', borderRadius: 20, background: profile.status === 'accepted' ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)', color: profile.status === 'accepted' ? '#22c55e' : '#f59e0b', fontWeight: 600, fontSize: 11 }}>
                 {profile.status === 'accepted' ? 'Actif' : 'En attente'}
               </span>
-              {avatarUrl && (
-                <button onClick={handleRemoveAvatar} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3, padding: 0 }}>
-                  <Trash2 size={10} /> Supprimer la photo
-                </button>
-              )}
             </div>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
           </div>
         </div>
 
@@ -447,4 +485,26 @@ function UserRow({ user, onRevoke, isProtected, onEditProfile }: { user: Invited
       )}
     </div>
   )
+}
+
+async function resizeImage(file: File, maxSize: number): Promise<File> {
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onload = () => {
+      let { width, height } = img
+      if (width > height) {
+        if (width > maxSize) { height = Math.round(height * maxSize / width); width = maxSize }
+      } else {
+        if (height > maxSize) { width = Math.round(width * maxSize / height); height = maxSize }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width; canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        blob => resolve(new File([blob!], file.name, { type: 'image/jpeg' })),
+        'image/jpeg', 0.85
+      )
+    }
+    img.src = URL.createObjectURL(file)
+  })
 }
