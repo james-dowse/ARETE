@@ -44,6 +44,7 @@ export default function GeneratorPage() {
   const [templates, setTemplates] = useState<{ id: string; name: string; blocks: Block[] }[]>([])
   const [loadingTemplates, setLoadingTemplates] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
+  const [claimingTemplates, setClaimingTemplates] = useState(false)
 
   // Track which block cards are collapsed
   const [collapsedBlocks, setCollapsedBlocks] = useState<Record<string, boolean>>({})
@@ -174,6 +175,18 @@ export default function GeneratorPage() {
 
   const applyTemplate = (tpl: { blocks: Block[] }) => {
     setBlocks(tpl.blocks); setShowTemplates(false); setGenerated(null)
+  }
+
+  const claimTemplates = async () => {
+    setClaimingTemplates(true)
+    try {
+      const res = await fetch('/api/templates/claim', { method: 'POST' })
+      const { claimed } = await res.json()
+      if (claimed > 0) await loadTemplates()
+      else setShowTemplates(false)
+    } finally {
+      setClaimingTemplates(false)
+    }
   }
 
   const totalMovements = blocks.reduce((s, b) => s + b.count, 0)
@@ -351,6 +364,19 @@ export default function GeneratorPage() {
                 <Save size={12} /> {loadingTemplates ? '…' : 'Mes templates'}
               </button>
             </div>
+
+            {showTemplates && templates.length === 0 && (
+              <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Aucun template trouvé pour ce compte.</span>
+                <button
+                  onClick={claimTemplates}
+                  disabled={claimingTemplates}
+                  style={{ fontSize: 12, color: 'var(--gold,#C9A535)', background: 'none', border: '1px solid rgba(201,165,53,0.35)', borderRadius: 6, padding: '5px 11px', cursor: claimingTemplates ? 'wait' : 'pointer', whiteSpace: 'nowrap', opacity: claimingTemplates ? 0.6 : 1 }}
+                >
+                  {claimingTemplates ? '…' : '↩ Récupérer mes anciens templates'}
+                </button>
+              </div>
+            )}
 
             {showTemplates && templates.length > 0 && (
               <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 12, marginBottom: 14 }}>

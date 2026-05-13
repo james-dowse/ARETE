@@ -246,6 +246,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [sharingWorkout, setSharingWorkout] = useState<Workout | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [claiming, setClaiming] = useState(false)
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
@@ -305,6 +306,22 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
 
   const hasAnything = myWorkouts.length > 0 || savedWorkouts.length > 0
 
+  const handleClaimWorkouts = async () => {
+    setClaiming(true)
+    try {
+      const res = await fetch('/api/workouts/claim', { method: 'POST' })
+      const { claimed } = await res.json()
+      if (claimed > 0) {
+        setToast(`${claimed} workout${claimed > 1 ? 's' : ''} récupéré${claimed > 1 ? 's' : ''} ✓`)
+        await loadMine()
+      } else {
+        setToast('Aucun workout orphelin trouvé')
+      }
+    } finally {
+      setClaiming(false)
+    }
+  }
+
   return (
     <>
       {/* Tabs + compteur dynamique */}
@@ -345,11 +362,20 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
               <div style={{ fontSize: 44, marginBottom: 14 }}>📭</div>
               <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucun workout</div>
               <div style={{ fontSize: 13, marginBottom: 24 }}>Génère et sauvegarde ton premier workout</div>
-              <Link href="/generator">
-                <button style={{ padding: '11px 26px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                  <Zap size={14} /> Générer
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Link href="/generator">
+                  <button style={{ padding: '11px 26px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                    <Zap size={14} /> Générer
+                  </button>
+                </Link>
+                <button
+                  onClick={handleClaimWorkouts}
+                  disabled={claiming}
+                  style={{ padding: '11px 20px', background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: claiming ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, opacity: claiming ? 0.6 : 1 }}
+                >
+                  {claiming ? '…' : '↩ Récupérer mes anciens workouts'}
                 </button>
-              </Link>
+              </div>
             </div>
           )}
 

@@ -121,7 +121,7 @@ export default async function DashboardPage() {
         {/* ── Stats ────────────────────────────────────────────── */}
         <div className="r-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, marginBottom: 2, background: 'var(--border)' }}>
           {[
-            { value: workoutCount,   label: 'Workouts sauvegardés' },
+            { value: workoutCount,   label: 'Workouts' },
             { value: movementCount,  label: 'Mouvements' },
             { value: templateCount,  label: 'Templates' },
           ].map(({ value, label }, i) => (
