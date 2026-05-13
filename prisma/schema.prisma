@@ -88,6 +88,10 @@ model InvitedUser {
   status         String            @default("pending")
   invitedAt      DateTime          @default(now())
   acceptedAt     DateTime?
+  firstName      String?
+  lastName       String?
+  bio            String?
+  avatarUrl      String?
   workouts       Workout[]
   templates      WorkoutTemplate[]
   sharesSent     WorkoutShare[]    @relation("SharesSent")

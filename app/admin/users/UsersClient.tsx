@@ -1,7 +1,7 @@
 'use client'
 import AppShell from '@/components/AppShell'
 import { useState, useEffect } from 'react'
-import { Mail, Trash2, RefreshCw, UserPlus, CheckCircle, Clock, Copy, Check, Link2, AlertTriangle } from 'lucide-react'
+import { Mail, Trash2, RefreshCw, UserPlus, CheckCircle, Clock, Copy, Check, Link2, AlertTriangle, Pencil, X, Save } from 'lucide-react'
 
 interface InvitedUser {
   id: string
@@ -10,6 +10,12 @@ interface InvitedUser {
   invitedAt: string
   acceptedAt?: string | null
   token: string
+}
+
+interface UserProfile {
+  id: string; email: string; status: string
+  firstName: string | null; lastName: string | null
+  bio: string | null; avatarUrl: string | null
 }
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3040'
@@ -43,6 +49,7 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
   const [email, setEmail] = useState('')
   const [inviting, setInviting] = useState(false)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'warning' | 'error'; msg: string; inviteUrl?: string } | null>(null)
+  const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null)
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -198,7 +205,10 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
           <div style={{ marginBottom: 24 }}>
             <SectionLabel icon={<Clock size={13} />} label={`En attente · ${pending.length}`} color="var(--orange,#f59e0b)" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {pending.map(u => <UserRow key={u.id} user={u} onRevoke={revoke} isProtected={u.email === adminEmail} />)}
+              {pending.map(u => <UserRow key={u.id} user={u} onRevoke={revoke} isProtected={u.email === adminEmail} onEditProfile={async () => {
+                const res = await fetch(`/api/admin/users/${u.id}`)
+                setEditingProfile(await res.json())
+              }} />)}
             </div>
           </div>
         )}
@@ -208,11 +218,23 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
           <div>
             <SectionLabel icon={<CheckCircle size={13} />} label={`Accès actif · ${accepted.length}`} color="var(--green,#22c55e)" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {accepted.map(u => <UserRow key={u.id} user={u} onRevoke={revoke} isProtected={u.email === adminEmail} />)}
+              {accepted.map(u => <UserRow key={u.id} user={u} onRevoke={revoke} isProtected={u.email === adminEmail} onEditProfile={async () => {
+                const res = await fetch(`/api/admin/users/${u.id}`)
+                setEditingProfile(await res.json())
+              }} />)}
             </div>
           </div>
         )}
       </div>
+
+      {/* ── Modale édition profil (admin) ── */}
+      {editingProfile && (
+        <AdminProfileModal
+          profile={editingProfile}
+          onClose={() => setEditingProfile(null)}
+          onSaved={updated => setEditingProfile(updated)}
+        />
+      )}
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -252,7 +274,125 @@ function InviteLinkBox({ url }: { url: string }) {
   )
 }
 
-function UserRow({ user, onRevoke, isProtected }: { user: InvitedUser; onRevoke: (id: string, email: string) => void; isProtected?: boolean }) {
+function AdminProfileModal({ profile, onClose, onSaved }: { profile: UserProfile; onClose: () => void; onSaved: (updated: UserProfile) => void }) {
+  const [firstName, setFirstName] = useState(profile.firstName ?? '')
+  const [lastName, setLastName] = useState(profile.lastName ?? '')
+  const [bio, setBio] = useState(profile.bio ?? '')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(profile.avatarUrl)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  const initials = ((firstName[0] ?? '') + (lastName[0] ?? '')).toUpperCase() || profile.email[0].toUpperCase()
+
+  async function handleSave() {
+    setSaving(true); setSaved(false)
+    const res = await fetch(`/api/admin/users/${profile.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, bio }),
+    })
+    const updated = await res.json()
+    setSaving(false); setSaved(true)
+    onSaved({ ...profile, ...updated })
+    setTimeout(() => setSaved(false), 2500)
+  }
+
+  async function handleRemoveAvatar() {
+    await fetch(`/api/admin/users/${profile.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatarUrl: null }),
+    })
+    setAvatarUrl(null)
+    onSaved({ ...profile, avatarUrl: null })
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 480, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 18 }}>Profil utilisateur</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>{profile.email}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: 'var(--text-muted)', borderRadius: 6 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Avatar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-elevated)', border: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
+            {avatarUrl
+              ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : initials}
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{(firstName || lastName) ? `${firstName} ${lastName}`.trim() : profile.email}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ padding: '2px 8px', borderRadius: 20, background: profile.status === 'accepted' ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)', color: profile.status === 'accepted' ? '#22c55e' : '#f59e0b', fontWeight: 600, fontSize: 11 }}>
+                {profile.status === 'accepted' ? 'Actif' : 'En attente'}
+              </span>
+              {avatarUrl && (
+                <button onClick={handleRemoveAvatar} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3, padding: 0 }}>
+                  <Trash2 size={10} /> Supprimer la photo
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Fields */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>PRÉNOM</label>
+            <input
+              value={firstName} onChange={e => setFirstName(e.target.value)}
+              placeholder="Jean"
+              style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 11px', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>NOM</label>
+            <input
+              value={lastName} onChange={e => setLastName(e.target.value)}
+              placeholder="Dupont"
+              style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 11px', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>DESCRIPTION</label>
+          <textarea
+            value={bio} onChange={e => setBio(e.target.value)}
+            placeholder="Quelques mots sur la pratique, les objectifs…"
+            rows={3}
+            style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 11px', color: 'var(--text-primary)', fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6, boxSizing: 'border-box' }}
+          />
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', background: 'none', border: '1px solid var(--border)', borderRadius: 9, fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', cursor: 'pointer' }}>
+            Annuler
+          </button>
+          <button
+            onClick={handleSave} disabled={saving}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', background: saved ? 'var(--green,#22c55e)' : 'var(--accent)', color: saved ? '#fff' : 'var(--on-accent)', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: saving ? 'wait' : 'pointer', transition: 'background 0.2s' }}
+          >
+            {saved ? <><Check size={13} /> Enregistré</> : <><Save size={13} /> {saving ? 'Sauvegarde…' : 'Enregistrer'}</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function UserRow({ user, onRevoke, isProtected, onEditProfile }: { user: InvitedUser; onRevoke: (id: string, email: string) => void; isProtected?: boolean; onEditProfile?: () => void }) {
   const accepted = user.status === 'accepted'
   const date = new Date(accepted && user.acceptedAt ? user.acceptedAt : user.invitedAt)
     .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -275,6 +415,16 @@ function UserRow({ user, onRevoke, isProtected }: { user: InvitedUser; onRevoke:
         <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600, flexShrink: 0, background: accepted ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)', color: accepted ? '#22c55e' : '#f59e0b', border: `1px solid ${accepted ? 'rgba(34,197,94,0.25)' : 'rgba(245,158,11,0.25)'}` }}>
           {accepted ? 'Actif' : 'En attente'}
         </span>
+
+        <button
+          onClick={onEditProfile}
+          title="Éditer le profil"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: 'var(--text-dim)', borderRadius: 6, flexShrink: 0 }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--gold,#C9A535)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}
+        >
+          <Pencil size={14} />
+        </button>
 
         {!isProtected && (
           <button

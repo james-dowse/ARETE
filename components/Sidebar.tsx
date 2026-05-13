@@ -3,15 +3,16 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react'
 
 const allNav = [
   { href: '/',            label: 'Dashboard',    icon: LayoutDashboard, admin: false },
   { href: '/generator',   label: 'Générateur',   icon: Zap,             admin: false },
   { href: '/library',     label: 'Bibliothèque', icon: Library,         admin: false },
+  { href: '/workouts',    label: 'Workouts',     icon: BookOpen,        admin: false },
+  { href: '/profile',     label: 'Mon profil',   icon: UserCircle,      admin: false },
   { href: '/admin',       label: 'Mouvements',   icon: Settings2,       admin: true, sub: true },
   { href: '/admin/users', label: 'Utilisateurs', icon: Users,           admin: true, sub: true },
-  { href: '/workouts',    label: 'Workouts',     icon: BookOpen,        admin: false },
 ]
 
 const EXPANDED_WIDTH = 224
