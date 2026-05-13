@@ -484,6 +484,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const originals = initial.movements
 
   const [duplicating, setDuplicating] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
 
@@ -589,6 +590,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     router.push(`/workouts/${copy.id}`)
   }
 
+  const handleDelete = async () => {
+    if (!confirm('Supprimer définitivement ce workout ?')) return
+    setDeleting(true)
+    await fetch(`/api/workouts/${initial.id}`, { method: 'DELETE' })
+    router.push(backTo ?? '/workouts')
+  }
+
   const allMovementIds = editMode
     ? editStates.map(es => es.movementId)
     : initial.movements.map(m => m.movementId)
@@ -646,6 +654,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                 <button onClick={handleEnterEdit}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                   <Pencil size={14} /> Modifier
+                </button>
+                <button onClick={handleDelete} disabled={deleting}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 9, color: deleting ? 'var(--text-dim)' : '#ef4444', fontSize: 13, fontWeight: 600, cursor: deleting ? 'wait' : 'pointer', opacity: deleting ? 0.6 : 1, transition: 'all 0.15s' }}
+                  onMouseEnter={e => { if (!deleting) { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor = '#ef4444' } }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                >
+                  <Trash2 size={14} />
                 </button>
               </>
             ) : (
