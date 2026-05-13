@@ -8,6 +8,12 @@ interface Movement {
   description?: string | null; imageUrl?: string | null; videoUrl?: string | null
 }
 
+interface UsageWorkout {
+  id: string; name: string; createdAt: string; duration?: number | null
+  user?: { firstName: string | null; lastName: string | null; email: string } | null
+  _count: { movements: number }
+}
+
 type SortKey = 'id' | 'name' | 'bioType' | 'complexity'
 type SortDir = 'asc' | 'desc'
 
@@ -190,6 +196,19 @@ export default function AdminClient({
   const [importing, setImporting] = useState(false)
   const importRef = useRef<HTMLInputElement>(null)
 
+  // ── Usage panel ──
+  const [usagePanel, setUsagePanel] = useState<{ id: string; name: string; workouts: UsageWorkout[] } | null>(null)
+  const [usagePanelLoading, setUsagePanelLoading] = useState(false)
+
+  const openUsagePanel = async (m: Movement) => {
+    setUsagePanel({ id: m.id, name: m.name, workouts: [] })
+    setUsagePanelLoading(true)
+    const res = await fetch(`/api/movements/${encodeURIComponent(m.id)}/workouts`)
+    const data = await res.json()
+    setUsagePanel({ id: m.id, name: m.name, workouts: data })
+    setUsagePanelLoading(false)
+  }
+
   // ── Bulk selection state ──
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkWorking, setBulkWorking] = useState(false)
@@ -351,7 +370,7 @@ export default function AdminClient({
   const bioStats = BIO_TYPES.map(bt => ({ bt, count: movements.filter(m => m.bioType === bt).length }))
 
   return (
-    <div style={{ maxWidth: 1200 }}>
+    <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', maxWidth: usagePanel ? 1600 : 1200 }}><div style={{ flex: 1, minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
         <div>
@@ -557,9 +576,17 @@ export default function AdminClient({
 
                     {/* Usage */}
                     <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                      <span style={{ fontSize: 12, color: usage > 0 ? 'var(--blue)' : 'var(--text-dim)', fontWeight: usage > 0 ? 700 : 400 }}>
-                        {usage > 0 ? usage : '—'}
-                      </span>
+                      {usage > 0 ? (
+                        <button
+                          onClick={() => openUsagePanel(m)}
+                          title="Voir les workouts"
+                          style={{ fontSize: 12, fontWeight: 700, color: usagePanel?.id === m.id ? 'var(--gold,#C9A535)' : 'var(--blue,#60a5fa)', background: usagePanel?.id === m.id ? 'rgba(200,169,81,0.12)' : 'rgba(96,165,250,0.08)', border: `1px solid ${usagePanel?.id === m.id ? 'rgba(200,169,81,0.3)' : 'rgba(96,165,250,0.2)'}`, borderRadius: 6, padding: '2px 9px', cursor: 'pointer', transition: 'all 0.15s' }}
+                        >
+                          {usage}
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>—</span>
+                      )}
                     </td>
 
                     {/* Actions */}
@@ -698,7 +725,70 @@ export default function AdminClient({
         tr:hover .row-actions { opacity: 1 !important; transition: opacity 0.15s; }
         .row-actions { transition: opacity 0.15s; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .usage-row:hover { background: var(--bg-elevated) !important; }
       `}</style>
-    </div>
+    </div>{/* end flex:1 main content */}
+
+    {/* ── Usage panel ── */}
+    {usagePanel && (
+      <div style={{ width: 340, flexShrink: 0, position: 'sticky', top: 24 }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
+          {/* Header */}
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>Utilisé dans</div>
+              <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{usagePanel.name}</div>
+            </div>
+            <button onClick={() => setUsagePanel(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}>
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* List */}
+          <div style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
+            {usagePanelLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12 }}>
+                {[1,2,3].map(i => <div key={i} style={{ height: 52, background: 'var(--bg-elevated)', borderRadius: 8, opacity: 0.5 }} />)}
+              </div>
+            ) : usagePanel.workouts.length === 0 ? (
+              <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Aucun workout trouvé</div>
+            ) : (
+              <div>
+                {usagePanel.workouts.map((w, i) => {
+                  const author = w.user ? ((w.user.firstName || w.user.lastName) ? `${w.user.firstName ?? ''} ${w.user.lastName ?? ''}`.trim() : w.user.email) : null
+                  const date = new Date(w.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+                  return (
+                    <a
+                      key={w.id}
+                      href={`/workouts/${w.id}?from=admin`}
+                      className="usage-row"
+                      style={{ display: 'block', padding: '11px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none', textDecoration: 'none', transition: 'background 0.12s' }}
+                    >
+                      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 8 }}>
+                        <span>{date}</span>
+                        <span>·</span>
+                        <span>{w._count.movements} mouv.</span>
+                        {w.duration && <><span>·</span><span>{w.duration} min</span></>}
+                        {author && <><span>·</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{author}</span></>}
+                      </div>
+                    </a>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Footer count */}
+          {!usagePanelLoading && usagePanel.workouts.length > 0 && (
+            <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-dim)' }}>
+              {usagePanel.workouts.length} workout{usagePanel.workouts.length > 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+
+    </div>{/* end outer flex wrapper */}
   )
 }

@@ -4,8 +4,14 @@ import WorkoutDetailClient from './WorkoutDetailClient'
 
 export const dynamic = 'force-dynamic'
 
-export default async function WorkoutDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function WorkoutDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ from?: string }>
+}) {
+  const [{ id }, { from }] = await Promise.all([params, searchParams])
   const workout = await prisma.workout.findUnique({
     where: { id },
     include: {
@@ -16,5 +22,5 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
   })
   if (!workout) notFound()
 
-  return <WorkoutDetailClient workout={JSON.parse(JSON.stringify(workout))} />
+  return <WorkoutDetailClient workout={JSON.parse(JSON.stringify(workout))} backTo={from === 'admin' ? '/admin' : undefined} />
 }

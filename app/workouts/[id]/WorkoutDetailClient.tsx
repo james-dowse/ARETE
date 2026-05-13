@@ -471,7 +471,7 @@ function fmtMin(min: number) {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function WorkoutDetailClient({ workout: initial }: { workout: Workout }) {
+export default function WorkoutDetailClient({ workout: initial, backTo }: { workout: Workout; backTo?: string }) {
   const router = useRouter()
 
   const [editMode, setEditMode] = useState(false)
@@ -621,8 +621,8 @@ export default function WorkoutDetailClient({ workout: initial }: { workout: Wor
   return (
     <AppShell>
       <div style={{ maxWidth: 700, paddingBottom: isDirty ? 100 : 32 }}>
-        <Link href="/workouts" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', textDecoration: 'none', fontSize: 13, marginBottom: 24 }}>
-          <ArrowLeft size={14} /> Retour aux workouts
+        <Link href={backTo ?? '/workouts'} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', textDecoration: 'none', fontSize: 13, marginBottom: 24 }}>
+          <ArrowLeft size={14} /> {backTo === '/admin' ? 'Retour à l\'administration' : 'Retour aux workouts'}
         </Link>
 
         {/* Header */}
