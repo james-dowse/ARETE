@@ -107,12 +107,13 @@ function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => voi
 
 // ── Workout card ─────────────────────────────────────────────────────────────
 function WorkoutCard({
-  w, context, onShare, onToggleSave,
+  w, context, onShare, onToggleSave, onDelete,
 }: {
   w: Workout
   context: 'mine' | 'saved' | 'community'
   onShare?: () => void
   onToggleSave?: (saved: boolean) => void
+  onDelete?: () => void
 }) {
   const [saving, setSaving] = useState(false)
   const [isSaved, setIsSaved] = useState(w.isSaved ?? false)
@@ -217,7 +218,7 @@ function WorkoutCard({
               </button>
             )}
           </div>
-          {context === 'mine' && <WorkoutActions workoutId={w.id} />}
+          {context === 'mine' && <WorkoutActions workoutId={w.id} onDelete={onDelete} />}
         </div>
       )}
     </div>
@@ -352,6 +353,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                     w={w}
                     context="mine"
                     onShare={() => setSharingWorkout(w)}
+                    onDelete={() => setMyWorkouts(prev => prev.filter(x => x.id !== w.id))}
                   />
                 ))}
               </div>

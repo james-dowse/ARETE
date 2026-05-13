@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation'
 import { Trash2, Copy } from 'lucide-react'
 import { useState } from 'react'
 
-export default function WorkoutActions({ workoutId }: { workoutId: string }) {
+export default function WorkoutActions({ workoutId, onDelete }: { workoutId: string; onDelete?: () => void }) {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
@@ -14,7 +14,11 @@ export default function WorkoutActions({ workoutId }: { workoutId: string }) {
     if (!confirm('Supprimer ce workout ?')) return
     setDeleting(true)
     await fetch(`/api/workouts/${workoutId}`, { method: 'DELETE' })
-    router.refresh()
+    if (onDelete) {
+      onDelete()
+    } else {
+      router.refresh()
+    }
   }
 
   const handleDuplicate = async (e: React.MouseEvent) => {

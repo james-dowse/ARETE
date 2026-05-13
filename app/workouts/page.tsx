@@ -10,7 +10,11 @@ export const dynamic = 'force-dynamic'
 
 export default async function WorkoutsPage() {
   const currentUserId = await getCurrentUserId()
-  const total = await prisma.workout.count()
+  const total = await prisma.workout.count({
+    where: currentUserId
+      ? { userId: { not: null }, NOT: { userId: currentUserId } }
+      : { userId: { not: null } },
+  })
 
   return (
     <AppShell>
