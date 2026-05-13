@@ -37,7 +37,7 @@ function CopyLinkButton({ token }: { token: string }) {
   )
 }
 
-export default function UsersClient() {
+export default function UsersClient({ adminEmail }: { adminEmail: string }) {
   const [users, setUsers] = useState<InvitedUser[]>([])
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
@@ -198,7 +198,7 @@ export default function UsersClient() {
           <div style={{ marginBottom: 24 }}>
             <SectionLabel icon={<Clock size={13} />} label={`En attente · ${pending.length}`} color="var(--orange,#f59e0b)" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {pending.map(u => <UserRow key={u.id} user={u} onRevoke={revoke} />)}
+              {pending.map(u => <UserRow key={u.id} user={u} onRevoke={revoke} isProtected={u.email === adminEmail} />)}
             </div>
           </div>
         )}
@@ -208,7 +208,7 @@ export default function UsersClient() {
           <div>
             <SectionLabel icon={<CheckCircle size={13} />} label={`Accès actif · ${accepted.length}`} color="var(--green,#22c55e)" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {accepted.map(u => <UserRow key={u.id} user={u} onRevoke={revoke} />)}
+              {accepted.map(u => <UserRow key={u.id} user={u} onRevoke={revoke} isProtected={u.email === adminEmail} />)}
             </div>
           </div>
         )}
@@ -252,7 +252,7 @@ function InviteLinkBox({ url }: { url: string }) {
   )
 }
 
-function UserRow({ user, onRevoke }: { user: InvitedUser; onRevoke: (id: string, email: string) => void }) {
+function UserRow({ user, onRevoke, isProtected }: { user: InvitedUser; onRevoke: (id: string, email: string) => void; isProtected?: boolean }) {
   const accepted = user.status === 'accepted'
   const date = new Date(accepted && user.acceptedAt ? user.acceptedAt : user.invitedAt)
     .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -276,15 +276,17 @@ function UserRow({ user, onRevoke }: { user: InvitedUser; onRevoke: (id: string,
           {accepted ? 'Actif' : 'En attente'}
         </span>
 
-        <button
-          onClick={() => onRevoke(user.id, user.email)}
-          title="Révoquer l'accès"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: 'var(--text-dim)', borderRadius: 6, flexShrink: 0 }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}
-        >
-          <Trash2 size={14} />
-        </button>
+        {!isProtected && (
+          <button
+            onClick={() => onRevoke(user.id, user.email)}
+            title="Révoquer l'accès"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: 'var(--text-dim)', borderRadius: 6, flexShrink: 0 }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
       </div>
 
       {/* Lien d'invitation pour les pending */}

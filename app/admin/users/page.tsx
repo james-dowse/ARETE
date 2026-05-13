@@ -8,5 +8,6 @@ export const dynamic = 'force-dynamic'
 export default async function UsersPage() {
   const user = await getCurrentUser()
   if (!isAdmin(user?.email)) redirect('/')
-  return <UsersClient />
+  const adminEmail = (process.env.ADMIN_EMAIL || 'jimmy.dowse@gmail.com').toLowerCase()
+  return <UsersClient adminEmail={adminEmail} />
 }
