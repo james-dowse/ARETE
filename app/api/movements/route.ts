@@ -7,12 +7,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const bioType = searchParams.get('bioType')
   const complexity = searchParams.get('complexity')
+  const equipment = searchParams.get('equipment')
   const search = searchParams.get('search')
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = {}
   if (bioType) where.bioType = bioType
   if (complexity) where.complexity = complexity
+  if (equipment) where.equipment = equipment
   if (search) where.name = { contains: search }
 
   const movements = await prisma.movement.findMany({
@@ -27,7 +29,7 @@ export async function POST(req: NextRequest) {
   if (!isAdmin(user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { id, name, bioType, complexity, description, imageUrl, videoUrl } = body
+  const { id, name, bioType, complexity, equipment, description, imageUrl, videoUrl } = body
 
   if (!id?.trim() || !name?.trim() || !bioType?.trim() || !complexity?.trim()) {
     return NextResponse.json({ error: 'id, name, bioType et complexity sont requis' }, { status: 400 })
@@ -45,6 +47,7 @@ export async function POST(req: NextRequest) {
       name: name.trim(),
       bioType: bioType.trim(),
       complexity: complexity.trim(),
+      equipment: equipment?.trim() || null,
       description: description?.trim() || null,
       imageUrl: imageUrl?.trim() || null,
       videoUrl: videoUrl?.trim() || null,

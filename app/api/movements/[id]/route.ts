@@ -16,7 +16,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params
   const body = await req.json()
-  const { name, bioType, complexity, description, imageUrl, videoUrl } = body
+  const { name, bioType, complexity, equipment, description, imageUrl, videoUrl } = body
 
   const m = await prisma.movement.update({
     where: { id },
@@ -24,6 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(name !== undefined && { name: name.trim() }),
       ...(bioType !== undefined && { bioType: bioType.trim() }),
       ...(complexity !== undefined && { complexity: complexity.trim() }),
+      ...(equipment !== undefined && { equipment: equipment?.trim() || null }),
       ...(description !== undefined && { description: description?.trim() || null }),
       ...(imageUrl !== undefined && { imageUrl: imageUrl?.trim() || null }),
       ...(videoUrl !== undefined && { videoUrl: videoUrl?.trim() || null }),

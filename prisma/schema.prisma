@@ -11,6 +11,7 @@ model Movement {
   name             String
   bioType          String
   complexity       String
+  equipment        String?
   description      String?
   imageUrl         String?
   videoUrl         String?
@@ -76,6 +77,7 @@ model TemplateBlock {
   templateId String
   bioType    String?
   complexity String?
+  equipments String?
   count      Int
   order      Int
   template   WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)

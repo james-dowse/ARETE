@@ -1,13 +1,21 @@
 'use client'
 import AppShell from '@/components/AppShell'
-import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, type TemplateBlockInput, type GeneratedMovement } from '@/lib/types'
+import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, type GeneratedMovement } from '@/lib/types'
 import RichEditor from '@/components/RichEditor'
 import { useState } from 'react'
 import { Plus, Trash2, Zap, Save, RefreshCw, Clock, Minus, ChevronDown, ChevronUp, Dices, Search } from 'lucide-react'
 import MovementModal from '@/components/MovementModal'
 import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
 
-interface Block extends TemplateBlockInput { id: string; instructions: string }
+interface Block {
+  id: string
+  bioTypes: string[]
+  complexities: string[]
+  equipments: string[]
+  count: number
+  order: number
+  instructions: string
+}
 interface MovementParams { sets: number; reps: string; rest: number }
 
 function uid() { return Math.random().toString(36).slice(2) }
@@ -17,7 +25,7 @@ const DEFAULT_REPS = '10'
 
 export default function GeneratorPage() {
   const [blocks, setBlocks] = useState<Block[]>([
-    { id: uid(), bioType: null, complexity: null, count: 3, order: 0, instructions: '' },
+    { id: uid(), bioTypes: [], complexities: [], equipments: [], count: 3, order: 0, instructions: '' },
   ])
   const [duration, setDuration] = useState('')
   const [workoutName, setWorkoutName] = useState('')
@@ -67,10 +75,16 @@ export default function GeneratorPage() {
     setSubstitutingIndex(null)
   }
 
-  const addBlock = () => setBlocks(prev => [...prev, { id: uid(), bioType: null, complexity: null, count: 3, order: prev.length, instructions: '' }])
+  const addBlock = () => setBlocks(prev => [...prev, { id: uid(), bioTypes: [], complexities: [], equipments: [], count: 3, order: prev.length, instructions: '' }])
   const removeBlock = (id: string) => setBlocks(prev => prev.filter(b => b.id !== id))
   const updateBlock = (id: string, field: keyof Block, value: string | number | null) =>
     setBlocks(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b))
+  const toggleBlockArr = (id: string, field: 'bioTypes' | 'complexities' | 'equipments', value: string) =>
+    setBlocks(prev => prev.map(b => {
+      if (b.id !== id) return b
+      const arr = b[field]
+      return { ...b, [field]: arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value] }
+    }))
   const toggleCollapse = (id: string) =>
     setCollapsedBlocks(prev => ({ ...prev, [id]: !prev[id] }))
 
@@ -84,7 +98,7 @@ export default function GeneratorPage() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blocks }),
+        body: JSON.stringify({ blocks: blocks.map(b => ({ bioTypes: b.bioTypes, complexities: b.complexities, equipments: b.equipments, count: b.count })) }),
       })
       const data = await res.json()
       setGenerated(data.movements)
@@ -121,7 +135,7 @@ export default function GeneratorPage() {
           })),
           blocks: blocks.map((b, i) => ({
             order: i,
-            bioType: b.bioType,
+            bioType: b.bioTypes[0] ?? null,
             instructions: b.instructions || null,
           })),
         }),
@@ -174,7 +188,9 @@ export default function GeneratorPage() {
   }
 
   const applyTemplate = (tpl: { blocks: Block[] }) => {
-    setBlocks(tpl.blocks); setShowTemplates(false); setGenerated(null)
+    setBlocks(tpl.blocks.map((b, i) => ({ ...b, id: uid(), order: i })))
+    setShowTemplates(false)
+    setGenerated(null)
   }
 
   const claimTemplates = async () => {
@@ -260,8 +276,9 @@ export default function GeneratorPage() {
 
     const randomBlocks: Block[] = Array.from({ length: nbBlocks }, (_, i) => ({
       id: uid(),
-      bioType: shuffledBioTypes[i % shuffledBioTypes.length],
-      complexity: complexities[Math.floor(Math.random() * complexities.length)],
+      bioTypes: [shuffledBioTypes[i % shuffledBioTypes.length]],
+      complexities: [complexities[Math.floor(Math.random() * complexities.length)]],
+      equipments: [],
       count: base + (i < extra ? 1 : 0),
       order: i,
       instructions: '',
@@ -410,18 +427,23 @@ export default function GeneratorPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
               {blocks.map((block, idx) => {
                 const collapsed = !!collapsedBlocks[block.id]
-                const color = block.bioType ? BIO_TYPE_COLORS[block.bioType] : 'var(--text-muted)'
                 return (
                   <div key={block.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 12px rgba(0,0,0,0.4)' }}>
                     {/* Block header row */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', cursor: 'pointer' }} onClick={() => toggleCollapse(block.id)}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 1 }}>BLOC {idx + 1}</span>
-                        {block.bioType && (
-                          <span style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${color}22`, color, border: `1px solid ${color}44`, fontWeight: 600 }}>
-                            {BIO_TYPE_ICONS[block.bioType]} {block.bioType}
+                        {block.bioTypes.map(bt => (
+                          <span key={bt} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${BIO_TYPE_COLORS[bt]}22`, color: BIO_TYPE_COLORS[bt], border: `1px solid ${BIO_TYPE_COLORS[bt]}44`, fontWeight: 600 }}>
+                            {BIO_TYPE_ICONS[bt]} {bt}
                           </span>
-                        )}
+                        ))}
+                        {block.complexities.map(c => (
+                          <span key={c} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${COMPLEXITY_COLORS[c]}22`, color: COMPLEXITY_COLORS[c], border: `1px solid ${COMPLEXITY_COLORS[c]}44`, fontWeight: 600 }}>{c}</span>
+                        ))}
+                        {block.equipments.map(eq => (
+                          <span key={eq} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontWeight: 600 }}>{EQUIPMENT_ICONS[eq]} {eq}</span>
+                        ))}
                         <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{block.count} mvt{block.count > 1 ? 's' : ''} · {fmtMin(blockEstMin(block.count, globalSets))}</span>
                         {block.instructions && (
                           <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600 }}>• instructions</span>
@@ -465,14 +487,16 @@ export default function GeneratorPage() {
                           </div>
                         </div>
                         <div style={{ marginBottom: 12 }}>
-                          <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>TYPE BIOMÉCANIQUE</label>
+                          <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                            TYPE BIOMÉCANIQUE
+                            {block.bioTypes.length === 0 && <span style={{ marginLeft: 6, fontWeight: 400, fontStyle: 'italic' }}>· tous</span>}
+                          </label>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            <button onClick={() => updateBlock(block.id, 'bioType', null)} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: !block.bioType ? '1px solid var(--text-muted)' : '1px solid var(--border)', background: !block.bioType ? 'rgba(255,255,255,0.1)' : 'var(--bg-elevated)', color: !block.bioType ? 'var(--text-primary)' : 'var(--text-muted)' }}>Tous</button>
                             {BIO_TYPES.map(bt => {
-                              const active = block.bioType === bt
+                              const active = block.bioTypes.includes(bt)
                               const c = BIO_TYPE_COLORS[bt]
                               return (
-                                <button key={bt} onClick={() => updateBlock(block.id, 'bioType', active ? null : bt)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? c : 'var(--border)'}`, background: active ? `${c}22` : 'var(--bg-elevated)', color: active ? c : 'var(--text-muted)' }}>
+                                <button key={bt} onClick={() => toggleBlockArr(block.id, 'bioTypes', bt)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? c : 'var(--border)'}`, background: active ? `${c}22` : 'var(--bg-elevated)', color: active ? c : 'var(--text-muted)', fontWeight: active ? 700 : 400 }}>
                                   {BIO_TYPE_ICONS[bt]} {bt}
                                 </button>
                               )
@@ -480,14 +504,32 @@ export default function GeneratorPage() {
                           </div>
                         </div>
                         <div style={{ marginBottom: 12 }}>
-                          <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>COMPLEXITÉ</label>
+                          <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                            COMPLEXITÉ
+                            {block.complexities.length === 0 && <span style={{ marginLeft: 6, fontWeight: 400, fontStyle: 'italic' }}>· toutes</span>}
+                          </label>
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            <button onClick={() => updateBlock(block.id, 'complexity', null)} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: !block.complexity ? '1px solid var(--text-muted)' : '1px solid var(--border)', background: !block.complexity ? 'rgba(255,255,255,0.1)' : 'var(--bg-elevated)', color: !block.complexity ? 'var(--text-primary)' : 'var(--text-muted)' }}>Tous</button>
                             {COMPLEXITIES.map(c => {
-                              const active = block.complexity === c
+                              const active = block.complexities.includes(c)
                               const cc = COMPLEXITY_COLORS[c]
                               return (
-                                <button key={c} onClick={() => updateBlock(block.id, 'complexity', active ? null : c)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? cc : 'var(--border)'}`, background: active ? `${cc}22` : 'var(--bg-elevated)', color: active ? cc : 'var(--text-muted)' }}>{c}</button>
+                                <button key={c} onClick={() => toggleBlockArr(block.id, 'complexities', c)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? cc : 'var(--border)'}`, background: active ? `${cc}22` : 'var(--bg-elevated)', color: active ? cc : 'var(--text-muted)', fontWeight: active ? 700 : 400 }}>{c}</button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                            MATÉRIEL
+                            {block.equipments.length === 0 && <span style={{ marginLeft: 6, fontWeight: 400, fontStyle: 'italic' }}>· tous</span>}
+                          </label>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {EQUIPMENT_TYPES.map(eq => {
+                              const active = block.equipments.includes(eq)
+                              return (
+                                <button key={eq} onClick={() => toggleBlockArr(block.id, 'equipments', eq)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: `1px solid ${active ? 'var(--text-primary)' : 'var(--border)'}`, background: active ? 'rgba(255,255,255,0.12)' : 'var(--bg-elevated)', color: active ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: active ? 700 : 400 }}>
+                                  {EQUIPMENT_ICONS[eq]} {eq}
+                                </button>
                               )
                             })}
                           </div>
@@ -618,20 +660,25 @@ export default function GeneratorPage() {
                   {generatedByBlock.map((movs, bi) => {
                     const block = blocks[bi]
                     if (!block || movs.length === 0) return null
-                    const blockColor = block.bioType ? BIO_TYPE_COLORS[block.bioType] : 'var(--text-muted)'
                     // Compute the absolute index offset for this block
                     const offset = generatedByBlock.slice(0, bi).reduce((s, g) => s + g.length, 0)
                     return (
                       <div key={block.id}>
                         {/* Block header */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1 }}>BLOC {bi + 1}</span>
-                            {block.bioType && (
-                              <span style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${blockColor}22`, color: blockColor, border: `1px solid ${blockColor}44`, fontWeight: 600 }}>
-                                {BIO_TYPE_ICONS[block.bioType]} {block.bioType}
+                            {block.bioTypes.map(bt => (
+                              <span key={bt} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${BIO_TYPE_COLORS[bt]}22`, color: BIO_TYPE_COLORS[bt], border: `1px solid ${BIO_TYPE_COLORS[bt]}44`, fontWeight: 600 }}>
+                                {BIO_TYPE_ICONS[bt]} {bt}
                               </span>
-                            )}
+                            ))}
+                            {block.complexities.map(c => (
+                              <span key={c} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${COMPLEXITY_COLORS[c]}22`, color: COMPLEXITY_COLORS[c], border: `1px solid ${COMPLEXITY_COLORS[c]}44`, fontWeight: 600 }}>{c}</span>
+                            ))}
+                            {block.equipments.map(eq => (
+                              <span key={eq} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontWeight: 600 }}>{EQUIPMENT_ICONS[eq]} {eq}</span>
+                            ))}
                             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
                               {fmtMin(movs.reduce((s, _, j) => s + minPerMov(params[offset + j]?.sets ?? globalSets), 0))}
                             </span>
@@ -642,7 +689,7 @@ export default function GeneratorPage() {
                         {block.instructions && (
                           <div
                             className="rich-content"
-                            style={{ background: `${blockColor}10`, border: `1px solid ${blockColor}30`, borderRadius: 8, padding: '7px 12px', marginBottom: 8, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}
+                            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 12px', marginBottom: 8, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}
                             dangerouslySetInnerHTML={{ __html: block.instructions }}
                           />
                         )}

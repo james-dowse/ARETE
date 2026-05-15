@@ -3,8 +3,9 @@ import { type Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 interface Block {
-  bioType: string | null
-  complexity: string | null
+  bioTypes?: string[]
+  complexities?: string[]
+  equipments?: string[]
   count: number
 }
 
@@ -23,12 +24,12 @@ export async function POST(req: NextRequest) {
 
   const result: { id: string; name: string; bioType: string; complexity: string; videoUrl: string | null; blockIndex: number }[] = []
 
-
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx]
     const where: Prisma.MovementWhereInput = {}
-    if (block.bioType) where.bioType = block.bioType
-    if (block.complexity) where.complexity = block.complexity
+    if (block.bioTypes?.length) where.bioType = { in: block.bioTypes }
+    if (block.complexities?.length) where.complexity = { in: block.complexities }
+    if (block.equipments?.length) where.equipment = { in: block.equipments }
 
     const pool = await prisma.movement.findMany({ where })
     const picked = shuffle(pool).slice(0, block.count)

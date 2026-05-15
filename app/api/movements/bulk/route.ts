@@ -7,12 +7,13 @@ import { isAdmin } from '@/lib/admin'
 export async function PATCH(req: NextRequest) {
   const user = await getCurrentUser()
   if (!isAdmin(user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const { ids, bioType, complexity } = await req.json()
+  const { ids, bioType, complexity, equipment } = await req.json()
   if (!Array.isArray(ids) || ids.length === 0) return NextResponse.json({ error: 'ids requis' }, { status: 400 })
 
-  const data: Record<string, string> = {}
+  const data: Record<string, string | null> = {}
   if (bioType) data.bioType = bioType.trim()
   if (complexity) data.complexity = complexity.trim()
+  if (equipment !== undefined) data.equipment = equipment ? equipment.trim() : null
   if (Object.keys(data).length === 0) return NextResponse.json({ error: 'Aucun champ à mettre à jour' }, { status: 400 })
 
   await prisma.movement.updateMany({ where: { id: { in: ids } }, data })

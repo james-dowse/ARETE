@@ -1,7 +1,7 @@
 'use client'
 import AppShell from '@/components/AppShell'
 import MovementModal from '@/components/MovementModal'
-import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
+import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, EQUIPMENT_ICONS } from '@/lib/types'
 import { useState, useEffect, useCallback } from 'react'
 import { Search, X } from 'lucide-react'
 
@@ -10,6 +10,7 @@ interface Movement {
   name: string
   bioType: string
   complexity: string
+  equipment?: string | null
   description?: string | null
   videoUrl?: string | null
 }
@@ -20,6 +21,7 @@ export default function LibraryPage() {
   const [search, setSearch] = useState('')
   const [bioFilter, setBioFilter] = useState<string | null>(null)
   const [complexityFilter, setComplexityFilter] = useState<string | null>(null)
+  const [equipmentFilter, setEquipmentFilter] = useState<string | null>(null)
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
 
   const fetchMovements = useCallback(async () => {
@@ -27,12 +29,13 @@ export default function LibraryPage() {
     const params = new URLSearchParams()
     if (bioFilter) params.set('bioType', bioFilter)
     if (complexityFilter) params.set('complexity', complexityFilter)
+    if (equipmentFilter) params.set('equipment', equipmentFilter)
     if (search) params.set('search', search)
     const res = await fetch(`/api/movements?${params}`)
     const data = await res.json()
     setMovements(data)
     setLoading(false)
-  }, [bioFilter, complexityFilter, search])
+  }, [bioFilter, complexityFilter, equipmentFilter, search])
 
   useEffect(() => {
     const t = setTimeout(fetchMovements, 300)
@@ -102,7 +105,7 @@ export default function LibraryPage() {
           </div>
 
           {/* Complexity filters */}
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <button onClick={() => setComplexityFilter(null)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: !complexityFilter ? '1px solid var(--text-primary)' : '1px solid var(--border)', background: !complexityFilter ? 'rgba(255,255,255,0.1)' : 'var(--bg-card)', color: !complexityFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}>
               Tous niveaux
             </button>
@@ -112,6 +115,21 @@ export default function LibraryPage() {
               return (
                 <button key={c} onClick={() => setComplexityFilter(active ? null : c)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? color : 'var(--border)'}`, background: active ? `${color}22` : 'var(--bg-card)', color: active ? color : 'var(--text-muted)' }}>
                   {c}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Equipment filters */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button onClick={() => setEquipmentFilter(null)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: !equipmentFilter ? '1px solid var(--text-primary)' : '1px solid var(--border)', background: !equipmentFilter ? 'rgba(255,255,255,0.1)' : 'var(--bg-card)', color: !equipmentFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+              Tout équipement
+            </button>
+            {EQUIPMENT_TYPES.map(eq => {
+              const active = equipmentFilter === eq
+              return (
+                <button key={eq} onClick={() => setEquipmentFilter(active ? null : eq)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: `1px solid ${active ? 'var(--text-muted)' : 'var(--border)'}`, background: active ? 'rgba(255,255,255,0.1)' : 'var(--bg-card)', color: active ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: active ? 600 : 400 }}>
+                  {EQUIPMENT_ICONS[eq]} {eq}
                 </button>
               )
             })}
@@ -177,10 +195,16 @@ function MovementCard({ movement: m, onClick }: { movement: Movement; onClick: (
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
-        <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
+        <div style={{ display: 'flex', gap: 6, marginTop: 3, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontSize: 12, color: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)' }}>{m.bioType}</span>
           <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>·</span>
           <span style={{ fontSize: 12, color: COMPLEXITY_COLORS[m.complexity] || 'var(--text-muted)' }}>{m.complexity}</span>
+          {m.equipment && (
+            <>
+              <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>·</span>
+              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{EQUIPMENT_ICONS[m.equipment] || '🔧'} {m.equipment}</span>
+            </>
+          )}
         </div>
       </div>
       {m.videoUrl && (

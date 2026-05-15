@@ -1,13 +1,14 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { X, Play, ExternalLink } from 'lucide-react'
-import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
+import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, EQUIPMENT_ICONS } from '@/lib/types'
 
 interface Movement {
   id: string
   name: string
   bioType: string
   complexity: string
+  equipment?: string | null
   description?: string | null
   imageUrl?: string | null
   videoUrl?: string | null
@@ -102,6 +103,11 @@ export default function MovementModal({ movementId, onClose }: Props) {
                 <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 20, background: `${cxColor}18`, color: cxColor, border: `1px solid ${cxColor}33`, fontWeight: 600 }}>
                   {movement.complexity}
                 </span>
+                {movement.equipment && (
+                  <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontWeight: 600 }}>
+                    {EQUIPMENT_ICONS[movement.equipment] || '🔧'} {movement.equipment}
+                  </span>
+                )}
               </div>
             )}
           </div>

@@ -1,10 +1,10 @@
 'use client'
-import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
+import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown, Upload, CheckSquare } from 'lucide-react'
 
 interface Movement {
-  id: string; name: string; bioType: string; complexity: string
+  id: string; name: string; bioType: string; complexity: string; equipment?: string | null
   description?: string | null; imageUrl?: string | null; videoUrl?: string | null
 }
 
@@ -29,7 +29,7 @@ function EditableCell({
     return (
       <select value={value} onChange={e => onChange(e.target.value)} onKeyDown={onKeyDown}
         style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--accent)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }}>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        {options.map(o => <option key={o} value={o}>{o || '—'}</option>)}
       </select>
     )
   }
@@ -45,7 +45,7 @@ function NewMovementModal({
 }: {
   onSave: (m: Movement) => void; onClose: () => void
 }) {
-  const [form, setForm] = useState({ id: '', name: '', bioType: BIO_TYPES[0], complexity: COMPLEXITIES[0], description: '', videoUrl: '' })
+  const [form, setForm] = useState({ id: '', name: '', bioType: BIO_TYPES[0], complexity: COMPLEXITIES[0], equipment: '', description: '', videoUrl: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -98,7 +98,7 @@ function NewMovementModal({
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
           <div>
             <label style={labelStyle}>TYPE BIOMÉCANIQUE *</label>
             <select value={form.bioType} onChange={e => set('bioType', e.target.value)} style={fieldStyle}>
@@ -109,6 +109,13 @@ function NewMovementModal({
             <label style={labelStyle}>COMPLEXITÉ *</label>
             <select value={form.complexity} onChange={e => set('complexity', e.target.value)} style={fieldStyle}>
               {COMPLEXITIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>ÉQUIPEMENT</label>
+            <select value={form.equipment} onChange={e => set('equipment', e.target.value)} style={fieldStyle}>
+              <option value="">—</option>
+              {EQUIPMENT_TYPES.map(eq => <option key={eq} value={eq}>{EQUIPMENT_ICONS[eq]} {eq}</option>)}
             </select>
           </div>
         </div>
@@ -183,6 +190,7 @@ export default function AdminClient({
   const [search, setSearch] = useState('')
   const [bioFilter, setBioFilter] = useState('')
   const [complexityFilter, setComplexityFilter] = useState('')
+  const [equipmentFilter, setEquipmentFilter] = useState('')
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'name', dir: 'asc' })
 
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -213,9 +221,10 @@ export default function AdminClient({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkWorking, setBulkWorking] = useState(false)
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
-  const [pendingBulkUpdate, setPendingBulkUpdate] = useState<{ bioType?: string; complexity?: string } | null>(null)
+  const [pendingBulkUpdate, setPendingBulkUpdate] = useState<{ bioType?: string; complexity?: string; equipment?: string } | null>(null)
   const [stagedBioType, setStagedBioType] = useState('')
   const [stagedComplexity, setStagedComplexity] = useState('')
+  const [stagedEquipment, setStagedEquipment] = useState('')
   const selectAllRef = useRef<HTMLInputElement>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2800) }
@@ -226,11 +235,12 @@ export default function AdminClient({
     if (search) list = list.filter(m => m.name.toLowerCase().includes(search.toLowerCase()) || m.id.toLowerCase().includes(search.toLowerCase()))
     if (bioFilter) list = list.filter(m => m.bioType === bioFilter)
     if (complexityFilter) list = list.filter(m => m.complexity === complexityFilter)
-    return [...list].sort((a, b) => {
+    if (equipmentFilter) list = list.filter(m => m.equipment === equipmentFilter)
+    return [...list].sort((a: Movement, b: Movement) => {
       const va = a[sort.key] ?? ''; const vb = b[sort.key] ?? ''
       return sort.dir === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va))
     })
-  }, [movements, search, bioFilter, complexityFilter, sort])
+  }, [movements, search, bioFilter, complexityFilter, equipmentFilter, sort])
 
   const toggleSort = (key: SortKey) => {
     setSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' })
@@ -258,7 +268,7 @@ export default function AdminClient({
   }
   const clearSelection = () => setSelected(new Set())
 
-  const handleBulkUpdate = async (patch: { bioType?: string; complexity?: string }) => {
+  const handleBulkUpdate = async (patch: { bioType?: string; complexity?: string; equipment?: string }) => {
     if (selected.size === 0) return
     setBulkWorking(true)
     const ids = [...selected]
@@ -301,7 +311,7 @@ export default function AdminClient({
   }
 
   // ── Edit ──
-  const startEdit = (m: Movement) => { setEditingId(m.id); setEditBuf({ name: m.name, bioType: m.bioType, complexity: m.complexity, description: m.description ?? '', videoUrl: m.videoUrl ?? '' }) }
+  const startEdit = (m: Movement) => { setEditingId(m.id); setEditBuf({ name: m.name, bioType: m.bioType, complexity: m.complexity, equipment: m.equipment ?? '', description: m.description ?? '', videoUrl: m.videoUrl ?? '' }) }
   const cancelEdit = () => { setEditingId(null); setEditBuf({}) }
 
   const commitEdit = async (id: string) => {
@@ -415,8 +425,13 @@ export default function AdminClient({
           <option value="">Tous niveaux</option>
           {COMPLEXITIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        {(search || bioFilter || complexityFilter) && (
-          <button onClick={() => { setSearch(''); setBioFilter(''); setComplexityFilter('') }}
+        <select value={equipmentFilter} onChange={e => setEquipmentFilter(e.target.value)}
+          style={{ padding: '7px 12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, color: equipmentFilter ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
+          <option value="">Tout équipement</option>
+          {EQUIPMENT_TYPES.map(eq => <option key={eq} value={eq}>{EQUIPMENT_ICONS[eq]} {eq}</option>)}
+        </select>
+        {(search || bioFilter || complexityFilter || equipmentFilter) && (
+          <button onClick={() => { setSearch(''); setBioFilter(''); setComplexityFilter(''); setEquipmentFilter('') }}
             style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
             <X size={12} /> Réinitialiser
           </button>
@@ -464,10 +479,25 @@ export default function AdminClient({
             </select>
           </div>
 
+          {/* Equipment */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>ÉQUIPEMENT</span>
+            <select
+              value={stagedEquipment}
+              onChange={e => setStagedEquipment(e.target.value)}
+              disabled={bulkWorking}
+              style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedEquipment ? 'var(--gold,#C9A535)' : 'var(--border)'}`, borderRadius: 7, color: stagedEquipment ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="">Changer…</option>
+              <option value="__clear__">— Effacer —</option>
+              {EQUIPMENT_TYPES.map(eq => <option key={eq} value={eq}>{EQUIPMENT_ICONS[eq]} {eq}</option>)}
+            </select>
+          </div>
+
           {/* Single apply button */}
-          {(stagedBioType || stagedComplexity) && (
+          {(stagedBioType || stagedComplexity || stagedEquipment) && (
             <button
-              onClick={() => setPendingBulkUpdate({ bioType: stagedBioType || undefined, complexity: stagedComplexity || undefined })}
+              onClick={() => setPendingBulkUpdate({ bioType: stagedBioType || undefined, complexity: stagedComplexity || undefined, equipment: stagedEquipment === '__clear__' ? '' : (stagedEquipment || undefined) })}
               style={{ padding: '5px 12px', background: 'var(--gold,#C9A535)', border: 'none', borderRadius: 7, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
             >
               Appliquer
@@ -508,6 +538,7 @@ export default function AdminClient({
                 <SortTh label="NOM" field="name" sort={sort} onSort={toggleSort} />
                 <SortTh label="TYPE" field="bioType" sort={sort} onSort={toggleSort} />
                 <SortTh label="COMPLEXITÉ" field="complexity" sort={sort} onSort={toggleSort} />
+                <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: 'var(--text-muted)' }}>ÉQUIPEMENT</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: 'var(--text-muted)' }}>DESCRIPTION</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: 'var(--text-muted)' }}>VIDÉO</th>
                 <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: 'var(--text-muted)' }}>USAGES</th>
@@ -556,6 +587,15 @@ export default function AdminClient({
                         : <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, background: `${COMPLEXITY_COLORS[m.complexity] || '#fff'}18`, color: COMPLEXITY_COLORS[m.complexity] || 'var(--text-muted)' }}>
                             {m.complexity}
                           </span>}
+                    </td>
+
+                    {/* Equipment */}
+                    <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
+                      {isEditing
+                        ? <EditableCell value={editBuf.equipment ?? ''} options={['', ...EQUIPMENT_TYPES]} onChange={v => setEditBuf(b => ({ ...b, equipment: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
+                        : m.equipment
+                          ? <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{EQUIPMENT_ICONS[m.equipment] || '🔧'} {m.equipment}</span>
+                          : <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>—</span>}
                     </td>
 
                     {/* Description */}

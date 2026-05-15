@@ -4,7 +4,7 @@ import RichEditor from '@/components/RichEditor'
 import MovementModal from '@/components/MovementModal'
 import {
   BIO_TYPE_COLORS, BIO_TYPE_ICONS, BIO_TYPES,
-  COMPLEXITIES, COMPLEXITY_COLORS,
+  COMPLEXITIES, COMPLEXITY_COLORS, EQUIPMENT_ICONS,
 } from '@/lib/types'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -18,7 +18,7 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Movement {
   id: string; name: string; bioType: string; complexity: string
-  description?: string | null; videoUrl?: string | null
+  equipment?: string | null; description?: string | null; videoUrl?: string | null
 }
 interface WorkoutMovement {
   id: string; movementId: string; order: number
@@ -221,6 +221,12 @@ function MovementRowView({ wm, index, onMovementClick }: { wm: WorkoutMovement; 
             <span style={{ fontSize: 11, color: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)' }}>{m.bioType}</span>
             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>·</span>
             <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 20, background: `${COMPLEXITY_COLORS[m.complexity] || '#000'}12`, color: COMPLEXITY_COLORS[m.complexity] || 'var(--text-muted)' }}>{m.complexity}</span>
+            {m.equipment && (
+              <>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>·</span>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{EQUIPMENT_ICONS[m.equipment] || '🔧'} {m.equipment}</span>
+              </>
+            )}
             {hasSetsReps && (
               <>
                 <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>·</span>
