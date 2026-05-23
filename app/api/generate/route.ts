@@ -22,6 +22,7 @@ function shuffle<T>(arr: T[]): T[] {
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const blocks: Block[] = body.blocks || []
+  const videoOnly: boolean = body.videoOnly === true
 
   const result: { id: string; name: string; bioType: string; complexity: string; videoUrl: string | null; blockIndex: number }[] = []
 
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
     if (block.complexities?.length) where.complexity = { in: block.complexities }
     if (block.equipments?.length) where.equipment = { in: block.equipments }
     if (block.exclude?.length) where.id = { notIn: block.exclude }
+    if (videoOnly) where.videoUrl = { not: null }
 
     const pool = await prisma.movement.findMany({ where })
     const picked = shuffle(pool).slice(0, block.count)

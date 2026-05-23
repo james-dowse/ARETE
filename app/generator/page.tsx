@@ -53,6 +53,7 @@ export default function GeneratorPage() {
   const [loadingTemplates, setLoadingTemplates] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
   const [claimingTemplates, setClaimingTemplates] = useState(false)
+  const [videoOnly, setVideoOnly] = useState(false)
 
   // Track which block cards are collapsed
   const [collapsedBlocks, setCollapsedBlocks] = useState<Record<string, boolean>>({})
@@ -83,6 +84,7 @@ export default function GeneratorPage() {
             count: 1,
             exclude: [generated[i].id],
           }],
+          videoOnly,
         }),
       })
       const data = await res.json()
@@ -130,7 +132,7 @@ export default function GeneratorPage() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blocks: blocks.map(b => ({ bioTypes: b.bioTypes, complexities: b.complexities, equipments: b.equipments, count: b.count })) }),
+        body: JSON.stringify({ blocks: blocks.map(b => ({ bioTypes: b.bioTypes, complexities: b.complexities, equipments: b.equipments, count: b.count })), videoOnly }),
       })
       const data = await res.json()
       setGenerated(data.movements)
@@ -612,6 +614,26 @@ export default function GeneratorPage() {
             </div>
 
             {/* Workout settings */}
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {/* Video only toggle */}
+              <button
+                onClick={() => setVideoOnly(v => !v)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  padding: '7px 13px',
+                  background: videoOnly ? 'rgba(201,165,53,0.10)' : 'var(--bg-card)',
+                  border: `1px solid ${videoOnly ? 'rgba(201,165,53,0.55)' : 'var(--border)'}`,
+                  borderRadius: 8, cursor: 'pointer',
+                  fontSize: 12, fontWeight: videoOnly ? 700 : 500,
+                  color: videoOnly ? 'var(--gold,#C9A535)' : 'var(--text-muted)',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <span style={{ fontSize: 14 }}>▶</span>
+                Vidéos uniquement
+              </button>
+            </div>
+
             <div style={{ marginTop: 12 }}>
               <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>DURÉE CIBLE (min)</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: `1px solid ${targetMovements && !durationOk ? 'var(--orange)' : 'var(--border)'}`, borderRadius: 8, padding: '8px 12px', transition: 'border-color 0.2s' }}>
