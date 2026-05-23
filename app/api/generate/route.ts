@@ -7,6 +7,7 @@ interface Block {
   complexities?: string[]
   equipments?: string[]
   count: number
+  exclude?: string[]   // IDs à exclure (reroll)
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
     if (block.bioTypes?.length) where.bioType = { in: block.bioTypes }
     if (block.complexities?.length) where.complexity = { in: block.complexities }
     if (block.equipments?.length) where.equipment = { in: block.equipments }
+    if (block.exclude?.length) where.id = { notIn: block.exclude }
 
     const pool = await prisma.movement.findMany({ where })
     const picked = shuffle(pool).slice(0, block.count)

@@ -64,6 +64,38 @@ export default function GeneratorPage() {
 
   // Library substitution
   const [substitutingIndex, setSubstitutingIndex] = useState<number | null>(null)
+  // Random reroll per movement
+  const [rerollingIndex, setRerollingIndex] = useState<number | null>(null)
+
+  const handleReroll = async (i: number, blockIdx: number) => {
+    if (!generated) return
+    setRerollingIndex(i)
+    try {
+      const block = blocks[blockIdx]
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          blocks: [{
+            bioTypes: block.bioTypes,
+            complexities: block.complexities,
+            equipments: block.equipments,
+            count: 1,
+            exclude: [generated[i].id],
+          }],
+        }),
+      })
+      const data = await res.json()
+      const newMov = data.movements?.[0]
+      if (newMov) {
+        setGenerated(prev => prev!.map((gm, idx) =>
+          idx === i ? { ...newMov, blockIndex: gm.blockIndex } : gm
+        ))
+      }
+    } finally {
+      setRerollingIndex(null)
+    }
+  }
 
   const handleLibraryPick = (m: PickableMovement) => {
     if (substitutingIndex === null) return
@@ -717,6 +749,15 @@ export default function GeneratorPage() {
                                     </div>
                                   </div>
                                   <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                                    <button
+                                      onClick={() => handleReroll(i, bi)}
+                                      disabled={rerollingIndex === i}
+                                      title="Remplacer par un mouvement aléatoire"
+                                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 11, cursor: rerollingIndex === i ? 'wait' : 'pointer', opacity: rerollingIndex === i ? 0.5 : 1 }}
+                                    >
+                                      <RefreshCw size={11} style={rerollingIndex === i ? { animation: 'spin 1s linear infinite' } : {}} />
+                                      Aléatoire
+                                    </button>
                                     <button
                                       onClick={() => setSubstitutingIndex(i)}
                                       style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}
