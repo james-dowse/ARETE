@@ -68,6 +68,18 @@ export default function GeneratorPage() {
   // Random reroll per movement
   const [rerollingIndex, setRerollingIndex] = useState<number | null>(null)
 
+  const removeMovement = (i: number) => {
+    setGenerated(prev => prev!.filter((_, idx) => idx !== i))
+    setParams(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  const removeBlock = (bi: number) => {
+    if (!generated) return
+    const keepIndices = generated.map((m, idx) => ({ m, idx })).filter(({ m }) => m.blockIndex !== bi).map(({ idx }) => idx)
+    setGenerated(generated.filter(m => m.blockIndex !== bi))
+    setParams(prev => keepIndices.map(i => prev[i]))
+  }
+
   const handleReroll = async (i: number, blockIdx: number) => {
     if (!generated) return
     setRerollingIndex(i)
@@ -738,6 +750,15 @@ export default function GeneratorPage() {
                             </span>
                           </div>
                           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                          <button
+                            onClick={() => removeBlock(bi)}
+                            title="Supprimer ce bloc du résultat"
+                            style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center' }}
+                            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444' }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-dim)' }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </div>
                         {/* Block instructions preview */}
                         {block.instructions && (
@@ -785,6 +806,15 @@ export default function GeneratorPage() {
                                       style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}
                                     >
                                       <Search size={11} /> Biblio
+                                    </button>
+                                    <button
+                                      onClick={() => removeMovement(i)}
+                                      title="Supprimer ce mouvement"
+                                      style={{ display: 'flex', alignItems: 'center', padding: '4px 6px', background: 'none', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-dim)', cursor: 'pointer' }}
+                                      onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444' }}
+                                      onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-dim)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                                    >
+                                      <Trash2 size={11} />
                                     </button>
                                     <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 700 }}>#{i + 1}</span>
                                   </div>
