@@ -250,10 +250,10 @@ function MovementRowView({ wm, index, onMovementClick }: { wm: WorkoutMovement; 
 }
 
 // ─── Edit Row ─────────────────────────────────────────────────────────────────
-function MovementRowEdit({ es, original, index, allMovementIds, onUpdate, onRevert, onMovementClick }: {
+function MovementRowEdit({ es, original, index, allMovementIds, onUpdate, onRevert, onMovementClick, onRemove }: {
   es: EditState; original: WorkoutMovement; index: number; allMovementIds: string[]
   onUpdate: (idx: number, patch: Partial<EditState>) => void; onRevert: (idx: number) => void
-  onMovementClick: (id: string) => void
+  onMovementClick: (id: string) => void; onRemove: () => void
 }) {
   const [loadingRandom, setLoadingRandom] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
@@ -308,6 +308,13 @@ function MovementRowEdit({ es, original, index, allMovementIds, onUpdate, onReve
             <button onClick={() => setShowPicker(true)}
               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}>
               <Search size={11} /> Biblio
+            </button>
+            <button onClick={onRemove} title="Supprimer ce mouvement"
+              style={{ display: 'flex', alignItems: 'center', padding: '4px 6px', background: 'none', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-dim)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+            >
+              <Trash2 size={11} />
             </button>
           </div>
         </div>
@@ -373,8 +380,8 @@ function BlockHeaderView({ block, index, movements }: { block: WorkoutBlock; ind
 }
 
 // ─── Block Header (edit) ──────────────────────────────────────────────────────
-function BlockHeaderEdit({ block, index, instructions, onChange, isDirty }: {
-  block: WorkoutBlock; index: number; instructions: string; onChange: (v: string) => void; isDirty: boolean
+function BlockHeaderEdit({ block, index, instructions, onChange, isDirty, onRemove }: {
+  block: WorkoutBlock; index: number; instructions: string; onChange: (v: string) => void; isDirty: boolean; onRemove: () => void
 }) {
   const color = block.bioType ? BIO_TYPE_COLORS[block.bioType] : 'var(--text-muted)'
   return (
@@ -390,6 +397,13 @@ function BlockHeaderEdit({ block, index, instructions, onChange, isDirty }: {
           {isDirty && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 20, background: 'var(--dirty)', color: 'var(--dirty-text)', fontWeight: 600 }}>modifié</span>}
         </div>
         <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+        <button onClick={onRemove} title="Supprimer ce bloc"
+          style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#ef4444' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-dim)' }}
+        >
+          <Trash2 size={13} />
+        </button>
       </div>
       <div style={{ marginBottom: 4 }}>
         <label style={{ fontSize: 11, color: isDirty ? 'var(--dirty-text)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5, fontWeight: 600, letterSpacing: 0.4 }}>
@@ -493,6 +507,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [deleting, setDeleting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
+  const [removedWmIds, setRemovedWmIds] = useState<Set<string>>(new Set())
+  const [removedBlockIds, setRemovedBlockIds] = useState<Set<string>>(new Set())
 
   // ── Dirty checks ──
   const isDirtyMovements = editMode && editStates.some((es, i) => {
@@ -504,7 +520,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   )
   const isDirtyDescription = editMode && stripHtml(editDescription) !== stripHtml(initial.description ?? '')
   const isDirtyImage = editMode && (imageFile !== null || removeImage)
-  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyDescription || isDirtyImage
+  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyDescription || isDirtyImage || removedWmIds.size > 0 || removedBlockIds.size > 0
 
   const pendingCount = editMode
     ? editStates.filter((es, i) => {
@@ -514,6 +530,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       + initial.blocks.filter(b => (blockInstructions[b.id] ?? '') !== (b.instructions ?? '')).length
       + (isDirtyDescription ? 1 : 0)
       + (isDirtyImage ? 1 : 0)
+      + removedWmIds.size
+      + removedBlockIds.size
     : 0
 
   const handleEnterEdit = () => {
@@ -523,6 +541,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setBlockInstructions(initBI)
     setEditDescription(initial.description ?? '')
     setImageFile(null); setImagePreview(null); setRemoveImage(false)
+    setRemovedWmIds(new Set()); setRemovedBlockIds(new Set())
     setEditMode(true)
   }
 
@@ -533,6 +552,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setBlockInstructions(initBI)
     setEditDescription(initial.description ?? '')
     setImageFile(null); setImagePreview(null); setRemoveImage(false)
+    setRemovedWmIds(new Set()); setRemovedBlockIds(new Set())
     setEditMode(false)
   }
 
@@ -581,6 +601,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       ] : (imageFile ? [
         (() => { const fd = new FormData(); fd.append('file', imageFile); return fetch(`/api/workouts/${initial.id}/image`, { method: 'POST', body: fd }) })()
       ] : [])),
+      ...[...removedWmIds].map(wmId =>
+        fetch(`/api/workouts/${initial.id}/movements/${wmId}`, { method: 'DELETE' })
+      ),
+      ...[...removedBlockIds].map(blockId =>
+        fetch(`/api/workouts/${initial.id}/blocks/${blockId}`, { method: 'DELETE' })
+      ),
     ])
 
     setSaving(false)
@@ -751,9 +777,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         {/* ── MOVEMENTS ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {hasBlocks ? (
-            initial.blocks.map((block, bi) => {
+            initial.blocks.filter(block => !removedBlockIds.has(block.id)).map((block, bi) => {
               const blockMovements = blockMovementsMap[block.id] || []
-              const blockES = blockEditStatesMap[block.id] || []
+              const blockES = (blockEditStatesMap[block.id] || []).filter(({ orig }) => !removedWmIds.has(orig.id))
               return (
                 <div key={block.id}>
                   {editMode ? (
@@ -762,6 +788,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                       instructions={blockInstructions[block.id] ?? ''}
                       onChange={v => setBlockInstructions(prev => ({ ...prev, [block.id]: v }))}
                       isDirty={(blockInstructions[block.id] ?? '') !== (block.instructions ?? '')}
+                      onRemove={() => setRemovedBlockIds(prev => new Set([...prev, block.id]))}
                     />
                   ) : (
                     <BlockHeaderView block={block} index={bi} movements={blockMovementsMap[block.id] || []} />
@@ -769,7 +796,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {editMode
                       ? blockES.map(({ es, orig, absIdx }) => (
-                          <MovementRowEdit key={orig.id} es={es} original={orig} index={absIdx} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId} />
+                          <MovementRowEdit key={orig.id} es={es} original={orig} index={absIdx} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
+                            onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))} />
                         ))
                       : blockMovements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
                     }
@@ -789,9 +817,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
             })
           ) : (
             editMode
-              ? editStates.map((es, i) => (
-                  <MovementRowEdit key={originals[i].id} es={es} original={originals[i]} index={i} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId} />
-                ))
+              ? editStates
+                  .map((es, i) => ({ es, orig: originals[i], i }))
+                  .filter(({ orig }) => !removedWmIds.has(orig.id))
+                  .map(({ es, orig, i }) => (
+                    <MovementRowEdit key={orig.id} es={es} original={orig} index={i} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
+                      onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))} />
+                  ))
               : initial.movements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
           )}
         </div>

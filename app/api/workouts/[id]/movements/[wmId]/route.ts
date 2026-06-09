@@ -24,3 +24,12 @@ export async function PATCH(
 
   return NextResponse.json(updated)
 }
+
+export async function DELETE(
+  _: NextRequest,
+  { params }: { params: Promise<{ wmId: string }> }
+) {
+  const { wmId } = await params
+  await prisma.workoutMovement.delete({ where: { id: wmId } })
+  return NextResponse.json({ ok: true })
+}
