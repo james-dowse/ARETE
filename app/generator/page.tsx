@@ -64,10 +64,17 @@ export default function GeneratorPage() {
   // Movement detail modal
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
 
+  // Result panel blocks — snapshot from left panel on generate, then independent
+  const [resultBlocks, setResultBlocks] = useState<Block[]>([])
+
   // Library substitution
   const [substitutingIndex, setSubstitutingIndex] = useState<number | null>(null)
+  // Library picker for adding a movement to a result block
+  const [addingToBlockIndex, setAddingToBlockIndex] = useState<number | null>(null)
   // Random reroll per movement
   const [rerollingIndex, setRerollingIndex] = useState<number | null>(null)
+  // Adding a random movement to a result block
+  const [addingRandomToBlock, setAddingRandomToBlock] = useState<number | null>(null)
 
   const removeGeneratedMovement = (i: number) => {
     setGenerated(prev => prev!.filter((_, idx) => idx !== i))
@@ -77,15 +84,21 @@ export default function GeneratorPage() {
   const removeGeneratedBlock = (bi: number) => {
     if (!generated) return
     const keepIndices = generated.map((m, idx) => ({ m, idx })).filter(({ m }) => m.blockIndex !== bi).map(({ idx }) => idx)
-    setGenerated(generated.filter(m => m.blockIndex !== bi))
+    // Keep movements from other blocks, renumber blockIndex for blocks above bi
+    setGenerated(
+      generated
+        .filter(m => m.blockIndex !== bi)
+        .map(m => m.blockIndex > bi ? { ...m, blockIndex: m.blockIndex - 1 } : m)
+    )
     setParams(prev => keepIndices.map(i => prev[i]))
+    setResultBlocks(prev => prev.filter((_, i) => i !== bi).map((b, i) => ({ ...b, order: i })))
   }
 
   const handleReroll = async (i: number, blockIdx: number) => {
     if (!generated) return
     setRerollingIndex(i)
     try {
-      const block = blocks[blockIdx]
+      const block = resultBlocks[blockIdx]
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -113,13 +126,51 @@ export default function GeneratorPage() {
   }
 
   const handleLibraryPick = (m: PickableMovement) => {
-    if (substitutingIndex === null) return
-    setGenerated(prev => prev!.map((gm, i) =>
-      i === substitutingIndex
-        ? { id: m.id, name: m.name, bioType: m.bioType, complexity: m.complexity, videoUrl: m.videoUrl ?? null, blockIndex: gm.blockIndex }
-        : gm
-    ))
-    setSubstitutingIndex(null)
+    if (substitutingIndex !== null) {
+      setGenerated(prev => prev!.map((gm, i) =>
+        i === substitutingIndex
+          ? { id: m.id, name: m.name, bioType: m.bioType, complexity: m.complexity, videoUrl: m.videoUrl ?? null, blockIndex: gm.blockIndex }
+          : gm
+      ))
+      setSubstitutingIndex(null)
+    } else if (addingToBlockIndex !== null) {
+      const bi = addingToBlockIndex
+      const rb = resultBlocks[bi]
+      setGenerated(prev => [...(prev ?? []), { id: m.id, name: m.name, bioType: m.bioType, complexity: m.complexity, videoUrl: m.videoUrl ?? null, blockIndex: bi }])
+      setParams(prev => [...prev, { sets: rb?.sets ?? DEFAULT_SETS, reps: rb?.reps ?? DEFAULT_REPS, rest: rb?.rest ?? DEFAULT_REST }])
+      setAddingToBlockIndex(null)
+    }
+  }
+
+  const addRandomToResultBlock = async (bi: number) => {
+    const rb = resultBlocks[bi]
+    setAddingRandomToBlock(bi)
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          blocks: [{ bioTypes: rb.bioTypes, complexities: rb.complexities, equipments: rb.equipments, count: 1 }],
+          videoOnly,
+        }),
+      })
+      const data = await res.json()
+      const newMov = data.movements?.[0]
+      if (newMov) {
+        setGenerated(prev => [...(prev ?? []), { ...newMov, blockIndex: bi }])
+        setParams(prev => [...prev, { sets: rb?.sets ?? DEFAULT_SETS, reps: rb?.reps ?? DEFAULT_REPS, rest: rb?.rest ?? DEFAULT_REST }])
+      }
+    } finally {
+      setAddingRandomToBlock(null)
+    }
+  }
+
+  const addResultBlock = () => {
+    setResultBlocks(prev => [...prev, {
+      id: uid(), bioTypes: [], complexities: [], equipments: [],
+      count: 0, order: prev.length, instructions: '',
+      sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST,
+    }])
   }
 
   const addBlock = () => setBlocks(prev => [...prev, { id: uid(), bioTypes: [], complexities: [], equipments: [], count: 3, order: prev.length, instructions: '', sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST }])
@@ -148,6 +199,7 @@ export default function GeneratorPage() {
         body: JSON.stringify({ blocks: blocks.map(b => ({ bioTypes: b.bioTypes, complexities: b.complexities, equipments: b.equipments, count: b.count })), videoOnly }),
       })
       const data = await res.json()
+      setResultBlocks([...blocks])
       setGenerated(data.movements)
       setParams(data.movements.map((m: { blockIndex: number }) => {
         const b = blocks[m.blockIndex]
@@ -183,7 +235,7 @@ export default function GeneratorPage() {
             rest: params[i]?.rest ?? DEFAULT_REST,
             blockIndex: m.blockIndex,
           })),
-          blocks: blocks.map((b, i) => ({
+          blocks: resultBlocks.map((b, i) => ({
             order: i,
             bioType: b.bioTypes[0] ?? null,
             instructions: b.instructions || null,
@@ -257,9 +309,9 @@ export default function GeneratorPage() {
 
   const totalMovements = blocks.reduce((s, b) => s + b.count, 0)
 
-  // Group generated movements by blockIndex
+  // Group generated movements by blockIndex — uses resultBlocks (independent of left panel after generate)
   const generatedByBlock: GeneratedMovement[][] = generated
-    ? blocks.map((_, bi) => (generated || []).filter(m => m.blockIndex === bi))
+    ? resultBlocks.map((_, bi) => (generated || []).filter(m => m.blockIndex === bi))
     : []
 
   // ── Duration estimates ──
@@ -351,6 +403,7 @@ export default function GeneratorPage() {
         body: JSON.stringify({ blocks: randomBlocks }),
       })
       const data = await res.json()
+      setResultBlocks([...randomBlocks])
       setGenerated(data.movements)
       setParams(data.movements.map((m: { blockIndex: number }) => {
         const b = randomBlocks[m.blockIndex]
@@ -739,8 +792,8 @@ export default function GeneratorPage() {
                 {/* Movements grouped by block */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
                   {generatedByBlock.map((movs, bi) => {
-                    const block = blocks[bi]
-                    if (!block || movs.length === 0) return null
+                    const block = resultBlocks[bi]
+                    if (!block) return null
                     // Compute the absolute index offset for this block
                     const offset = generatedByBlock.slice(0, bi).reduce((s, g) => s + g.length, 0)
                     return (
@@ -854,8 +907,26 @@ export default function GeneratorPage() {
                             )
                           })}
                         </div>
+                        {/* Add movement to this block */}
+                        <div style={{ display: 'flex', gap: 6, marginTop: movs.length > 0 ? 8 : 0 }}>
+                          <button
+                            onClick={() => addRandomToResultBlock(bi)}
+                            disabled={addingRandomToBlock === bi}
+                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 10px', background: 'var(--bg-elevated)', border: '1px dashed var(--border)', borderRadius: 8, color: 'var(--text-dim)', fontSize: 12, cursor: addingRandomToBlock === bi ? 'wait' : 'pointer', opacity: addingRandomToBlock === bi ? 0.6 : 1 }}
+                          >
+                            <RefreshCw size={11} style={addingRandomToBlock === bi ? { animation: 'spin 1s linear infinite' } : {}} />
+                            Mouvement aléatoire
+                          </button>
+                          <button
+                            onClick={() => setAddingToBlockIndex(bi)}
+                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 10px', background: 'var(--bg-elevated)', border: '1px dashed var(--border)', borderRadius: 8, color: 'var(--text-dim)', fontSize: 12, cursor: 'pointer' }}
+                          >
+                            <Search size={11} /> Depuis la bibliothèque
+                          </button>
+                        </div>
+
                         {/* Inter-block rest */}
-                        {generatedByBlock.slice(bi + 1).some(g => g.length > 0) && (
+                        {bi < resultBlocks.length - 1 && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
                             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
@@ -868,6 +939,16 @@ export default function GeneratorPage() {
                     )
                   })}
                 </div>
+
+                {/* Add a new block to the result */}
+                <button
+                  onClick={addResultBlock}
+                  style={{ width: '100%', marginBottom: 20, padding: '9px', border: '1px dashed var(--border)', borderRadius: 10, background: 'none', color: 'var(--text-dim)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--text-dim)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-dim)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                >
+                  <Plus size={13} /> Ajouter un bloc
+                </button>
 
                 {!savedId ? (
                   <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 16 }}>
@@ -902,11 +983,11 @@ export default function GeneratorPage() {
 
       <MovementModal movementId={selectedMovementId} onClose={() => setSelectedMovementId(null)} />
 
-      {substitutingIndex !== null && generated && (
+      {(substitutingIndex !== null || addingToBlockIndex !== null) && (
         <LibraryPicker
-          currentName={generated[substitutingIndex]?.name ?? ''}
+          currentName={substitutingIndex !== null && generated ? (generated[substitutingIndex]?.name ?? '') : ''}
           onPick={handleLibraryPick}
-          onClose={() => setSubstitutingIndex(null)}
+          onClose={() => { setSubstitutingIndex(null); setAddingToBlockIndex(null) }}
         />
       )}
     </AppShell>
