@@ -66,6 +66,8 @@ export default function GeneratorPage() {
 
   // Result panel blocks — snapshot from left panel on generate, then independent
   const [resultBlocks, setResultBlocks] = useState<Block[]>([])
+  // Per-gap rests: blockRests[i] = rest (min) between resultBlock[i] and resultBlock[i+1]
+  const [blockRests, setBlockRests] = useState<number[]>([])
 
   // Library substitution
   const [substitutingIndex, setSubstitutingIndex] = useState<number | null>(null)
@@ -92,6 +94,8 @@ export default function GeneratorPage() {
     )
     setParams(prev => keepIndices.map(i => prev[i]))
     setResultBlocks(prev => prev.filter((_, i) => i !== bi).map((b, i) => ({ ...b, order: i })))
+    // Remove the gap after bi (or the last gap if bi is the last block)
+    setBlockRests(prev => prev.filter((_, i) => i !== (bi < prev.length ? bi : prev.length - 1)))
   }
 
   const handleReroll = async (i: number, blockIdx: number) => {
@@ -171,6 +175,7 @@ export default function GeneratorPage() {
       count: 0, order: prev.length, instructions: '',
       sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST,
     }])
+    setBlockRests(prev => [...prev, globalBlockRest])
   }
 
   const addBlock = () => setBlocks(prev => [...prev, { id: uid(), bioTypes: [], complexities: [], equipments: [], count: 3, order: prev.length, instructions: '', sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST }])
@@ -200,6 +205,7 @@ export default function GeneratorPage() {
       })
       const data = await res.json()
       setResultBlocks([...blocks])
+      setBlockRests(Array(Math.max(0, blocks.length - 1)).fill(globalBlockRest))
       setGenerated(data.movements)
       setParams(data.movements.map((m: { blockIndex: number }) => {
         const b = blocks[m.blockIndex]
@@ -239,6 +245,7 @@ export default function GeneratorPage() {
             order: i,
             bioType: b.bioTypes[0] ?? null,
             instructions: b.instructions || null,
+            restAfter: blockRests[i] ?? null,
           })),
         }),
       })
@@ -324,9 +331,15 @@ export default function GeneratorPage() {
   const minPerMov = (sets: number, rest: number) => sets * (1 + rest)
   const blockEstMin = (count: number, sets: number, rest: number) => count * minPerMov(sets, rest)
   const interBlockRest = (nbBlocks: number) => Math.max(0, nbBlocks - 1) * globalBlockRest
+  // When generated: sum actual per-gap rests (only between non-empty adjacent blocks)
+  const totalInterBlockRestGenerated = blockRests.reduce((s, r, i) => {
+    const hasLeft = generatedByBlock[i]?.length > 0
+    const hasRight = generatedByBlock[i + 1]?.length > 0
+    return s + (hasLeft && hasRight ? r : 0)
+  }, 0)
   const totalEstMin = generated
     ? generated.reduce((sum, _, i) => sum + minPerMov(params[i]?.sets ?? DEFAULT_SETS, params[i]?.rest ?? DEFAULT_REST), 0)
-      + interBlockRest(generatedByBlock.filter(g => g.length > 0).length)
+      + totalInterBlockRestGenerated
     : blocks.reduce((sum, b) => sum + b.count * minPerMov(b.sets, b.rest), 0)
       + interBlockRest(blocks.length)
 
@@ -404,6 +417,7 @@ export default function GeneratorPage() {
       })
       const data = await res.json()
       setResultBlocks([...randomBlocks])
+      setBlockRests(Array(Math.max(0, randomBlocks.length - 1)).fill(globalBlockRest))
       setGenerated(data.movements)
       setParams(data.movements.map((m: { blockIndex: number }) => {
         const b = randomBlocks[m.blockIndex]
@@ -925,13 +939,20 @@ export default function GeneratorPage() {
                           </button>
                         </div>
 
-                        {/* Inter-block rest */}
+                        {/* Per-gap inter-block rest */}
                         {bi < resultBlocks.length - 1 && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
                             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                              ⏸ {globalBlockRest} min · repos entre blocs
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px' }}>
+                              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>⏸</span>
+                              <Stepper
+                                value={blockRests[bi] ?? globalBlockRest}
+                                min={0}
+                                max={15}
+                                onChange={v => setBlockRests(prev => prev.map((r, i) => i === bi ? v : r))}
+                              />
+                              <span style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>min entre blocs</span>
+                            </div>
                             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                           </div>
                         )}

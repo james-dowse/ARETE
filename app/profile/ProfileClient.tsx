@@ -20,8 +20,13 @@ export default function ProfileClient() {
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const [notLoggedIn, setNotLoggedIn] = useState(false)
+
   useEffect(() => {
-    fetch('/api/profile').then(r => r.json()).then((d: Profile) => {
+    fetch('/api/profile').then(async r => {
+      if (!r.ok) { setNotLoggedIn(true); return }
+      const d: Profile = await r.json()
+      if (!d?.id) { setNotLoggedIn(true); return }
       setProfile(d)
       setFirstName(d.firstName ?? '')
       setLastName(d.lastName ?? '')
@@ -58,6 +63,26 @@ export default function ProfileClient() {
     })
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 3000)
+  }
+
+  if (notLoggedIn) {
+    return (
+      <AppShell>
+        <div style={{ maxWidth: 560, textAlign: 'center', paddingTop: 64 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Connexion requise</h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 15 }}>
+            Tu dois être connecté pour accéder à ton profil.
+          </p>
+          <a
+            href="/login?redirect=/profile"
+            style={{ display: 'inline-block', padding: '11px 28px', background: 'var(--accent)', color: 'var(--on-accent)', borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: 'none' }}
+          >
+            Se connecter
+          </a>
+        </div>
+      </AppShell>
+    )
   }
 
   if (!profile) {

@@ -26,7 +26,7 @@ interface WorkoutMovement {
   blockId?: string | null
 }
 interface WorkoutBlock {
-  id: string; order: number; bioType?: string | null; instructions?: string | null
+  id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null
 }
 interface Workout {
   id: string; name: string; createdAt: string
@@ -803,11 +803,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                     }
                   </div>
                   {/* Inter-block rest */}
-                  {!editMode && initial.blockRest != null && bi < initial.blocks.length - 1 && (
+                  {!editMode && bi < initial.blocks.length - 1 && (block.restAfter != null || initial.blockRest != null) && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
                       <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                        ⏸ {initial.blockRest} min · repos entre blocs
+                        ⏸ {block.restAfter ?? initial.blockRest} min · repos entre blocs
                       </span>
                       <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                     </div>

@@ -105,9 +105,9 @@ export async function POST(req: NextRequest) {
 
     const blockIdMap: Record<number, string> = {}
     if (blocks && blocks.length > 0) {
-      for (const b of blocks as { order: number; bioType?: string | null; instructions?: string | null }[]) {
+      for (const b of blocks as { order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null }[]) {
         const block = await prisma.workoutBlock.create({
-          data: { workoutId: workout.id, order: b.order, bioType: b.bioType || null, instructions: b.instructions || null },
+          data: { workoutId: workout.id, order: b.order, bioType: b.bioType || null, instructions: b.instructions || null, restAfter: b.restAfter != null ? Number(b.restAfter) : null },
         })
         blockIdMap[b.order] = block.id
       }

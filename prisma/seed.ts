@@ -1,48 +1,61 @@
+/**
+ * Seed cross-platform — Mac / Windows / Linux
+ * Lit prisma/movements-seed.json (exporté depuis le Mac)
+ * Usage : npx tsx prisma/seed.ts
+ */
 import { PrismaClient } from '@prisma/client'
 import { PrismaLibSql } from '@prisma/adapter-libsql'
-import * as XLSX from 'xlsx'
 import * as path from 'path'
+import { readFileSync } from 'fs'
 
-const adapter = new PrismaLibSql({ url: 'file:/Users/jamesdowse/arete-100/prisma/dev.db' })
-const prisma = new PrismaClient({ adapter })
-
-const EXCEL_PATH = path.join(
-  process.env.HOME || '/Users/jamesdowse',
-  'Library/CloudStorage/GoogleDrive-jimmy.dowse@gmail.com/Mon Drive/000. ARETE 100 PROTOCOL/ARETE 100 - DATABASE - 2026 05 08.xlsx'
-)
-
-async function main() {
-  console.log('Reading Excel file...')
-  const wb = XLSX.readFile(EXCEL_PATH)
-  const ws = wb.Sheets['DATABASE']
-  const rows = XLSX.utils.sheet_to_json(ws) as Record<string, string>[]
-
-  console.log(`Found ${rows.length} raw rows`)
-
-  await prisma.movement.deleteMany()
-
-  const seen = new Set<string>()
-  const movements = rows
-    .filter(row => row['ID'] && row['MOVE'])
-    .map((row, idx) => {
-      let id = String(row['ID']).trim()
-      if (seen.has(id)) id = `${id}_${idx}`
-      seen.add(id)
-      return {
-        id,
-        name: String(row['MOVE']).trim(),
-        bioType: String(row['TYPE BIOMECANIQUE'] || '').trim(),
-        complexity: String(row['COMPLEXITY'] || '').trim(),
-        description: row['DESCRIPTION'] ? String(row['DESCRIPTION']).trim() : null,
-        imageUrl: row['IMAGE'] ? String(row['IMAGE']).trim() : null,
-        videoUrl: row['VIDEO'] ? String(row['VIDEO']).trim() : null,
-      }
-    })
-
-  await prisma.movement.createMany({ data: movements })
-  console.log(`Seeded ${movements.length} movements`)
+function buildLocalUrl(): string {
+  const raw = (process.env.DATABASE_URL ?? 'file:./prisma/dev.db').replace(/^file:\/\//, 'file:')
+  if (raw.startsWith('file:/')) return raw
+  const rel = raw.replace(/^file:/, '')
+  return `file:${path.resolve(process.cwd(), rel)}`
 }
 
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect())
+const adapter = new PrismaLibSql({ url: buildLocalUrl() })
+const prisma = new PrismaClient({ adapter })
+
+interface Movement {
+  id: string
+  name: string
+  bioType: string
+  complexity: string
+  description?: string | null
+  imageUrl?: string | null
+  videoUrl?: string | null
+}
+
+async function main() {
+  const seedFile = path.join(__dirname, 'movements-seed.json')
+  const movements: Movement[] = JSON.parse(readFileSync(seedFile, 'utf-8'))
+
+  console.log(`Seeding ${movements.length} mouvements...`)
+
+  let created = 0
+  let skipped = 0
+
+  for (const m of movements) {
+    const exists = await prisma.movement.findUnique({ where: { id: m.id } })
+    if (exists) { skipped++; continue }
+    await prisma.movement.create({
+      data: {
+        id: m.id,
+        name: m.name,
+        bioType: m.bioType,
+        complexity: m.complexity,
+        description: m.description ?? null,
+        imageUrl: m.imageUrl ?? null,
+        videoUrl: m.videoUrl ?? null,
+      },
+    })
+    created++
+  }
+
+  console.log(`✅ ${created} créés, ${skipped} déjà existants`)
+  await prisma.$disconnect()
+}
+
+main().catch(e => { console.error(e); process.exit(1) })

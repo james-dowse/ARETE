@@ -1,0 +1,2657 @@
+[
+  {
+    "id": "1.1",
+    "name": "Nordic Curl",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "1.2",
+    "name": "Nordic Curl Bent Hip",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "1.3",
+    "name": "Nordic Curl Assisted",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "1.4",
+    "name": "Nordic Curl deficit",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "1.5",
+    "name": "Nordic pulse",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "2.1",
+    "name": "Nordic Curl Reverse",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "2.2",
+    "name": "Nordic Curl Reverse Assisted",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "3.1",
+    "name": "Knee to feet jumps",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "3.2",
+    "name": "Knee to feet steps",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "3.3",
+    "name": "Knee to feet jump goblet",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "4.1",
+    "name": "Knee over toe Squat",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "4.2",
+    "name": "Knee over toe Squat on box (front leg)",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "5.1",
+    "name": "Cossack Goblet",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "5.2",
+    "name": "Cossack Squat",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "5.3",
+    "name": "Cossack Zercher",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "5.4",
+    "name": "Lateral Lunge",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "6.1",
+    "name": "Pushup 1 arm",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "6.2",
+    "name": "Pushup 1 arm negative",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "6.3",
+    "name": "Pushup 1 arm Resistance Band",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "6.4",
+    "name": "Pushup Superman",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "6.5",
+    "name": "Pushup climber KB",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.1",
+    "name": "Pushup",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.2",
+    "name": "Pushup bench plyo 1 arm",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.3",
+    "name": "Pushup bench plyo",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.4",
+    "name": "Pushup clap",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.5",
+    "name": "Pushup dynamic",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.6",
+    "name": "Pushup Plate push",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.7",
+    "name": "Pushup assisted",
+    "bioType": "Push",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.8",
+    "name": "Pushup on knees",
+    "bioType": "Push",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.9",
+    "name": "Pushup navy seal",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.10",
+    "name": "Pushup spiderman",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.11",
+    "name": "Pushup jack",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.12",
+    "name": "Pushup split",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.13",
+    "name": "Pushup on Fingertip Dynamic Switch",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.14",
+    "name": "Pushup on Fingertip",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.15",
+    "name": "Pushup on Fingertip on knees",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.16",
+    "name": "Hindu Pushup",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.17",
+    "name": "Pushup Knuckle",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.18",
+    "name": "Pushup on Thumb",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.19",
+    "name": "Pushup KB table posture",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.20",
+    "name": "Pushup with passover",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "7.21",
+    "name": "Pushup rotation KB",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "8.1",
+    "name": "Ring Fly",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "8.2",
+    "name": "Ring Archer",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "8.3",
+    "name": "1 arm landmine fly",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "8.3_45",
+    "name": "Pushup Over and Out",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "8.4",
+    "name": "Pushup Archer",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "8.5",
+    "name": "Pushup side to side",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "9.1",
+    "name": "Pullup Commando",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "9.2",
+    "name": "Pullup Commando ring",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "9.3",
+    "name": "Pullup Commando sitting",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "10.1",
+    "name": "Pullup",
+    "bioType": "Pull",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "10.2",
+    "name": "Pullup negative",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "10.3",
+    "name": "Pullup assisted",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "10.4",
+    "name": "Scapula pullup",
+    "bioType": "Pull",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "11.1",
+    "name": "Hanging toes to bar",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "11.1_56",
+    "name": "Hanging Leg Raise",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "11.2",
+    "name": "Hanging knee raise",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "11.3",
+    "name": "Seated Leg Raise",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "12.1",
+    "name": "Pull press ring",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "12.2",
+    "name": "Pull press bar",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "13.1",
+    "name": "Row 1 arm wih rotation",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "13.2",
+    "name": "Row 1 arm",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "13.3",
+    "name": "Row alternate grip",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "13.4",
+    "name": "Row 1 arm cable",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "13.5",
+    "name": "Ring Row",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "13.6",
+    "name": "Decline Row",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "13.7",
+    "name": "Row",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "13.8",
+    "name": "Row incline",
+    "bioType": "Pull",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "13.9",
+    "name": "Row 1 arm with band",
+    "bioType": "Pull",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "13.10",
+    "name": "Row  with band",
+    "bioType": "Pull",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "13.11",
+    "name": "Row front lever",
+    "bioType": "Pull",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.1",
+    "name": "1 leg Hip Thrust",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.2",
+    "name": "Hip Thrust",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.3",
+    "name": "Glute bridge 1 leg",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.4",
+    "name": "Glute Bridge March",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.5",
+    "name": "Glute Bridge",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.1_77",
+    "name": "Squat Front Rack",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.2_78",
+    "name": "Squat Goblet",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.3_79",
+    "name": "Squat Goblet heels elevated",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.4_80",
+    "name": "Squat Baby Rocking",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.5_81",
+    "name": "Squat jump",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.6",
+    "name": "Squat jump KB",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.7",
+    "name": "Squat",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.8",
+    "name": "Squat KB deep",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.9",
+    "name": "Squat halo",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "14.10",
+    "name": "Squat landmine",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "15.1",
+    "name": "Zercher squat",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "15.2",
+    "name": "Zercher squat transversal.mp4",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "16.1",
+    "name": "Sumo squat",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "16.2",
+    "name": "Sumo squat landmine",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "16.3",
+    "name": "Sumo squat + bent over landmine",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "17.1",
+    "name": "SwingKB 1 arm banded",
+    "bioType": "Compound",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "17.2",
+    "name": "Swing KB Banded",
+    "bioType": "Compound",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "17.3",
+    "name": "Swing KB 1 arm",
+    "bioType": "Compound",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "17.4",
+    "name": "Swing KB",
+    "bioType": "Compound",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "17.5",
+    "name": "Swing KB reverse lunge",
+    "bioType": "Compound",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "17.6",
+    "name": "Swing KB with Reverse Pull",
+    "bioType": "Compound",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "18.1",
+    "name": "Lowerback extension with Rotation",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "18.2",
+    "name": "Lowerback extension",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "19.1",
+    "name": "Burpee with row",
+    "bioType": "Compound",
+    "complexity": "Hard",
+    "description": "Test vidéo Youtube",
+    "imageUrl": null,
+    "videoUrl": "https://youtube.com/shorts/0-t2soXNYf0?feature=share"
+  },
+  {
+    "id": "19.2",
+    "name": "Burpee with press (man maker)",
+    "bioType": "Compound",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "19.3",
+    "name": "Burpee with box jump",
+    "bioType": "Compound",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "19.4",
+    "name": "Burpee with frog jump",
+    "bioType": "Compound",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "19.5",
+    "name": "Burpee",
+    "bioType": "Compound",
+    "complexity": "Common",
+    "description": "Full body exercice for power",
+    "imageUrl": null,
+    "videoUrl": "https://www.instagram.com/reel/DW_9hGJu37Q/"
+  },
+  {
+    "id": "19.6",
+    "name": "Burpee sprawl",
+    "bioType": "Compound",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "20.1",
+    "name": "Clean and Press KB",
+    "bioType": "Compound",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "20.2",
+    "name": "Clean and Rack KB",
+    "bioType": "Compound",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "20.3",
+    "name": "Clean and press Landmine 1 arm",
+    "bioType": "Compound",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "20.4",
+    "name": "Clean & Press 1 arm kneeling landmine",
+    "bioType": "Compound",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "21.1",
+    "name": "Cross Body Kettlebell Clean and Press",
+    "bioType": "Compound",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "21.3",
+    "name": "Squat press",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "21.4",
+    "name": "Squat dumbell",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "22.1",
+    "name": "Lunge stepthrough press",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "22.2",
+    "name": "Lunge Uppercut",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "22.3",
+    "name": "Lunge with switch knee strike",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "22.4",
+    "name": "Lunge Walking",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "22.5",
+    "name": "Lunge Walking with plate drag",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "22.6",
+    "name": "Lunge Gorilla",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "22.7",
+    "name": "Lunge isometric",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "22.8",
+    "name": "Lunge landmine",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "22.9",
+    "name": "Lunge overhead throw",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "22.10",
+    "name": "Lunge rotating KB",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "23.1",
+    "name": "Bulgarian split 1 arm vertical pull",
+    "bioType": "Compound",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "23.2",
+    "name": "Bulgarian split squat",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "23.3",
+    "name": "Bulgarian split jump",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "23.4",
+    "name": "Bulgarian split jump plate holding overhead",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "23.5",
+    "name": "Bulgarian split jumps with MB",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "23.5_128",
+    "name": "Split ballet jump",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "24.1",
+    "name": "Dip",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "24.2",
+    "name": "Dip sitting",
+    "bioType": "Push",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "24.3",
+    "name": "Dip on rings feet supported",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "24.4",
+    "name": "Dip on rings",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "24.5",
+    "name": "Dip over the bar",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "25.1",
+    "name": "Cable Pull Rotation 1 arm",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "25.2",
+    "name": "Cable Pull Rotation",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "26.1",
+    "name": "Cable Push Through (staggered stance)",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "26.2",
+    "name": "Cable oblique push",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "27.1",
+    "name": "MB Slam to Wall",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "27.2",
+    "name": "MB Slam to Wall 1 arm",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "28.1",
+    "name": "Box step",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "28.1_141",
+    "name": "Boex step deficit",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "28.2",
+    "name": "Box jump",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "28.3",
+    "name": "Box jump reaction",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "28.4",
+    "name": "Box jump 1 leg",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "28.5",
+    "name": "High Jump",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "28.6",
+    "name": "High Jump reaction",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "29.4",
+    "name": "Step rotation kneeling",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "30.1",
+    "name": "Kick power drill set",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "31.1",
+    "name": "Mountain climber stop'n'go",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "31.2",
+    "name": "Mountain hops with arm lift",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "31.3",
+    "name": "Mountain Climber",
+    "bioType": "Core focus",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "33.1",
+    "name": "Overhead press ring",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "33.2",
+    "name": "Overhead press bar",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "33.3",
+    "name": "Overhead press",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "33.4",
+    "name": "Overhead pushup (box)",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "33.5",
+    "name": "Pushup sphinx",
+    "bioType": "Push",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.1",
+    "name": "Plank copenhagen",
+    "bioType": "Core focus",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.2",
+    "name": "Plank star",
+    "bioType": "Core focus",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.3",
+    "name": "Plank lateral rotation",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.4",
+    "name": "Plank lateral",
+    "bioType": "Core focus",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.5",
+    "name": "Plank",
+    "bioType": "Core focus",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.6",
+    "name": "Plank commando",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.7",
+    "name": "Plank Alternate Punch",
+    "bioType": "Core focus",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.8",
+    "name": "Plank Air sweeps",
+    "bioType": "Core focus",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.9",
+    "name": "Plank Anchor Sweep",
+    "bioType": "Core focus",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.10",
+    "name": "Plank Forward Push",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.11",
+    "name": "Plank Forward Push dynamic",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.12",
+    "name": "Plank passover",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.13",
+    "name": "Plank lateral moon",
+    "bioType": "Core focus",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "34.14",
+    "name": "Plank KB juggling",
+    "bioType": "Core focus",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "35.1",
+    "name": "Pikes on box",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "35.2",
+    "name": "Pikes",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "35.2_173",
+    "name": "Pikes decline",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "40.1",
+    "name": "HS Pushup",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "40.2",
+    "name": "Assisted HS pushup",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "36.1",
+    "name": "Face Pull ring",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "36.1_177",
+    "name": "Face Pull band",
+    "bioType": "Pull",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "37.1",
+    "name": "Suitcase carry : 1 arm uphold",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "37.2",
+    "name": "Suitcase carry : 1 arm",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "37.3",
+    "name": "Suitcase carry : 2 arms",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "38.1",
+    "name": "Lizard Crawl",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "38.2",
+    "name": "Bear Crawl",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "38.3",
+    "name": "Gorilla walk",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "38.4",
+    "name": "Duck Waddle",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "38.5",
+    "name": "Worm walk",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "39.1",
+    "name": "Front lever Flutter Kick",
+    "bioType": "Core focus",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "39.2",
+    "name": "Front lever",
+    "bioType": "Core focus",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "39.3",
+    "name": "Front lever negative",
+    "bioType": "Core focus",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "39.4",
+    "name": "Front level scapula row",
+    "bioType": "Core focus",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "39.5",
+    "name": "L-Sit Flutters",
+    "bioType": "Core focus",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "39.6",
+    "name": "Lying Leg Raises",
+    "bioType": "Core focus",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "39.7",
+    "name": "Lying Leg Flutters",
+    "bioType": "Core focus",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "39.7_193",
+    "name": "Dragon flag",
+    "bioType": "Core focus",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "40.1_194",
+    "name": "Shoulder press with reverse pull",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "40.2_195",
+    "name": "Shoulder Press",
+    "bioType": "Push",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "40.3",
+    "name": "Shoulder press military",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "40.4",
+    "name": "1 arm Shoulder Press",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "40.5",
+    "name": "Shoulder press kneeling step",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "41.1",
+    "name": "Dead Hang one hand",
+    "bioType": "Pull",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "41.2",
+    "name": "Dead Hang",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "42.1",
+    "name": "Cable pull double",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "42.2",
+    "name": "Kneeling Alternate Pull",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "42.3",
+    "name": "Band Pull",
+    "bioType": "Pull",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "43.1",
+    "name": "Pistol squat",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "43.2",
+    "name": "Pistol squat negative",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "43.3",
+    "name": "Pistol squat seated / box",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "43.4",
+    "name": "1 Leg Jump Squat with Kneel Thrust (alternate)",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "44.1",
+    "name": "Lunge Scissor Jump",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "44.2",
+    "name": "Reverse Lunge",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "45.1",
+    "name": "Planche Pushups",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "45.2",
+    "name": "Pseudo Pushups",
+    "bioType": "Push",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "45.3",
+    "name": "Planche Pushup Straddle",
+    "bioType": "Push",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "45.4",
+    "name": "Planche Pushup Tuck",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "46.1",
+    "name": "Gamma Cast",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "46.2",
+    "name": "Halo disc",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "46.3",
+    "name": "Halo KB",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "46.4",
+    "name": "Halo KB x100 protocol",
+    "bioType": "Core focus",
+    "complexity": "Hard",
+    "description": "5 / side until 100, never drop KB (reste = farmer hold)",
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "46.5",
+    "name": "Side to side KB",
+    "bioType": "Core focus",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "47.1",
+    "name": "Deadlift",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "47.2",
+    "name": "Deadlift Trap bar jump",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "47.3",
+    "name": "Deadlift Trap bar",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "47.4",
+    "name": "Deadlift dumbells",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "47.5",
+    "name": "Deadlift row deep",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "48.1",
+    "name": "Bench Press",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "49.1",
+    "name": "Skater Hops",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "50.1",
+    "name": "Calf raise deficit",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "50.1_227",
+    "name": "Calf raise box",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "50.1_228",
+    "name": "Calf raise",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "51.1",
+    "name": "Finger and Wrist Dynamic Strenghtening",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "52.1",
+    "name": "RDL 1 leg",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "52.2",
+    "name": "RDL",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "52.3",
+    "name": "RDL kickstand",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "52.3_233",
+    "name": "1 Leg Good Morning",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "52.4",
+    "name": "Good Morning",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "53.1",
+    "name": "Overhand Curls",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "54.1",
+    "name": "Landmine L to R  overhead",
+    "bioType": "Core focus",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "54.2",
+    "name": "Landmine L to R  rotation",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "54.3",
+    "name": "Landmine sitting Overhead Push",
+    "bioType": "Core focus",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "54.3_239",
+    "name": "Med ball swing",
+    "bioType": "Core focus",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "54.4",
+    "name": "DB Chop",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "55.1",
+    "name": "Sissy Squat",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "55.2",
+    "name": "Sissy Squat banded",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "55.3",
+    "name": "Sissy squat landmine",
+    "bioType": "Lower body",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "55.4",
+    "name": "Hindu Squat",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "55.5",
+    "name": "Bunny Hop",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "55.6",
+    "name": "Pogo hops",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "56.1",
+    "name": "Backward Run",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "56.2",
+    "name": "Backward Walk",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "57.1",
+    "name": "Lalanne Pushup 1 arm",
+    "bioType": "Core focus",
+    "complexity": "Advanced",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "57.2",
+    "name": "Lalanne Pushup",
+    "bioType": "Core focus",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "57.3",
+    "name": "Barbell Rollout",
+    "bioType": "Core focus",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "57.4",
+    "name": "Ab Rollout",
+    "bioType": "Core focus",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "58.1",
+    "name": "Dumbell Runners",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "59.1",
+    "name": "Curl squat",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "60.1",
+    "name": "360 lunge",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "61.1",
+    "name": "Hip Shoulder Row",
+    "bioType": "Push",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "62.2",
+    "name": "Golf Swing",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "63.1",
+    "name": "Snatch 1 arm banded",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "63.2",
+    "name": "Snatch 1 arm",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "64.1",
+    "name": "Pull press overhead",
+    "bioType": "Pull",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "64.2",
+    "name": "Pull press band",
+    "bioType": "Pull",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "64.3",
+    "name": "Pull press overhead ring",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "65.1",
+    "name": "Deepsquat to thrust",
+    "bioType": "Lower body",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "66.1",
+    "name": "Cable pull with split",
+    "bioType": "Pull",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "67.1",
+    "name": "MB Slam to Floor",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "68.1",
+    "name": "Thruster Landmine",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "68.1_267",
+    "name": "Thruster kneeling landmine close grip",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "69.1",
+    "name": "Landmine split press",
+    "bioType": "Push",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "70.1",
+    "name": "90/90",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "71.1",
+    "name": "Alternate asymetric hammer",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "72.1",
+    "name": "A-Skip",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "73.1",
+    "name": "Back Bridge",
+    "bioType": "Push",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "74.1",
+    "name": "Elephant Walk",
+    "bioType": "Lower body",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "75.1",
+    "name": "Lateral pull cable",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "75.1_275",
+    "name": "Lateral pull cable explosive",
+    "bioType": "Pull",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "75.2",
+    "name": "Diagonal pull cable",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "75.3",
+    "name": "Transversal pull cable",
+    "bioType": "Pull",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "76.1",
+    "name": "Boxing Shuffle KB",
+    "bioType": "Boxing",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "76.2",
+    "name": "Boxing Shuffle landmine",
+    "bioType": "Boxing",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "76.3",
+    "name": "Lunge side landmine",
+    "bioType": "Boxing",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "76.4",
+    "name": "Uppercut KB",
+    "bioType": "Boxing",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "76.5",
+    "name": "Uppercut KB kneeling",
+    "bioType": "Boxing",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "76.6",
+    "name": "Swings KB",
+    "bioType": "Boxing",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "76.7",
+    "name": "Hook rotation MB banded",
+    "bioType": "Boxing",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "76.8",
+    "name": "Punch & Pull",
+    "bioType": "Boxing",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "76.9",
+    "name": "Unmovable barbell Push & Pull",
+    "bioType": "Boxing",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "76.10",
+    "name": "Unmovable MB hook",
+    "bioType": "Boxing",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "76.11",
+    "name": "Cross Explosive Shifts",
+    "bioType": "Boxing",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "77.1",
+    "name": "Bent row gorilla",
+    "bioType": "Boxing",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "77.2",
+    "name": "Bent row neck hold",
+    "bioType": "Boxing",
+    "complexity": "Common",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "77.3",
+    "name": "Peacock squat KB rack",
+    "bioType": "Boxing",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "78.1",
+    "name": "Hip stacked hops",
+    "bioType": "Lower body",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "79.1",
+    "name": "Jacknife",
+    "bioType": "Core focus",
+    "complexity": "Hard",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  },
+  {
+    "id": "0.0",
+    "name": "MHollander lymphatic routine",
+    "bioType": "Core focus",
+    "complexity": "Easy",
+    "description": null,
+    "imageUrl": null,
+    "videoUrl": null
+  }
+]
