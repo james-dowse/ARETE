@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/session'
+import { getCurrentUser, getCurrentUserId } from '@/lib/session'
 import { isAdmin } from '@/lib/admin'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const m = await prisma.movement.findUnique({ where: { id } })
+  const [m, userId] = await Promise.all([
+    prisma.movement.findUnique({ where: { id } }),
+    getCurrentUserId(),
+  ])
   if (!m) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json(m)
+
+  let favorited = false
+  if (userId) {
+    const fav = await prisma.favoriteMovement.findUnique({
+      where: { userId_movementId: { userId, movementId: id } },
+    })
+    favorited = !!fav
+  }
+
+  return NextResponse.json({ ...m, favorited })
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

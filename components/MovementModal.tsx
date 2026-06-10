@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { X, Play, ExternalLink } from 'lucide-react'
+import { X, Play, ExternalLink, Heart } from 'lucide-react'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, EQUIPMENT_ICONS } from '@/lib/types'
 
 interface Movement {
@@ -12,6 +12,7 @@ interface Movement {
   description?: string | null
   imageUrl?: string | null
   videoUrl?: string | null
+  favorited?: boolean
 }
 
 interface Props {
@@ -62,15 +63,34 @@ function getEmbedInfo(url: string): EmbedResult {
 export default function MovementModal({ movementId, onClose }: Props) {
   const [movement, setMovement] = useState<Movement | null>(null)
   const [loading, setLoading] = useState(false)
+  const [favorited, setFavorited] = useState<boolean | null>(null)
+  const [togglingFav, setTogglingFav] = useState(false)
 
   useEffect(() => {
-    if (!movementId) { setMovement(null); return }
+    if (!movementId) { setMovement(null); setFavorited(null); return }
     setLoading(true)
+    setFavorited(null)
     fetch(`/api/movements/${movementId}`)
       .then(r => r.json())
-      .then(setMovement)
+      .then(data => { setMovement(data); setFavorited(data.favorited ?? false) })
       .finally(() => setLoading(false))
   }, [movementId])
+
+  const toggleFavorite = async () => {
+    if (!movementId || togglingFav) return
+    setTogglingFav(true)
+    try {
+      const res = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ movementId }),
+      })
+      const data = await res.json()
+      setFavorited(data.favorited)
+    } finally {
+      setTogglingFav(false)
+    }
+  }
 
   if (!movementId) return null
 
@@ -111,12 +131,36 @@ export default function MovementModal({ movementId, onClose }: Props) {
               </div>
             )}
           </div>
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)', flexShrink: 0, marginLeft: 12 }}
-          >
-            <X size={18} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 12 }}>
+            {favorited !== null && (
+              <button
+                onClick={toggleFavorite}
+                disabled={togglingFav}
+                title={favorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                style={{
+                  background: favorited ? 'rgba(239,68,68,0.1)' : 'none',
+                  border: `1px solid ${favorited ? 'rgba(239,68,68,0.4)' : 'var(--border)'}`,
+                  borderRadius: 8,
+                  cursor: togglingFav ? 'wait' : 'pointer',
+                  padding: '5px 8px',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  color: favorited ? '#ef4444' : 'var(--text-muted)',
+                  fontSize: 12, fontWeight: 600,
+                  transition: 'all 0.15s',
+                  opacity: togglingFav ? 0.6 : 1,
+                }}
+              >
+                <Heart size={14} fill={favorited ? 'currentColor' : 'none'} />
+                {favorited ? 'Favori' : 'Favori'}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)' }}
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}

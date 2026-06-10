@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/session'
+import { getCurrentUser, getCurrentUserId } from '@/lib/session'
 import { isAdmin } from '@/lib/admin'
 
 export async function GET(req: NextRequest) {
@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   const complexity = searchParams.get('complexity')
   const equipment = searchParams.get('equipment')
   const search = searchParams.get('search')
+  const favoritesOnly = searchParams.get('favorites') === '1'
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = {}
@@ -16,6 +17,12 @@ export async function GET(req: NextRequest) {
   if (complexity) where.complexity = complexity
   if (equipment) where.equipment = equipment
   if (search) where.name = { contains: search }
+
+  if (favoritesOnly) {
+    const userId = await getCurrentUserId()
+    if (!userId) return NextResponse.json([])
+    where.favorites = { some: { userId } }
+  }
 
   const movements = await prisma.movement.findMany({
     where,

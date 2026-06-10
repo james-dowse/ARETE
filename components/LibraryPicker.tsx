@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, X } from 'lucide-react'
+import { Search, X, Heart } from 'lucide-react'
 import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
 
 export interface PickableMovement {
@@ -38,6 +38,7 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
   const [search, setSearch] = useState('')
   const [bioFilter, setBioFilter] = useState('')
   const [complexityFilter, setComplexityFilter] = useState('')
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [results, setResults] = useState<PickableMovement[]>([])
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -48,10 +49,11 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
     if (bioFilter) p.set('bioType', bioFilter)
     if (complexityFilter) p.set('complexity', complexityFilter)
     if (search) p.set('search', search)
+    if (favoritesOnly) p.set('favorites', '1')
     const res = await fetch(`/api/movements?${p}`)
     setResults(await res.json())
     setLoading(false)
-  }, [bioFilter, complexityFilter, search])
+  }, [bioFilter, complexityFilter, search, favoritesOnly])
 
   useEffect(() => { const t = setTimeout(doFetch, 200); return () => clearTimeout(t) }, [doFetch])
   useEffect(() => { inputRef.current?.focus() }, [])
@@ -69,12 +71,44 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
         <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Choisir un mouvement</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>
-              Remplace : <span style={{ color: 'var(--text-primary)' }}>{currentName}</span>
-            </div>
+            {currentName && (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>
+                Remplace : <span style={{ color: 'var(--text-primary)' }}>{currentName}</span>
+              </div>
+            )}
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
             <X size={17} />
+          </button>
+        </div>
+
+        {/* Source tabs */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
+          <button
+            onClick={() => setFavoritesOnly(false)}
+            style={{
+              flex: 1, padding: '9px 12px', background: 'none', border: 'none',
+              borderBottom: `2px solid ${!favoritesOnly ? 'var(--accent)' : 'transparent'}`,
+              color: !favoritesOnly ? 'var(--text-primary)' : 'var(--text-muted)',
+              fontWeight: !favoritesOnly ? 700 : 400, fontSize: 13, cursor: 'pointer',
+              transition: 'color 0.15s',
+            }}
+          >
+            Tous les mouvements
+          </button>
+          <button
+            onClick={() => setFavoritesOnly(true)}
+            style={{
+              flex: 1, padding: '9px 12px', background: 'none', border: 'none',
+              borderBottom: `2px solid ${favoritesOnly ? '#ef4444' : 'transparent'}`,
+              color: favoritesOnly ? '#ef4444' : 'var(--text-muted)',
+              fontWeight: favoritesOnly ? 700 : 400, fontSize: 13, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              transition: 'color 0.15s',
+            }}
+          >
+            <Heart size={13} fill={favoritesOnly ? 'currentColor' : 'none'} />
+            Mes favoris
           </button>
         </div>
 
@@ -86,7 +120,7 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
               ref={inputRef}
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Rechercher…"
+              placeholder={favoritesOnly ? 'Rechercher dans mes favoris…' : 'Rechercher…'}
               style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }}
             />
             {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={11} color="var(--text-muted)" /></button>}
@@ -112,7 +146,14 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
         {/* Results */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '6px 10px' }}>
           {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Chargement…</div>}
-          {!loading && results.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Aucun résultat</div>}
+          {!loading && results.length === 0 && (
+            <div style={{ padding: 28, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              {favoritesOnly
+                ? (<><Heart size={28} strokeWidth={1.2} color="var(--text-dim)" /><span>Aucun favori pour l&apos;instant — ouvre la fiche d&apos;un mouvement et clique ♥ pour l&apos;ajouter.</span></>)
+                : 'Aucun résultat'
+              }
+            </div>
+          )}
           {!loading && results.map(m => (
             <button key={m.id} onClick={() => onPick(m)}
               style={{

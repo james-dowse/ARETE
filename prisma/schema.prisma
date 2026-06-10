@@ -7,7 +7,7 @@ datasource db {
 }
 
 model Movement {
-  id               String            @id
+  id               String             @id
   name             String
   bioType          String
   complexity       String
@@ -16,6 +16,7 @@ model Movement {
   imageUrl         String?
   videoUrl         String?
   workoutMovements WorkoutMovement[]
+  favorites        FavoriteMovement[]
 }
 
 model Workout {
@@ -100,6 +101,18 @@ model InvitedUser {
   sharesSent     WorkoutShare[]    @relation("SharesSent")
   sharesReceived WorkoutShare[]    @relation("SharesReceived")
   savedWorkouts  SavedWorkout[]
+  favorites      FavoriteMovement[]
+}
+
+model FavoriteMovement {
+  id         String      @id @default(cuid())
+  userId     String
+  movementId String
+  createdAt  DateTime    @default(now())
+  user       InvitedUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movement   Movement    @relation(fields: [movementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movementId])
 }
 
 model SavedWorkout {
