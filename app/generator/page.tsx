@@ -15,6 +15,9 @@ interface Block {
   count: number
   order: number
   instructions: string
+  sets: number
+  reps: string
+  rest: number
 }
 interface MovementParams { sets: number; reps: string; rest: number }
 
@@ -22,10 +25,11 @@ function uid() { return Math.random().toString(36).slice(2) }
 
 const DEFAULT_SETS = 2
 const DEFAULT_REPS = '10'
+const DEFAULT_REST = 1
 
 export default function GeneratorPage() {
   const [blocks, setBlocks] = useState<Block[]>([
-    { id: uid(), bioTypes: [], complexities: [], equipments: [], count: 3, order: 0, instructions: '' },
+    { id: uid(), bioTypes: [], complexities: [], equipments: [], count: 3, order: 0, instructions: '', sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST },
   ])
   const [duration, setDuration] = useState('')
   const [workoutName, setWorkoutName] = useState('')
@@ -34,10 +38,7 @@ export default function GeneratorPage() {
   const [generated, setGenerated] = useState<GeneratedMovement[] | null>(null)
   const [params, setParams] = useState<MovementParams[]>([])
 
-  // Global defaults (apply on generate)
-  const [globalSets, setGlobalSets] = useState(DEFAULT_SETS)
-  const [globalReps, setGlobalReps] = useState(DEFAULT_REPS)
-  const [globalRest, setGlobalRest] = useState(1)      // minutes de repos entre séries
+  // Global inter-block rest (seconds between blocks, shared across all blocks)
   const [globalBlockRest, setGlobalBlockRest] = useState(2) // minutes de repos entre blocs
 
   const [workoutDescription, setWorkoutDescription] = useState('')
@@ -121,7 +122,7 @@ export default function GeneratorPage() {
     setSubstitutingIndex(null)
   }
 
-  const addBlock = () => setBlocks(prev => [...prev, { id: uid(), bioTypes: [], complexities: [], equipments: [], count: 3, order: prev.length, instructions: '' }])
+  const addBlock = () => setBlocks(prev => [...prev, { id: uid(), bioTypes: [], complexities: [], equipments: [], count: 3, order: prev.length, instructions: '', sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST }])
   const removeBlock = (id: string) => setBlocks(prev => prev.filter(b => b.id !== id))
   const updateBlock = (id: string, field: keyof Block, value: string | number | null) =>
     setBlocks(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b))
@@ -148,7 +149,10 @@ export default function GeneratorPage() {
       })
       const data = await res.json()
       setGenerated(data.movements)
-      setParams(data.movements.map(() => ({ sets: globalSets, reps: globalReps, rest: globalRest })))
+      setParams(data.movements.map((m: { blockIndex: number }) => {
+        const b = blocks[m.blockIndex]
+        return { sets: b?.sets ?? DEFAULT_SETS, reps: b?.reps ?? DEFAULT_REPS, rest: b?.rest ?? DEFAULT_REST }
+      }))
       if (!workoutName) {
         const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
         setWorkoutName(`Workout ${date}`)
@@ -174,9 +178,9 @@ export default function GeneratorPage() {
           movements: generated.map((m, i) => ({
             movementId: m.id,
             order: i,
-            sets: params[i]?.sets ?? globalSets,
-            reps: params[i]?.reps ?? globalReps,
-            rest: params[i]?.rest ?? globalRest,
+            sets: params[i]?.sets ?? DEFAULT_SETS,
+            reps: params[i]?.reps ?? DEFAULT_REPS,
+            rest: params[i]?.rest ?? DEFAULT_REST,
             blockIndex: m.blockIndex,
           })),
           blocks: blocks.map((b, i) => ({
@@ -225,7 +229,7 @@ export default function GeneratorPage() {
       const data = await res.json()
       setTemplates(data.map((t: { id: string; name: string; blocks: { bioType: string | null; complexity: string | null; count: number; order: number }[] }) => ({
         ...t,
-        blocks: t.blocks.map((b: { bioType: string | null; complexity: string | null; count: number; order: number }) => ({ ...b, id: uid(), instructions: '' })),
+        blocks: t.blocks.map((b: { bioType: string | null; complexity: string | null; count: number; order: number }) => ({ ...b, id: uid(), instructions: '', sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST })),
       })))
       setShowTemplates(true)
     } finally {
@@ -265,13 +269,13 @@ export default function GeneratorPage() {
     const h = Math.floor(r / 60); const m = r % 60
     return m > 0 ? `~${h}h${m}min` : `~${h}h`
   }
-  const minPerMov = (sets: number) => sets * (1 + globalRest)
-  const blockEstMin = (count: number, sets: number) => count * minPerMov(sets)
+  const minPerMov = (sets: number, rest: number) => sets * (1 + rest)
+  const blockEstMin = (count: number, sets: number, rest: number) => count * minPerMov(sets, rest)
   const interBlockRest = (nbBlocks: number) => Math.max(0, nbBlocks - 1) * globalBlockRest
   const totalEstMin = generated
-    ? generated.reduce((sum, _, i) => sum + minPerMov(params[i]?.sets ?? globalSets), 0)
+    ? generated.reduce((sum, _, i) => sum + minPerMov(params[i]?.sets ?? DEFAULT_SETS, params[i]?.rest ?? DEFAULT_REST), 0)
       + interBlockRest(generatedByBlock.filter(g => g.length > 0).length)
-    : blocks.reduce((sum, b) => sum + b.count * minPerMov(globalSets), 0)
+    : blocks.reduce((sum, b) => sum + b.count * minPerMov(b.sets, b.rest), 0)
       + interBlockRest(blocks.length)
 
   // ── Duration target logic ──
@@ -279,8 +283,11 @@ export default function GeneratorPage() {
   const movementTime = duration
     ? Math.max(0, Number(duration) - interBlockRest(blocks.length))
     : null
+  const avgMinPerMov = blocks.length > 0
+    ? blocks.reduce((s, b) => s + minPerMov(b.sets, b.rest), 0) / blocks.length
+    : minPerMov(DEFAULT_SETS, DEFAULT_REST)
   const targetMovements = movementTime !== null
-    ? Math.max(1, Math.round(movementTime / minPerMov(globalSets)))
+    ? Math.max(1, Math.round(movementTime / avgMinPerMov))
     : null
   const durationDelta = targetMovements ? totalMovements - targetMovements : 0
   const durationOk = Math.abs(durationDelta) <= 1
@@ -310,7 +317,7 @@ export default function GeneratorPage() {
 
     // Available time after inter-block rests
     const availableForMovements = Math.max(nbBlocks, targetDur - Math.max(0, nbBlocks - 1) * globalBlockRest)
-    const timePerMov = sets * (1 + globalRest)
+    const timePerMov = sets * (1 + DEFAULT_REST)
     const totalMovTarget = Math.max(nbBlocks * 2, Math.round(availableForMovements / timePerMov))
 
     // Distribute across blocks (min 2 per block)
@@ -328,10 +335,12 @@ export default function GeneratorPage() {
       count: base + (i < extra ? 1 : 0),
       order: i,
       instructions: '',
+      sets,
+      reps: DEFAULT_REPS,
+      rest: DEFAULT_REST,
     }))
 
     setBlocks(randomBlocks)
-    setGlobalSets(sets)
     setDuration(String(targetDur))
     setCollapsedBlocks({})
 
@@ -343,7 +352,10 @@ export default function GeneratorPage() {
       })
       const data = await res.json()
       setGenerated(data.movements)
-      setParams(data.movements.map(() => ({ sets, reps: globalReps, rest: globalRest })))
+      setParams(data.movements.map((m: { blockIndex: number }) => {
+        const b = randomBlocks[m.blockIndex]
+        return { sets: b?.sets ?? sets, reps: b?.reps ?? DEFAULT_REPS, rest: b?.rest ?? DEFAULT_REST }
+      }))
       const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
       setWorkoutName(`Workout ${label} ${date}`)
     } finally {
@@ -490,7 +502,7 @@ export default function GeneratorPage() {
                         {block.equipments.map(eq => (
                           <span key={eq} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontWeight: 600 }}>{EQUIPMENT_ICONS[eq]} {eq}</span>
                         ))}
-                        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{block.count} mvt{block.count > 1 ? 's' : ''} · {fmtMin(blockEstMin(block.count, globalSets))}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{block.count} mvt{block.count > 1 ? 's' : ''} · {fmtMin(blockEstMin(block.count, block.sets, block.rest))}</span>
                         {block.instructions && (
                           <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600 }}>• instructions</span>
                         )}
@@ -581,7 +593,7 @@ export default function GeneratorPage() {
                           </div>
                         </div>
                         {/* Instructions */}
-                        <div>
+                        <div style={{ marginBottom: 12 }}>
                           <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>INSTRUCTIONS (optionnel)</label>
                           <RichEditor
                             value={block.instructions}
@@ -589,6 +601,25 @@ export default function GeneratorPage() {
                             placeholder="Ex: 45s travail / 15s repos, priorité technique…"
                             minHeight={60}
                           />
+                        </div>
+                        {/* Per-block sets / reps / rest */}
+                        <div style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, display: 'block', marginBottom: 10 }}>PARAMÈTRES</label>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', letterSpacing: 0.4 }}>SÉRIES</label>
+                              <Stepper value={block.sets} min={1} max={10} onChange={v => updateBlock(block.id, 'sets', v)} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', letterSpacing: 0.4 }}>REPS</label>
+                              <RepsInput value={block.reps} onChange={v => updateBlock(block.id, 'reps', v)} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', letterSpacing: 0.4 }}>REPOS (min)</label>
+                              <Stepper value={block.rest} min={0} max={10} onChange={v => updateBlock(block.id, 'rest', v)} />
+                              <span style={{ fontSize: 9, fontStyle: 'italic', color: 'var(--text-dim)' }}>entre chaque série</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -601,26 +632,10 @@ export default function GeneratorPage() {
               <Plus size={14} /> Ajouter un bloc
             </button>
 
-            {/* Global defaults */}
+            {/* Inter-block rest */}
             <div style={{ marginTop: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, marginBottom: 12 }}>PARAMÈTRES DES MOUVEMENTS</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>SÉRIES</label>
-                  <Stepper value={globalSets} min={1} max={10} onChange={setGlobalSets} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>RÉPÉTITIONS</label>
-                  <RepsInput value={globalReps} onChange={setGlobalReps} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>REPOS (min)</label>
-                  <Stepper value={globalRest} min={0} max={10} onChange={setGlobalRest} />
-                  <div style={{ fontSize: 10, fontStyle: 'italic', color: 'var(--text-dim)', marginTop: 4 }}>entre chaque série</div>
-                </div>
-              </div>
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>REPOS ENTRE BLOCS (min)</label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.4 }}>REPOS ENTRE BLOCS (min)</label>
                 <Stepper value={globalBlockRest} min={0} max={15} onChange={setGlobalBlockRest} />
               </div>
             </div>
@@ -746,7 +761,7 @@ export default function GeneratorPage() {
                               <span key={eq} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontWeight: 600 }}>{EQUIPMENT_ICONS[eq]} {eq}</span>
                             ))}
                             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-                              {fmtMin(movs.reduce((s, _, j) => s + minPerMov(params[offset + j]?.sets ?? globalSets), 0))}
+                              {fmtMin(movs.reduce((s, _, j) => s + minPerMov(params[offset + j]?.sets ?? DEFAULT_SETS, params[offset + j]?.rest ?? DEFAULT_REST), 0))}
                             </span>
                           </div>
                           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
@@ -824,15 +839,15 @@ export default function GeneratorPage() {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
                                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Séries</span>
-                                    <Stepper value={params[i]?.sets ?? globalSets} min={1} max={10} onChange={v => setParam(i, 'sets', v)} />
+                                    <Stepper value={params[i]?.sets ?? DEFAULT_SETS} min={1} max={10} onChange={v => setParam(i, 'sets', v)} />
                                   </div>
                                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Reps</span>
-                                    <RepsInput value={params[i]?.reps ?? globalReps} onChange={v => setParam(i, 'reps', v)} />
+                                    <RepsInput value={params[i]?.reps ?? DEFAULT_REPS} onChange={v => setParam(i, 'reps', v)} />
                                   </div>
                                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Repos (min)</span>
-                                    <Stepper value={params[i]?.rest ?? globalRest} min={0} max={10} onChange={v => setParam(i, 'rest', v)} />
+                                    <Stepper value={params[i]?.rest ?? DEFAULT_REST} min={0} max={10} onChange={v => setParam(i, 'rest', v)} />
                                   </div>
                                 </div>
                               </div>
