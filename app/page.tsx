@@ -61,7 +61,7 @@ export default async function DashboardPage() {
     ? (user.firstName?.trim() || getDisplayName(user.email))
     : null
 
-  const [movementCount, workoutCount, templateCount, recentWorkouts, bioStats, complexityStats, recentSessions] = await Promise.all([
+  const [movementCount, workoutCount, templateCount, recentWorkouts, bioStats, complexityStats] = await Promise.all([
     prisma.movement.count(),
     prisma.workout.count(),
     prisma.workoutTemplate.count(),
@@ -72,15 +72,16 @@ export default async function DashboardPage() {
     }),
     prisma.movement.groupBy({ by: ['bioType'], _count: true }),
     prisma.movement.groupBy({ by: ['complexity'], _count: true }),
-    user
-      ? prisma.workoutSession.findMany({
-          where: { userId: user.id },
-          take: 5,
-          orderBy: { doneAt: 'desc' },
-          include: { workout: { select: { id: true, name: true, duration: true, movements: { select: { movement: { select: { bioType: true } } } } } } },
-        })
-      : Promise.resolve([]),
   ])
+
+  const recentSessions = user
+    ? await prisma.workoutSession.findMany({
+        where: { userId: user.id },
+        take: 5,
+        orderBy: { doneAt: 'desc' },
+        include: { workout: { select: { id: true, name: true, duration: true, movements: { select: { movement: { select: { bioType: true } } } } } } },
+      }).catch(() => [])
+    : []
 
   const complexityOrder = ['Easy', 'Common', 'Hard', 'Advanced']
   const maxBio = Math.max(...bioStats.map(s => s._count), 1)
