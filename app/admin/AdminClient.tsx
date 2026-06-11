@@ -223,6 +223,17 @@ function AttributeSection({
     if (res.ok) { await onReload() } else { const d = await res.json(); setError(d.error || 'Erreur') }
   }
 
+  const handleMove = async (opt: AttributeOption, idx: number, dir: 'up' | 'down') => {
+    const swapIdx = dir === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= items.length) return
+    const swap = items[swapIdx]
+    await Promise.all([
+      fetch(`/api/attributes/${opt.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position: swap.position }) }),
+      fetch(`/api/attributes/${swap.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position: opt.position }) }),
+    ])
+    await onReload()
+  }
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!addForm.value.trim()) return
@@ -257,7 +268,7 @@ function AttributeSection({
       )}
 
       <div>
-        {items.map(opt => (
+        {items.map((opt, idx) => (
           <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: '1px solid var(--border)', minHeight: 42 }}>
             {editingId === opt.id ? (
               <>
@@ -285,6 +296,16 @@ function AttributeSection({
                 {opt.icon && <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{opt.icon}</span>}
                 {opt.color && <span style={{ width: 10, height: 10, borderRadius: '50%', background: opt.color, flexShrink: 0, border: '1px solid rgba(255,255,255,0.15)' }} />}
                 <span style={{ fontSize: 13, flex: 1, color: opt.color || 'var(--text-primary)' }}>{opt.value}</span>
+                <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                  <button onClick={() => handleMove(opt, idx, 'up')} disabled={idx === 0} title="Monter"
+                    style={{ width: 22, height: 22, borderRadius: 5, background: 'none', border: 'none', color: idx === 0 ? 'var(--text-dim)' : 'var(--text-muted)', cursor: idx === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: idx === 0 ? 0.3 : 1 }}>
+                    <ChevronUp size={12} />
+                  </button>
+                  <button onClick={() => handleMove(opt, idx, 'down')} disabled={idx === items.length - 1} title="Descendre"
+                    style={{ width: 22, height: 22, borderRadius: 5, background: 'none', border: 'none', color: idx === items.length - 1 ? 'var(--text-dim)' : 'var(--text-muted)', cursor: idx === items.length - 1 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: idx === items.length - 1 ? 0.3 : 1 }}>
+                    <ChevronDown size={12} />
+                  </button>
+                </div>
                 <div className="attr-row-actions" style={{ display: 'flex', gap: 4, opacity: 0 }}>
                   <button onClick={() => startEdit(opt)} title="Modifier"
                     style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -324,7 +345,7 @@ function AttributeSection({
 
 // ─── Référentiels tab ─────────────────────────────────────────────────────────
 function AttributesTab() {
-  const { bioTypes, complexities, equipments, loading, reload } = useAttributes()
+  const { bioTypes, complexities, equipments, loading, error, reload } = useAttributes()
 
   if (loading) {
     return (
@@ -342,6 +363,11 @@ function AttributesTab() {
           Valeurs possibles pour les types biomécaniques, complexités et équipements.
         </p>
       </div>
+      {error && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.25)', borderRadius: 8, fontSize: 13, color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={14} /> {error}
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
         <AttributeSection
           title="Types Biomécaniques"

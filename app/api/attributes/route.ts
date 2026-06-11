@@ -48,7 +48,7 @@ async function ensureSeeded() {
 }
 
 export async function GET() {
-  await ensureSeeded()
+  try { await ensureSeeded() } catch { /* non-fatal: return whatever is already in DB */ }
 
   const all = await prisma.attributeOption.findMany({ orderBy: [{ category: 'asc' }, { position: 'asc' }, { value: 'asc' }] })
 

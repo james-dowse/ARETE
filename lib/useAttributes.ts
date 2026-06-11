@@ -22,29 +22,36 @@ export function invalidateAttributesCache() {
   _cache = null
 }
 
+async function fetchAttributes(): Promise<AttributesData> {
+  const r = await fetch('/api/attributes')
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
+
 export function useAttributes() {
   const [data, setData] = useState<AttributesData | null>(_cache)
   const [loading, setLoading] = useState(!_cache)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!_cache) {
-      fetch('/api/attributes')
-        .then(r => r.json())
-        .then((d: AttributesData) => {
-          _cache = d
-          setData(d)
-          setLoading(false)
-        })
+      fetchAttributes()
+        .then(d => { _cache = d; setData(d); setLoading(false) })
+        .catch(e => { setError(String(e)); setLoading(false) })
     }
   }, [])
 
+  // Silent reload — does NOT set loading = true, avoids skeleton flash
   const reload = async () => {
     invalidateAttributesCache()
-    setLoading(true)
-    const d: AttributesData = await fetch('/api/attributes').then(r => r.json())
-    _cache = d
-    setData(d)
-    setLoading(false)
+    try {
+      const d = await fetchAttributes()
+      _cache = d
+      setData(d)
+      setError(null)
+    } catch (e) {
+      setError(String(e))
+    }
   }
 
   return {
@@ -52,6 +59,7 @@ export function useAttributes() {
     complexities: data?.complexities ?? [],
     equipments: data?.equipments ?? [],
     loading,
+    error,
     reload,
   }
 }
