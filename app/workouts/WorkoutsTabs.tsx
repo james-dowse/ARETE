@@ -392,6 +392,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const [toast, setToast] = useState<string | null>(null)
   const [claiming, setClaiming] = useState(false)
   const [recentsOpen, setRecentsOpen] = useState(false)
+  const [favoritesOpen, setFavoritesOpen] = useState(false)
   const [activeTag, setActiveTag] = useState<string | null>(null)
 
   useEffect(() => {
@@ -577,20 +578,30 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
           {/* Section Favoris */}
           {favorites.length > 0 && (
             <div style={{ marginBottom: 32 }}>
-              <SectionLabel icon={<Star size={13} fill="var(--gold)" color="var(--gold)" />} label="Favoris" count={favorites.length} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {favorites.map(w => (
-                  <WorkoutCard
-                    key={w.id}
-                    w={w}
-                    context={myWorkouts.find(x => x.id === w.id) ? 'mine' : 'saved'}
-                    onShare={myWorkouts.find(x => x.id === w.id) ? () => setSharingWorkout(w) : undefined}
-                    onDelete={myWorkouts.find(x => x.id === w.id) ? () => setMyWorkouts(prev => prev.filter(x => x.id !== w.id)) : undefined}
-                    onToggleSave={savedWorkouts.find(x => x.id === w.id) ? () => setSavedWorkouts(prev => prev.filter(x => x.id !== w.id)) : undefined}
-                    onToggleFavorite={fav => updateFavorite(w.id, fav)}
-                  />
-                ))}
+              <div
+                onClick={() => setFavoritesOpen(o => !o)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: favoritesOpen ? 12 : 0, marginTop: 4, cursor: 'pointer', userSelect: 'none' }}
+              >
+                <span style={{ color: 'var(--gold)', display: 'flex' }}><Star size={13} fill="var(--gold)" /></span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.6, textTransform: 'uppercase' }}>Favoris</span>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{favorites.length}</span>
+                <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', display: 'flex' }}>{favoritesOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</span>
               </div>
+              {favoritesOpen && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {favorites.map(w => (
+                    <WorkoutCard
+                      key={w.id}
+                      w={w}
+                      context={myWorkouts.find(x => x.id === w.id) ? 'mine' : 'saved'}
+                      onShare={myWorkouts.find(x => x.id === w.id) ? () => setSharingWorkout(w) : undefined}
+                      onDelete={myWorkouts.find(x => x.id === w.id) ? () => setMyWorkouts(prev => prev.filter(x => x.id !== w.id)) : undefined}
+                      onToggleSave={savedWorkouts.find(x => x.id === w.id) ? () => setSavedWorkouts(prev => prev.filter(x => x.id !== w.id)) : undefined}
+                      onToggleFavorite={fav => updateFavorite(w.id, fav)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
