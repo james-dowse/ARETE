@@ -86,7 +86,7 @@ export default function LibraryPage() {
 
   const displayed = tab === 'favorites' ? sorted.filter(m => favIds.has(m.id)) : sorted
 
-  const groupByBio = !bioFilter && tab !== 'favorites'
+  const groupByBio = !bioFilter
   const grouped: Record<string, Movement[]> = {}
   if (groupByBio) {
     displayed.forEach(m => {
