@@ -127,6 +127,17 @@ model SavedWorkout {
   @@unique([workoutId, userId])
 }
 
+model AttributeOption {
+  id       String @id @default(cuid())
+  category String // 'bioType' | 'complexity' | 'equipment'
+  value    String
+  icon     String?
+  color    String?
+  position Int    @default(0)
+
+  @@unique([category, value])
+}
+
 model WorkoutShare {
   id             String       @id @default(cuid())
   workoutId      String

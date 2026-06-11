@@ -1,5 +1,6 @@
 'use client'
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
+import { useAttributes, invalidateAttributesCache, type AttributeOption } from '@/lib/useAttributes'
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown, Upload, Download, CheckSquare } from 'lucide-react'
 
@@ -179,6 +180,200 @@ function SortTh({ label, field, sort, onSort }: { label: string; field: SortKey;
   )
 }
 
+// ─── Référentiels — one category section ──────────────────────────────────────
+function AttributeSection({
+  title, category, items, hasIcon, hasColor, onReload,
+}: {
+  title: string
+  category: string
+  items: AttributeOption[]
+  hasIcon?: boolean
+  hasColor?: boolean
+  onReload: () => Promise<void>
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editBuf, setEditBuf] = useState<{ value: string; icon: string; color: string }>({ value: '', icon: '', color: '' })
+  const [saving, setSaving] = useState(false)
+  const [addForm, setAddForm] = useState({ value: '', icon: '', color: '' })
+  const [adding, setAdding] = useState(false)
+  const [error, setError] = useState('')
+
+  const startEdit = (o: AttributeOption) => {
+    setEditingId(o.id)
+    setEditBuf({ value: o.value, icon: o.icon ?? '', color: o.color ?? '' })
+    setError('')
+  }
+  const cancelEdit = () => { setEditingId(null); setEditBuf({ value: '', icon: '', color: '' }) }
+
+  const commitEdit = async (id: string) => {
+    setSaving(true)
+    const body: Record<string, string | null> = { value: editBuf.value.trim() }
+    if (hasIcon) body.icon = editBuf.icon.trim() || null
+    if (hasColor) body.color = editBuf.color.trim() || null
+    const res = await fetch(`/api/attributes/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    })
+    setSaving(false)
+    if (res.ok) { setEditingId(null); await onReload() } else { const d = await res.json(); setError(d.error || 'Erreur') }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Supprimer cette valeur ?')) return
+    const res = await fetch(`/api/attributes/${id}`, { method: 'DELETE' })
+    if (res.ok) { await onReload() } else { const d = await res.json(); setError(d.error || 'Erreur') }
+  }
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!addForm.value.trim()) return
+    setAdding(true)
+    const body: Record<string, string | null> = { category, value: addForm.value.trim() }
+    if (hasIcon) body.icon = addForm.icon.trim() || null
+    if (hasColor) body.color = addForm.color.trim() || null
+    const res = await fetch('/api/attributes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    })
+    setAdding(false)
+    if (res.ok) { setAddForm({ value: '', icon: '', color: '' }); await onReload() } else { const d = await res.json(); setError(d.error || 'Erreur') }
+  }
+
+  const inp = (v: string, onChange: (x: string) => void, placeholder: string, width?: number) => (
+    <input value={v} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+      style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', color: 'var(--text-primary)', fontSize: 12, outline: 'none', width: width ?? 'auto', minWidth: 0 }} />
+  )
+
+  return (
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.07em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{title}</span>
+        <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-dim)' }}>{items.length}</span>
+      </div>
+
+      {error && (
+        <div style={{ margin: '8px 12px 0', padding: '6px 10px', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.25)', borderRadius: 7, fontSize: 12, color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <AlertTriangle size={12} /> {error}
+          <button onClick={() => setError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)' }}><X size={11} /></button>
+        </div>
+      )}
+
+      <div>
+        {items.map(opt => (
+          <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: '1px solid var(--border)', minHeight: 42 }}>
+            {editingId === opt.id ? (
+              <>
+                {inp(editBuf.value, v => setEditBuf(b => ({ ...b, value: v })), 'Valeur', 120)}
+                {hasIcon && inp(editBuf.icon, v => setEditBuf(b => ({ ...b, icon: v })), 'Icône', 56)}
+                {hasColor && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <input type="color" value={editBuf.color || '#888888'} onChange={e => setEditBuf(b => ({ ...b, color: e.target.value }))}
+                      style={{ width: 28, height: 28, padding: 2, border: '1px solid var(--border)', borderRadius: 5, cursor: 'pointer', background: 'none' }} />
+                    <button onClick={() => setEditBuf(b => ({ ...b, color: '' }))} title="Effacer couleur"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 2 }}><X size={10} /></button>
+                  </div>
+                )}
+                <button onClick={() => commitEdit(opt.id)} disabled={saving} title="Sauvegarder"
+                  style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 6, background: 'var(--dirty,rgba(200,169,81,0.15))', border: '1px solid var(--accent)', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Check size={12} />
+                </button>
+                <button onClick={cancelEdit} title="Annuler"
+                  style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <X size={12} />
+                </button>
+              </>
+            ) : (
+              <>
+                {opt.icon && <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{opt.icon}</span>}
+                {opt.color && <span style={{ width: 10, height: 10, borderRadius: '50%', background: opt.color, flexShrink: 0, border: '1px solid rgba(255,255,255,0.15)' }} />}
+                <span style={{ fontSize: 13, flex: 1, color: opt.color || 'var(--text-primary)' }}>{opt.value}</span>
+                <div className="attr-row-actions" style={{ display: 'flex', gap: 4, opacity: 0 }}>
+                  <button onClick={() => startEdit(opt)} title="Modifier"
+                    style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Pencil size={11} />
+                  </button>
+                  <button onClick={() => handleDelete(opt.id)} title="Supprimer"
+                    style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Trash2 size={11} />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Add form */}
+      <form onSubmit={handleAdd} style={{ display: 'flex', gap: 6, padding: '10px 12px', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.04)', alignItems: 'center', flexWrap: 'wrap' }}>
+        {inp(addForm.value, v => setAddForm(f => ({ ...f, value: v })), 'Nouvelle valeur…', 120)}
+        {hasIcon && inp(addForm.icon, v => setAddForm(f => ({ ...f, icon: v })), 'Icône', 56)}
+        {hasColor && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <input type="color" value={addForm.color || '#888888'} onChange={e => setAddForm(f => ({ ...f, color: e.target.value }))}
+              style={{ width: 28, height: 28, padding: 2, border: '1px solid var(--border)', borderRadius: 5, cursor: 'pointer', background: 'none' }} />
+            <button type="button" onClick={() => setAddForm(f => ({ ...f, color: '' }))} title="Pas de couleur"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 2 }}><X size={10} /></button>
+          </div>
+        )}
+        <button type="submit" disabled={adding || !addForm.value.trim()}
+          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: 'var(--accent)', border: 'none', borderRadius: 7, color: 'var(--on-accent)', fontSize: 12, fontWeight: 700, cursor: adding ? 'wait' : 'pointer', opacity: adding ? 0.7 : 1, flexShrink: 0 }}>
+          <Plus size={12} /> Ajouter
+        </button>
+      </form>
+    </div>
+  )
+}
+
+// ─── Référentiels tab ─────────────────────────────────────────────────────────
+function AttributesTab() {
+  const { bioTypes, complexities, equipments, loading, reload } = useAttributes()
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
+        {[1, 2, 3].map(i => <div key={i} style={{ height: 200, background: 'var(--bg-card)', borderRadius: 12, opacity: 0.5 }} />)}
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Référentiels</h2>
+        <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--text-muted)' }}>
+          Valeurs possibles pour les types biomécaniques, complexités et équipements.
+        </p>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+        <AttributeSection
+          title="Types Biomécaniques"
+          category="bioType"
+          items={bioTypes}
+          hasIcon
+          hasColor
+          onReload={reload}
+        />
+        <AttributeSection
+          title="Complexités"
+          category="complexity"
+          items={complexities}
+          hasColor
+          onReload={reload}
+        />
+        <AttributeSection
+          title="Équipements"
+          category="equipment"
+          items={equipments}
+          hasIcon
+          onReload={reload}
+        />
+      </div>
+      <style>{`
+        div:hover .attr-row-actions { opacity: 1 !important; }
+        .attr-row-actions { transition: opacity 0.15s; }
+      `}</style>
+    </div>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function AdminClient({
   initialMovements, usageMap,
@@ -186,6 +381,7 @@ export default function AdminClient({
   initialMovements: Movement[]
   usageMap: Record<string, number>
 }) {
+  const [activeTab, setActiveTab] = useState<'mouvements' | 'referentiels'>('mouvements')
   const [movements, setMovements] = useState<Movement[]>(initialMovements)
   const [search, setSearch] = useState('')
   const [bioFilter, setBioFilter] = useState('')
@@ -246,7 +442,7 @@ export default function AdminClient({
     setSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' })
   }
 
-  // ── Bulk selection helpers (defined after filtered) ──
+  // ── Bulk selection helpers ──
   const allFilteredSelected = filtered.length > 0 && filtered.every(m => selected.has(m.id))
   const someSelected = filtered.some(m => selected.has(m.id))
 
@@ -380,385 +576,415 @@ export default function AdminClient({
   const bioStats = BIO_TYPES.map(bt => ({ bt, count: movements.filter(m => m.bioType === bt).length }))
 
   return (
-    <div style={{ maxWidth: 1200, paddingRight: usagePanel ? 364 : 0, transition: 'padding-right 0.2s' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>Administration</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: 14 }}>
-            {movements.length} mouvements · {filtered.length} affichés
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <input ref={importRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: 'none' }} />
-          <a href="/api/movements/export" download
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
-            <Download size={15} /> Exporter XLS
-          </a>
-          <button onClick={() => importRef.current?.click()} disabled={importing}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: importing ? 'wait' : 'pointer', opacity: importing ? 0.6 : 1 }}>
-            <Upload size={15} /> {importing ? 'Import...' : 'Importer XLS'}
-          </button>
-          <button onClick={() => setShowNew(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
-            <Plus size={16} /> Nouveau mouvement
-          </button>
-        </div>
-      </div>
+    <div style={{ maxWidth: 1200, paddingRight: activeTab === 'mouvements' && usagePanel ? 364 : 0, transition: 'padding-right 0.2s' }}>
 
-      {/* Mini stats bar */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-        {bioStats.map(({ bt, count }) => (
-          <button key={bt} onClick={() => setBioFilter(bioFilter === bt ? '' : bt)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, border: `1px solid ${bioFilter === bt ? BIO_TYPE_COLORS[bt] : 'var(--border)'}`, background: bioFilter === bt ? `${BIO_TYPE_COLORS[bt]}18` : 'var(--bg-card)', color: bioFilter === bt ? BIO_TYPE_COLORS[bt] : 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
-            {BIO_TYPE_ICONS[bt]} {bt}
-            <span style={{ fontWeight: 700, color: BIO_TYPE_COLORS[bt] }}>{count}</span>
+      {/* ── Tab bar ── */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 28, gap: 0 }}>
+        {(['mouvements', 'referentiels'] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            style={{
+              padding: '10px 22px',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === tab ? '2px solid var(--accent)' : '2px solid transparent',
+              color: activeTab === tab ? 'var(--accent)' : 'var(--text-muted)',
+              fontWeight: activeTab === tab ? 700 : 500,
+              fontSize: 14,
+              cursor: 'pointer',
+              transition: 'color 0.15s',
+              marginBottom: -1,
+            }}>
+            {tab === 'mouvements' ? 'Mouvements' : 'Référentiels'}
           </button>
         ))}
       </div>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, padding: '7px 12px', flex: '0 0 260px' }}>
-          <Search size={14} color="var(--text-muted)" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom ou ID..." style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }} />
-          {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={12} color="var(--text-muted)" /></button>}
+      {/* ── Mouvements tab ── */}
+      {activeTab === 'mouvements' && (<>
+
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
+          <div>
+            <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>Administration</h1>
+            <p style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: 14 }}>
+              {movements.length} mouvements · {filtered.length} affichés
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <input ref={importRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: 'none' }} />
+            <a href="/api/movements/export" download
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
+              <Download size={15} /> Exporter XLS
+            </a>
+            <button onClick={() => importRef.current?.click()} disabled={importing}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: importing ? 'wait' : 'pointer', opacity: importing ? 0.6 : 1 }}>
+              <Upload size={15} /> {importing ? 'Import...' : 'Importer XLS'}
+            </button>
+            <button onClick={() => setShowNew(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+              <Plus size={16} /> Nouveau mouvement
+            </button>
+          </div>
         </div>
-        <select value={complexityFilter} onChange={e => setComplexityFilter(e.target.value)}
-          style={{ padding: '7px 12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, color: complexityFilter ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
-          <option value="">Tous niveaux</option>
-          {COMPLEXITIES.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select value={equipmentFilter} onChange={e => setEquipmentFilter(e.target.value)}
-          style={{ padding: '7px 12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, color: equipmentFilter ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
-          <option value="">Tout équipement</option>
-          {EQUIPMENT_TYPES.map(eq => <option key={eq} value={eq}>{EQUIPMENT_ICONS[eq]} {eq}</option>)}
-        </select>
-        {(search || bioFilter || complexityFilter || equipmentFilter) && (
-          <button onClick={() => { setSearch(''); setBioFilter(''); setComplexityFilter(''); setEquipmentFilter('') }}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
-            <X size={12} /> Réinitialiser
-          </button>
-        )}
-      </div>
 
-      {/* ── Bulk action bar ── */}
-      {selected.size > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '10px 16px', background: 'rgba(200,169,81,0.08)', border: '1px solid rgba(200,169,81,0.25)', borderRadius: 10, flexWrap: 'wrap' }}>
-          <CheckSquare size={15} color="var(--gold,#C9A535)" />
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold,#C9A535)', marginRight: 4 }}>
-            {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
-          </span>
-          <button onClick={clearSelection} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
-            Désélectionner
-          </button>
+        {/* Mini stats bar */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+          {bioStats.map(({ bt, count }) => (
+            <button key={bt} onClick={() => setBioFilter(bioFilter === bt ? '' : bt)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, border: `1px solid ${bioFilter === bt ? BIO_TYPE_COLORS[bt] : 'var(--border)'}`, background: bioFilter === bt ? `${BIO_TYPE_COLORS[bt]}18` : 'var(--bg-card)', color: bioFilter === bt ? BIO_TYPE_COLORS[bt] : 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+              {BIO_TYPE_ICONS[bt]} {bt}
+              <span style={{ fontWeight: 700, color: BIO_TYPE_COLORS[bt] }}>{count}</span>
+            </button>
+          ))}
+        </div>
 
-          <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
-
-          {/* BioType */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>TYPE</span>
-            <select
-              value={stagedBioType}
-              onChange={e => setStagedBioType(e.target.value)}
-              disabled={bulkWorking}
-              style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedBioType ? 'var(--gold,#C9A535)' : 'var(--border)'}`, borderRadius: 7, color: stagedBioType ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
-            >
-              <option value="">Changer…</option>
-              {BIO_TYPES.map(bt => <option key={bt} value={bt}>{BIO_TYPE_ICONS[bt]} {bt}</option>)}
-            </select>
+        {/* Filters */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, padding: '7px 12px', flex: '0 0 260px' }}>
+            <Search size={14} color="var(--text-muted)" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom ou ID..." style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }} />
+            {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={12} color="var(--text-muted)" /></button>}
           </div>
-
-          {/* Complexity */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>COMPLEXITÉ</span>
-            <select
-              value={stagedComplexity}
-              onChange={e => setStagedComplexity(e.target.value)}
-              disabled={bulkWorking}
-              style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedComplexity ? 'var(--gold,#C9A535)' : 'var(--border)'}`, borderRadius: 7, color: stagedComplexity ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
-            >
-              <option value="">Changer…</option>
-              {COMPLEXITIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
-          {/* Equipment */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>ÉQUIPEMENT</span>
-            <select
-              value={stagedEquipment}
-              onChange={e => setStagedEquipment(e.target.value)}
-              disabled={bulkWorking}
-              style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedEquipment ? 'var(--gold,#C9A535)' : 'var(--border)'}`, borderRadius: 7, color: stagedEquipment ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
-            >
-              <option value="">Changer…</option>
-              <option value="__clear__">— Effacer —</option>
-              {EQUIPMENT_TYPES.map(eq => <option key={eq} value={eq}>{EQUIPMENT_ICONS[eq]} {eq}</option>)}
-            </select>
-          </div>
-
-          {/* Single apply button */}
-          {(stagedBioType || stagedComplexity || stagedEquipment) && (
-            <button
-              onClick={() => setPendingBulkUpdate({ bioType: stagedBioType || undefined, complexity: stagedComplexity || undefined, equipment: stagedEquipment === '__clear__' ? '' : (stagedEquipment || undefined) })}
-              style={{ padding: '5px 12px', background: 'var(--gold,#C9A535)', border: 'none', borderRadius: 7, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-            >
-              Appliquer
+          <select value={complexityFilter} onChange={e => setComplexityFilter(e.target.value)}
+            style={{ padding: '7px 12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, color: complexityFilter ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
+            <option value="">Tous niveaux</option>
+            {COMPLEXITIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select value={equipmentFilter} onChange={e => setEquipmentFilter(e.target.value)}
+            style={{ padding: '7px 12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, color: equipmentFilter ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
+            <option value="">Tout équipement</option>
+            {EQUIPMENT_TYPES.map(eq => <option key={eq} value={eq}>{EQUIPMENT_ICONS[eq]} {eq}</option>)}
+          </select>
+          {(search || bioFilter || complexityFilter || equipmentFilter) && (
+            <button onClick={() => { setSearch(''); setBioFilter(''); setComplexityFilter(''); setEquipmentFilter('') }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+              <X size={12} /> Réinitialiser
             </button>
           )}
-
-          <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
-
-          <button
-            onClick={() => setShowBulkDeleteConfirm(true)}
-            disabled={bulkWorking}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 7, color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-          >
-            <Trash2 size={12} /> Supprimer
-          </button>
-
-          {bulkWorking && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>En cours…</span>}
-        </div>
-      )}
-
-      {/* Table */}
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
-                <th style={{ padding: '10px 8px 10px 14px', width: 36 }}>
-                  <input
-                    ref={selectAllRef}
-                    type="checkbox"
-                    checked={allFilteredSelected}
-                    onChange={toggleAll}
-                    title={allFilteredSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
-                    style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--gold,#C9A535)' }}
-                  />
-                </th>
-                <SortTh label="ID" field="id" sort={sort} onSort={toggleSort} />
-                <SortTh label="NOM" field="name" sort={sort} onSort={toggleSort} />
-                <SortTh label="TYPE" field="bioType" sort={sort} onSort={toggleSort} />
-                <SortTh label="COMPLEXITÉ" field="complexity" sort={sort} onSort={toggleSort} />
-                <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: 'var(--text-muted)' }}>ÉQUIPEMENT</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: 'var(--text-muted)' }}>DESCRIPTION</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: 'var(--text-muted)' }}>VIDÉO</th>
-                <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: 'var(--text-muted)' }}>USAGES</th>
-                <th style={{ padding: '10px 12px', width: 90 }} />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((m, idx) => {
-                const isEditing = editingId === m.id
-                const usage = usageMap[m.id] || 0
-                const rowBg = isEditing ? 'var(--dirty)' : idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.025)'
-                return (
-                  <tr key={m.id} onDoubleClick={() => { if (!isEditing) startEdit(m) }} style={{ borderBottom: '1px solid var(--border)', background: selected.has(m.id) ? 'rgba(200,169,81,0.06)' : rowBg, transition: 'background 0.1s', cursor: isEditing ? 'default' : 'pointer' }}>
-                    {/* Checkbox */}
-                    <td style={{ padding: '8px 8px 8px 14px' }} onClick={e => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selected.has(m.id)}
-                        onChange={() => toggleOne(m.id)}
-                        style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--gold,#C9A535)' }}
-                      />
-                    </td>
-                    {/* ID */}
-                    <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: 'var(--text-dim)', fontSize: 12, whiteSpace: 'nowrap' }}>{m.id}</td>
-
-                    {/* Name */}
-                    <td style={{ padding: '8px 12px', minWidth: 200 }}>
-                      {isEditing
-                        ? <EditableCell autoFocus value={editBuf.name ?? ''} onChange={v => setEditBuf(b => ({ ...b, name: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
-                        : <span style={{ fontWeight: 600 }}>{m.name}</span>}
-                    </td>
-
-                    {/* BioType */}
-                    <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
-                      {isEditing
-                        ? <EditableCell value={editBuf.bioType ?? ''} options={BIO_TYPES} onChange={v => setEditBuf(b => ({ ...b, bioType: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
-                        : <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)', fontSize: 12 }}>
-                            {BIO_TYPE_ICONS[m.bioType]} {m.bioType}
-                          </span>}
-                    </td>
-
-                    {/* Complexity */}
-                    <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
-                      {isEditing
-                        ? <EditableCell value={editBuf.complexity ?? ''} options={COMPLEXITIES} onChange={v => setEditBuf(b => ({ ...b, complexity: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
-                        : <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, background: `${COMPLEXITY_COLORS[m.complexity] || '#fff'}18`, color: COMPLEXITY_COLORS[m.complexity] || 'var(--text-muted)' }}>
-                            {m.complexity}
-                          </span>}
-                    </td>
-
-                    {/* Equipment */}
-                    <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
-                      {isEditing
-                        ? <EditableCell value={editBuf.equipment ?? ''} options={['', ...EQUIPMENT_TYPES]} onChange={v => setEditBuf(b => ({ ...b, equipment: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
-                        : m.equipment
-                          ? <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{EQUIPMENT_ICONS[m.equipment] || '🔧'} {m.equipment}</span>
-                          : <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>—</span>}
-                    </td>
-
-                    {/* Description */}
-                    <td style={{ padding: '8px 12px', maxWidth: 200 }}>
-                      {isEditing
-                        ? <EditableCell value={editBuf.description ?? ''} onChange={v => setEditBuf(b => ({ ...b, description: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
-                        : <span style={{ color: 'var(--text-muted)', fontSize: 12, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{m.description || <span style={{ color: 'var(--text-dim)' }}>—</span>}</span>}
-                    </td>
-
-                    {/* Video */}
-                    <td style={{ padding: '8px 12px', maxWidth: 160 }}>
-                      {isEditing
-                        ? <EditableCell value={editBuf.videoUrl ?? ''} onChange={v => setEditBuf(b => ({ ...b, videoUrl: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
-                        : m.videoUrl
-                          ? <a href={m.videoUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontSize: 12 }}>▶ Voir</a>
-                          : <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>—</span>}
-                    </td>
-
-                    {/* Usage */}
-                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                      {usage > 0 ? (
-                        <button
-                          onClick={() => openUsagePanel(m)}
-                          title="Voir les workouts"
-                          style={{ fontSize: 12, fontWeight: 700, color: usagePanel?.id === m.id ? 'var(--gold,#C9A535)' : 'var(--blue,#60a5fa)', background: usagePanel?.id === m.id ? 'rgba(200,169,81,0.12)' : 'rgba(96,165,250,0.08)', border: `1px solid ${usagePanel?.id === m.id ? 'rgba(200,169,81,0.3)' : 'rgba(96,165,250,0.2)'}`, borderRadius: 6, padding: '2px 9px', cursor: 'pointer', transition: 'all 0.15s' }}
-                        >
-                          {usage}
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>—</span>
-                      )}
-                    </td>
-
-                    {/* Actions */}
-                    <td style={{ padding: '8px 10px' }}>
-                      {isEditing ? (
-                        <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                          <button onClick={() => commitEdit(m.id)} disabled={saving}
-                            title="Sauvegarder (Entrée)"
-                            style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--dirty)', border: '1px solid var(--dirty-border)', color: 'var(--dirty-text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Check size={13} />
-                          </button>
-                          <button onClick={cancelEdit} title="Annuler (Échap)"
-                            style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <X size={13} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', opacity: 0 }} className="row-actions">
-                          <button onClick={() => startEdit(m)} title="Modifier"
-                            style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Pencil size={12} />
-                          </button>
-                          <button onClick={() => { setDeleteError(null); setDeletingId(m.id) }} title="Supprimer"
-                            style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
         </div>
 
-        {filtered.length === 0 && (
-          <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
-            Aucun mouvement trouvé
+        {/* ── Bulk action bar ── */}
+        {selected.size > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '10px 16px', background: 'rgba(200,169,81,0.08)', border: '1px solid rgba(200,169,81,0.25)', borderRadius: 10, flexWrap: 'wrap' }}>
+            <CheckSquare size={15} color="var(--gold,#C9A535)" />
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold,#C9A535)', marginRight: 4 }}>
+              {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
+            </span>
+            <button onClick={clearSelection} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
+              Désélectionner
+            </button>
+
+            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+
+            {/* BioType */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>TYPE</span>
+              <select
+                value={stagedBioType}
+                onChange={e => setStagedBioType(e.target.value)}
+                disabled={bulkWorking}
+                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedBioType ? 'var(--gold,#C9A535)' : 'var(--border)'}`, borderRadius: 7, color: stagedBioType ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="">Changer…</option>
+                {BIO_TYPES.map(bt => <option key={bt} value={bt}>{BIO_TYPE_ICONS[bt]} {bt}</option>)}
+              </select>
+            </div>
+
+            {/* Complexity */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>COMPLEXITÉ</span>
+              <select
+                value={stagedComplexity}
+                onChange={e => setStagedComplexity(e.target.value)}
+                disabled={bulkWorking}
+                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedComplexity ? 'var(--gold,#C9A535)' : 'var(--border)'}`, borderRadius: 7, color: stagedComplexity ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="">Changer…</option>
+                {COMPLEXITIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {/* Equipment */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5 }}>ÉQUIPEMENT</span>
+              <select
+                value={stagedEquipment}
+                onChange={e => setStagedEquipment(e.target.value)}
+                disabled={bulkWorking}
+                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedEquipment ? 'var(--gold,#C9A535)' : 'var(--border)'}`, borderRadius: 7, color: stagedEquipment ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="">Changer…</option>
+                <option value="__clear__">— Effacer —</option>
+                {EQUIPMENT_TYPES.map(eq => <option key={eq} value={eq}>{EQUIPMENT_ICONS[eq]} {eq}</option>)}
+              </select>
+            </div>
+
+            {/* Single apply button */}
+            {(stagedBioType || stagedComplexity || stagedEquipment) && (
+              <button
+                onClick={() => setPendingBulkUpdate({ bioType: stagedBioType || undefined, complexity: stagedComplexity || undefined, equipment: stagedEquipment === '__clear__' ? '' : (stagedEquipment || undefined) })}
+                style={{ padding: '5px 12px', background: 'var(--gold,#C9A535)', border: 'none', borderRadius: 7, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Appliquer
+              </button>
+            )}
+
+            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+
+            <button
+              onClick={() => setShowBulkDeleteConfirm(true)}
+              disabled={bulkWorking}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 7, color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+            >
+              <Trash2 size={12} /> Supprimer
+            </button>
+
+            {bulkWorking && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>En cours…</span>}
           </div>
         )}
 
-        <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-            {filtered.length} / {movements.length} mouvements
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Double-clic ou ✏️ pour éditer · Entrée pour valider · Échap pour annuler</span>
-        </div>
-      </div>
+        {/* Table */}
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+                  <th style={{ padding: '10px 8px 10px 14px', width: 36 }}>
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      checked={allFilteredSelected}
+                      onChange={toggleAll}
+                      title={allFilteredSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+                      style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--gold,#C9A535)' }}
+                    />
+                  </th>
+                  <SortTh label="ID" field="id" sort={sort} onSort={toggleSort} />
+                  <SortTh label="NOM" field="name" sort={sort} onSort={toggleSort} />
+                  <SortTh label="TYPE" field="bioType" sort={sort} onSort={toggleSort} />
+                  <SortTh label="COMPLEXITÉ" field="complexity" sort={sort} onSort={toggleSort} />
+                  <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: 'var(--text-muted)' }}>ÉQUIPEMENT</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: 'var(--text-muted)' }}>DESCRIPTION</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: 'var(--text-muted)' }}>VIDÉO</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: 'var(--text-muted)' }}>USAGES</th>
+                  <th style={{ padding: '10px 12px', width: 90 }} />
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((m, idx) => {
+                  const isEditing = editingId === m.id
+                  const usage = usageMap[m.id] || 0
+                  const rowBg = isEditing ? 'var(--dirty)' : idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.025)'
+                  return (
+                    <tr key={m.id} onDoubleClick={() => { if (!isEditing) startEdit(m) }} style={{ borderBottom: '1px solid var(--border)', background: selected.has(m.id) ? 'rgba(200,169,81,0.06)' : rowBg, transition: 'background 0.1s', cursor: isEditing ? 'default' : 'pointer' }}>
+                      {/* Checkbox */}
+                      <td style={{ padding: '8px 8px 8px 14px' }} onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(m.id)}
+                          onChange={() => toggleOne(m.id)}
+                          style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--gold,#C9A535)' }}
+                        />
+                      </td>
+                      {/* ID */}
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: 'var(--text-dim)', fontSize: 12, whiteSpace: 'nowrap' }}>{m.id}</td>
 
-      {/* Delete error banner */}
-      {deleteError && (
-        <div style={{ marginTop: 14, display: 'flex', gap: 10, alignItems: 'center', padding: '10px 16px', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.25)', borderRadius: 10, fontSize: 13, color: 'var(--red)' }}>
-          <AlertTriangle size={15} />
-          <span style={{ flex: 1 }}>{deleteError}</span>
-          <button onClick={() => setDeleteError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)' }}><X size={14} /></button>
-        </div>
-      )}
+                      {/* Name */}
+                      <td style={{ padding: '8px 12px', minWidth: 200 }}>
+                        {isEditing
+                          ? <EditableCell autoFocus value={editBuf.name ?? ''} onChange={v => setEditBuf(b => ({ ...b, name: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
+                          : <span style={{ fontWeight: 600 }}>{m.name}</span>}
+                      </td>
 
-      {/* Modals */}
-      {showNew && <NewMovementModal onSave={handleCreated} onClose={() => setShowNew(false)} />}
-      {deletingId && (
-        <DeleteConfirm
-          movement={movements.find(m => m.id === deletingId)!}
-          onConfirm={() => confirmDelete(deletingId)}
-          onCancel={() => setDeletingId(null)}
-        />
-      )}
-      {pendingBulkUpdate && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div onClick={() => { setPendingBulkUpdate(null); setStagedBioType(''); setStagedComplexity('') }} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
-          <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px', width: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.6)', textAlign: 'center' }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>✏️</div>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>
-              Modifier {selected.size} mouvement{selected.size > 1 ? 's' : ''} ?
+                      {/* BioType */}
+                      <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
+                        {isEditing
+                          ? <EditableCell value={editBuf.bioType ?? ''} options={BIO_TYPES} onChange={v => setEditBuf(b => ({ ...b, bioType: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
+                          : <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)', fontSize: 12 }}>
+                              {BIO_TYPE_ICONS[m.bioType]} {m.bioType}
+                            </span>}
+                      </td>
+
+                      {/* Complexity */}
+                      <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
+                        {isEditing
+                          ? <EditableCell value={editBuf.complexity ?? ''} options={COMPLEXITIES} onChange={v => setEditBuf(b => ({ ...b, complexity: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
+                          : <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, background: `${COMPLEXITY_COLORS[m.complexity] || '#fff'}18`, color: COMPLEXITY_COLORS[m.complexity] || 'var(--text-muted)' }}>
+                              {m.complexity}
+                            </span>}
+                      </td>
+
+                      {/* Equipment */}
+                      <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
+                        {isEditing
+                          ? <EditableCell value={editBuf.equipment ?? ''} options={['', ...EQUIPMENT_TYPES]} onChange={v => setEditBuf(b => ({ ...b, equipment: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
+                          : m.equipment
+                            ? <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{EQUIPMENT_ICONS[m.equipment] || '🔧'} {m.equipment}</span>
+                            : <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>—</span>}
+                      </td>
+
+                      {/* Description */}
+                      <td style={{ padding: '8px 12px', maxWidth: 200 }}>
+                        {isEditing
+                          ? <EditableCell value={editBuf.description ?? ''} onChange={v => setEditBuf(b => ({ ...b, description: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
+                          : <span style={{ color: 'var(--text-muted)', fontSize: 12, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{m.description || <span style={{ color: 'var(--text-dim)' }}>—</span>}</span>}
+                      </td>
+
+                      {/* Video */}
+                      <td style={{ padding: '8px 12px', maxWidth: 160 }}>
+                        {isEditing
+                          ? <EditableCell value={editBuf.videoUrl ?? ''} onChange={v => setEditBuf(b => ({ ...b, videoUrl: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
+                          : m.videoUrl
+                            ? <a href={m.videoUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontSize: 12 }}>▶ Voir</a>
+                            : <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>—</span>}
+                      </td>
+
+                      {/* Usage */}
+                      <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                        {usage > 0 ? (
+                          <button
+                            onClick={() => openUsagePanel(m)}
+                            title="Voir les workouts"
+                            style={{ fontSize: 12, fontWeight: 700, color: usagePanel?.id === m.id ? 'var(--gold,#C9A535)' : 'var(--blue,#60a5fa)', background: usagePanel?.id === m.id ? 'rgba(200,169,81,0.12)' : 'rgba(96,165,250,0.08)', border: `1px solid ${usagePanel?.id === m.id ? 'rgba(200,169,81,0.3)' : 'rgba(96,165,250,0.2)'}`, borderRadius: 6, padding: '2px 9px', cursor: 'pointer', transition: 'all 0.15s' }}
+                          >
+                            {usage}
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>—</span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ padding: '8px 10px' }}>
+                        {isEditing ? (
+                          <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                            <button onClick={() => commitEdit(m.id)} disabled={saving}
+                              title="Sauvegarder (Entrée)"
+                              style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--dirty)', border: '1px solid var(--dirty-border)', color: 'var(--dirty-text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Check size={13} />
+                            </button>
+                            <button onClick={cancelEdit} title="Annuler (Échap)"
+                              style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <X size={13} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', opacity: 0 }} className="row-actions">
+                            <button onClick={() => startEdit(m)} title="Modifier"
+                              style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Pencil size={12} />
+                            </button>
+                            <button onClick={() => { setDeleteError(null); setDeletingId(m.id) }} title="Supprimer"
+                              style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {filtered.length === 0 && (
+            <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
+              Aucun mouvement trouvé
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16, alignItems: 'center' }}>
-              {pendingBulkUpdate.bioType && (
-                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                  Type → <span style={{ fontWeight: 700, color: BIO_TYPE_COLORS[pendingBulkUpdate.bioType] }}>{BIO_TYPE_ICONS[pendingBulkUpdate.bioType]} {pendingBulkUpdate.bioType}</span>
-                </div>
-              )}
-              {pendingBulkUpdate.complexity && (
-                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                  Complexité → <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{pendingBulkUpdate.complexity}</span>
-                </div>
-              )}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 22 }}>Cette action modifiera tous les mouvements sélectionnés.</div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button onClick={() => { setPendingBulkUpdate(null); setStagedBioType(''); setStagedComplexity('') }} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
-              <button
-                onClick={async () => {
-                  const patch = pendingBulkUpdate
-                  setPendingBulkUpdate(null)
-                  setStagedBioType('')
-                  setStagedComplexity('')
-                  await handleBulkUpdate(patch)
-                }}
-                disabled={bulkWorking}
-                style={{ padding: '8px 22px', background: 'var(--accent)', border: 'none', borderRadius: 8, color: 'var(--on-accent)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-              >
-                Confirmer
-              </button>
-            </div>
+          )}
+
+          <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+              {filtered.length} / {movements.length} mouvements
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Double-clic ou ✏️ pour éditer · Entrée pour valider · Échap pour annuler</span>
           </div>
         </div>
-      )}
 
-      {showBulkDeleteConfirm && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div onClick={() => setShowBulkDeleteConfirm(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
-          <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px', width: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.6)', textAlign: 'center' }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Supprimer {selected.size} mouvements ?</div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6 }}>Les mouvements utilisés dans des workouts seront ignorés.</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 22 }}>Cette action est irréversible.</div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button onClick={() => setShowBulkDeleteConfirm(false)} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={handleBulkDelete} disabled={bulkWorking} style={{ padding: '8px 22px', background: '#ef4444', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: bulkWorking ? 'wait' : 'pointer', opacity: bulkWorking ? 0.7 : 1 }}>
-                {bulkWorking ? 'Suppression…' : 'Supprimer'}
-              </button>
+        {/* Delete error banner */}
+        {deleteError && (
+          <div style={{ marginTop: 14, display: 'flex', gap: 10, alignItems: 'center', padding: '10px 16px', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.25)', borderRadius: 10, fontSize: 13, color: 'var(--red)' }}>
+            <AlertTriangle size={15} />
+            <span style={{ flex: 1 }}>{deleteError}</span>
+            <button onClick={() => setDeleteError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)' }}><X size={14} /></button>
+          </div>
+        )}
+
+        {/* Modals */}
+        {showNew && <NewMovementModal onSave={handleCreated} onClose={() => setShowNew(false)} />}
+        {deletingId && (
+          <DeleteConfirm
+            movement={movements.find(m => m.id === deletingId)!}
+            onConfirm={() => confirmDelete(deletingId)}
+            onCancel={() => setDeletingId(null)}
+          />
+        )}
+        {pendingBulkUpdate && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div onClick={() => { setPendingBulkUpdate(null); setStagedBioType(''); setStagedComplexity('') }} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
+            <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px', width: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.6)', textAlign: 'center' }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>✏️</div>
+              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>
+                Modifier {selected.size} mouvement{selected.size > 1 ? 's' : ''} ?
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16, alignItems: 'center' }}>
+                {pendingBulkUpdate.bioType && (
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                    Type → <span style={{ fontWeight: 700, color: BIO_TYPE_COLORS[pendingBulkUpdate.bioType] }}>{BIO_TYPE_ICONS[pendingBulkUpdate.bioType]} {pendingBulkUpdate.bioType}</span>
+                  </div>
+                )}
+                {pendingBulkUpdate.complexity && (
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                    Complexité → <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{pendingBulkUpdate.complexity}</span>
+                  </div>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 22 }}>Cette action modifiera tous les mouvements sélectionnés.</div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button onClick={() => { setPendingBulkUpdate(null); setStagedBioType(''); setStagedComplexity('') }} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
+                <button
+                  onClick={async () => {
+                    const patch = pendingBulkUpdate
+                    setPendingBulkUpdate(null)
+                    setStagedBioType('')
+                    setStagedComplexity('')
+                    await handleBulkUpdate(patch)
+                  }}
+                  disabled={bulkWorking}
+                  style={{ padding: '8px 22px', background: 'var(--accent)', border: 'none', borderRadius: 8, color: 'var(--on-accent)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Confirmer
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Toast */}
+        {showBulkDeleteConfirm && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div onClick={() => setShowBulkDeleteConfirm(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
+            <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px', width: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.6)', textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
+              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Supprimer {selected.size} mouvements ?</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6 }}>Les mouvements utilisés dans des workouts seront ignorés.</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 22 }}>Cette action est irréversible.</div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button onClick={() => setShowBulkDeleteConfirm(false)} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
+                <button onClick={handleBulkDelete} disabled={bulkWorking} style={{ padding: '8px 22px', background: '#ef4444', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: bulkWorking ? 'wait' : 'pointer', opacity: bulkWorking ? 0.7 : 1 }}>
+                  {bulkWorking ? 'Suppression…' : 'Supprimer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </>)}
+
+      {/* ── Référentiels tab ── */}
+      {activeTab === 'referentiels' && <AttributesTab />}
+
+      {/* Toast (global) */}
       {toast && (
         <div style={{ position: 'fixed', bottom: 24, right: 24, background: 'var(--bg-elevated)', border: '1px solid var(--accent)', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, color: 'var(--accent)', zIndex: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'slideUp 0.2s ease' }}>
           {toast}
@@ -773,64 +999,64 @@ export default function AdminClient({
         .usage-row:hover { background: var(--bg-elevated) !important; }
       `}</style>
 
-      {/* ── Usage panel (fixed right) ── */}
-      {usagePanel && (
-      <div style={{ position: 'fixed', top: 0, right: 0, width: 340, height: '100vh', zIndex: 40, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', borderLeft: '1px solid var(--border)', boxShadow: '-8px 0 32px rgba(0,0,0,0.25)', animation: 'slideInRight 0.2s ease' }}>
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
-          {/* Header */}
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>Utilisé dans</div>
-              <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{usagePanel.name}</div>
-            </div>
-            <button onClick={() => setUsagePanel(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}>
-              <X size={16} />
-            </button>
-          </div>
-
-          {/* List */}
-          <div style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
-            {usagePanelLoading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12 }}>
-                {[1,2,3].map(i => <div key={i} style={{ height: 52, background: 'var(--bg-elevated)', borderRadius: 8, opacity: 0.5 }} />)}
+      {/* ── Usage panel (fixed right, mouvements tab only) ── */}
+      {activeTab === 'mouvements' && usagePanel && (
+        <div style={{ position: 'fixed', top: 0, right: 0, width: 340, height: '100vh', zIndex: 40, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', borderLeft: '1px solid var(--border)', boxShadow: '-8px 0 32px rgba(0,0,0,0.25)', animation: 'slideInRight 0.2s ease' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>Utilisé dans</div>
+                <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{usagePanel.name}</div>
               </div>
-            ) : usagePanel.workouts.length === 0 ? (
-              <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Aucun workout trouvé</div>
-            ) : (
-              <div>
-                {usagePanel.workouts.map((w, i) => {
-                  const author = w.user ? ((w.user.firstName || w.user.lastName) ? `${w.user.firstName ?? ''} ${w.user.lastName ?? ''}`.trim() : w.user.email) : null
-                  const date = new Date(w.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-                  return (
-                    <a
-                      key={w.id}
-                      href={`/workouts/${w.id}?from=admin`}
-                      className="usage-row"
-                      style={{ display: 'block', padding: '11px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none', textDecoration: 'none', transition: 'background 0.12s' }}
-                    >
-                      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 8 }}>
-                        <span>{date}</span>
-                        <span>·</span>
-                        <span>{w._count.movements} mouv.</span>
-                        {w.duration && <><span>·</span><span>{w.duration} min</span></>}
-                        {author && <><span>·</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{author}</span></>}
-                      </div>
-                    </a>
-                  )
-                })}
+              <button onClick={() => setUsagePanel(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* List */}
+            <div style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
+              {usagePanelLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12 }}>
+                  {[1,2,3].map(i => <div key={i} style={{ height: 52, background: 'var(--bg-elevated)', borderRadius: 8, opacity: 0.5 }} />)}
+                </div>
+              ) : usagePanel.workouts.length === 0 ? (
+                <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Aucun workout trouvé</div>
+              ) : (
+                <div>
+                  {usagePanel.workouts.map((w, i) => {
+                    const author = w.user ? ((w.user.firstName || w.user.lastName) ? `${w.user.firstName ?? ''} ${w.user.lastName ?? ''}`.trim() : w.user.email) : null
+                    const date = new Date(w.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+                    return (
+                      <a
+                        key={w.id}
+                        href={`/workouts/${w.id}?from=admin`}
+                        className="usage-row"
+                        style={{ display: 'block', padding: '11px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none', textDecoration: 'none', transition: 'background 0.12s' }}
+                      >
+                        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 8 }}>
+                          <span>{date}</span>
+                          <span>·</span>
+                          <span>{w._count.movements} mouv.</span>
+                          {w.duration && <><span>·</span><span>{w.duration} min</span></>}
+                          {author && <><span>·</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{author}</span></>}
+                        </div>
+                      </a>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer count */}
+            {!usagePanelLoading && usagePanel.workouts.length > 0 && (
+              <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-dim)' }}>
+                {usagePanel.workouts.length} workout{usagePanel.workouts.length > 1 ? 's' : ''}
               </div>
             )}
           </div>
-
-          {/* Footer count */}
-          {!usagePanelLoading && usagePanel.workouts.length > 0 && (
-            <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-dim)' }}>
-              {usagePanel.workouts.length} workout{usagePanel.workouts.length > 1 ? 's' : ''}
-            </div>
-          )}
         </div>
-      </div>
       )}
 
     </div>
