@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react'
+import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon } from 'lucide-react'
 
 const allNav = [
   { href: '/',            label: 'Dashboard',    icon: LayoutDashboard, admin: false },
@@ -22,6 +22,7 @@ export default function Sidebar() {
   const path = usePathname()
   const [isAdmin, setIsAdmin] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
 
   useEffect(() => {
     fetch('/api/me').then(r => r.json()).then(data => {
@@ -36,6 +37,19 @@ export default function Sidebar() {
     const mobile = window.innerWidth < 768
     if (mobile) setCollapsed(true)
   }, [])
+
+  // Persist theme
+  useEffect(() => {
+    const saved = localStorage.getItem('arete-theme') as 'dark' | 'light' | null
+    if (saved) { setTheme(saved); document.documentElement.setAttribute('data-theme', saved) }
+  }, [])
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    document.documentElement.setAttribute('data-theme', next)
+    localStorage.setItem('arete-theme', next)
+  }
 
   // Met à jour la CSS variable utilisée par AppShell pour le margin-left
   useEffect(() => {
@@ -161,9 +175,28 @@ export default function Sidebar() {
       </div>
 
       {/* ── Footer — poussé en bas ── */}
-      <div style={{ marginTop: 'auto', padding: collapsed ? '16px 0' : '16px 20px', flexShrink: 0 }}>
+      <div style={{ marginTop: 'auto', padding: collapsed ? '16px 8px' : '16px 12px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* Dark/light toggle */}
+        <button
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: 8, background: 'rgba(200,169,81,0.06)', border: '1px solid rgba(200,169,81,0.15)',
+            borderRadius: 8, padding: collapsed ? '8px' : '8px 12px', cursor: 'pointer',
+            color: 'rgba(255,255,255,0.45)', transition: 'color 0.15s, background 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.background = 'rgba(200,169,81,0.12)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; e.currentTarget.style.background = 'rgba(200,169,81,0.06)' }}
+        >
+          {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+          <span style={{ fontSize: 12, maxWidth: collapsed ? 0 : 100, opacity: collapsed ? 0 : 1, overflow: 'hidden', whiteSpace: 'nowrap', transition: 'max-width 0.22s, opacity 0.15s' }}>
+            {theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+          </span>
+        </button>
+
         {!collapsed && (
-          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.10)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.10)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 0 0' }}>
             © 2026 ARETE
           </div>
         )}

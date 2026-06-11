@@ -52,6 +52,49 @@
   --teal:   #16a085;
 }
 
+/* ── Light mode ──────────────────────────────────────────────── */
+html[data-theme="light"] {
+  --bg-primary:   #F5F3EE;
+  --bg-card:      #FFFFFF;
+  --bg-elevated:  #EDE9E0;
+  --border:       #D8D2C6;
+  --border-plus:  #C4BDB0;
+  --shadow-sm:    0 0 0 1px rgba(0,0,0,0.08);
+  --shadow-md:    0 8px 32px rgba(0,0,0,0.12);
+
+  --sidebar-bg:           #1A1814;
+  --sidebar-border:       rgba(200,169,81,0.15);
+  --sidebar-text:         rgba(255,255,255,0.65);
+  --sidebar-text-hover:   rgba(255,255,255,0.92);
+  --sidebar-text-active:  #C8A951;
+  --sidebar-active-bg:    rgba(200,169,81,0.09);
+
+  --text-primary: #1A1714;
+  --text-muted:   #5C5650;
+  --text-dim:     #9E9890;
+
+  --dirty:        rgba(200,169,81,0.12);
+  --dirty-border: rgba(200,169,81,0.35);
+  --dirty-text:   #9A7C30;
+
+  --red:    #c0392b;
+  --green:  #27ae60;
+  --blue:   #2980b9;
+  --orange: #e67e22;
+  --purple: #8e44ad;
+  --teal:   #16a085;
+}
+
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea {
+  color-scheme: light;
+}
+
+html[data-theme="light"] .main-grid {
+  background-color: #F0EDE6;
+}
+
 /* ── Reset ─────────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
 html, body { overflow-x: hidden; }

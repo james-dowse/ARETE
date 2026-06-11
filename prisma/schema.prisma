@@ -34,6 +34,7 @@ model Workout {
   blocks      WorkoutBlock[]
   shares      WorkoutShare[]
   savedBy     SavedWorkout[]
+  favoritedBy FavoriteWorkout[]
   template    WorkoutTemplate?  @relation(fields: [templateId], references: [id])
   user        InvitedUser?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
@@ -100,8 +101,9 @@ model InvitedUser {
   templates      WorkoutTemplate[]
   sharesSent     WorkoutShare[]    @relation("SharesSent")
   sharesReceived WorkoutShare[]    @relation("SharesReceived")
-  savedWorkouts  SavedWorkout[]
-  favorites      FavoriteMovement[]
+  savedWorkouts    SavedWorkout[]
+  favorites        FavoriteMovement[]
+  favoriteWorkouts FavoriteWorkout[]
 }
 
 model FavoriteMovement {
@@ -116,15 +118,27 @@ model FavoriteMovement {
 }
 
 model SavedWorkout {
-  id        String      @id @default(cuid())
-  workoutId String
-  workout   Workout     @relation(fields: [workoutId], references: [id], onDelete: Cascade)
-  userId    String
-  user      InvitedUser @relation(fields: [userId], references: [id], onDelete: Cascade)
-  savedAt   DateTime    @default(now())
-  source    String      @default("manual") // "manual" | "shared"
+  id           String      @id @default(cuid())
+  workoutId    String
+  workout      Workout     @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  userId       String
+  user         InvitedUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedAt      DateTime    @default(now())
+  source       String      @default("manual") // "manual" | "shared"
+  lastViewedAt DateTime?
 
   @@unique([workoutId, userId])
+}
+
+model FavoriteWorkout {
+  id        String      @id @default(cuid())
+  userId    String
+  workoutId String
+  createdAt DateTime    @default(now())
+  user      InvitedUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workout   Workout     @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workoutId])
 }
 
 model AttributeOption {

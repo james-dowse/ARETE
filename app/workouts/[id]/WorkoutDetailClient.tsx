@@ -521,6 +521,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [collapsedViewBlocks, setCollapsedViewBlocks] = useState<Record<string, boolean>>({})
   const toggleViewBlock = (id: string) => setCollapsedViewBlocks(prev => ({ ...prev, [id]: !prev[id] }))
 
+  // Track last viewed (fire-and-forget)
+  useEffect(() => {
+    fetch(`/api/workouts/${initial.id}/view`, { method: 'POST' }).catch(() => {})
+  }, [initial.id])
+
   // ── Dirty checks ──
   const isDirtyMovements = editMode && editStates.some((es, i) => {
     const orig = originals[i]

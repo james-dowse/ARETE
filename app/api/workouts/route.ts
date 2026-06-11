@@ -17,23 +17,27 @@ export async function GET(req: NextRequest) {
     // Si non authentifié → liste vide
     if (!currentUserId) return NextResponse.json([])
 
-    const rows = await prisma.savedWorkout.findMany({
-      where: {
-        userId: currentUserId,
-        workout: { NOT: { userId: currentUserId } }, // jamais ses propres créations
-      },
-      orderBy: { savedAt: 'desc' },
-      include: {
-        workout: {
-          include: WORKOUT_INCLUDE,
+    const [rows, favIds] = await Promise.all([
+      prisma.savedWorkout.findMany({
+        where: {
+          userId: currentUserId,
+          workout: { NOT: { userId: currentUserId } }, // jamais ses propres créations
         },
-      },
-    })
-    // Aplatir : retourner les workouts avec metadata source/savedAt
+        orderBy: { savedAt: 'desc' },
+        include: { workout: { include: WORKOUT_INCLUDE } },
+      }),
+      prisma.favoriteWorkout.findMany({
+        where: { userId: currentUserId },
+        select: { workoutId: true },
+      }),
+    ])
+    const favSet = new Set(favIds.map(f => f.workoutId))
     const result = rows.map(r => ({
       ...r.workout,
       _savedSource: r.source,
       _savedAt: r.savedAt,
+      _lastViewedAt: r.lastViewedAt,
+      isFavorite: favSet.has(r.workoutId),
     }))
     return NextResponse.json(result)
   }
@@ -58,23 +62,31 @@ export async function GET(req: NextRequest) {
 
   // savedBy n'est utile que pour la communauté (savoir si l'utilisateur a déjà sauvegardé)
   const needsSavedBy = filter === 'community' && !!currentUserId
+  const needsFavorites = filter === 'mine' && !!currentUserId
 
-  const workouts = await prisma.workout.findMany({
-    where,
-    orderBy: { createdAt: 'desc' },
-    include: {
-      ...WORKOUT_INCLUDE,
-      ...(needsSavedBy
-        ? { savedBy: { where: { userId: currentUserId! }, select: { id: true } } }
-        : {}),
-    },
-    take: 100,
-  })
+  const [workouts, favIds] = await Promise.all([
+    prisma.workout.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        ...WORKOUT_INCLUDE,
+        ...(needsSavedBy
+          ? { savedBy: { where: { userId: currentUserId! }, select: { id: true } } }
+          : {}),
+      },
+      take: 100,
+    }),
+    needsFavorites
+      ? prisma.favoriteWorkout.findMany({ where: { userId: currentUserId! }, select: { workoutId: true } })
+      : Promise.resolve([] as { workoutId: string }[]),
+  ])
+  const favSet = new Set(favIds.map(f => f.workoutId))
 
   // Transformer savedBy → isSaved (booléen)
   const result = workouts.map(w => ({
     ...w,
     isSaved: needsSavedBy && Array.isArray((w as { savedBy?: { id: string }[] }).savedBy) && (w as { savedBy?: { id: string }[] }).savedBy!.length > 0,
+    isFavorite: needsFavorites ? favSet.has(w.id) : undefined,
     savedBy: undefined,
   }))
 

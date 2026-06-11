@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { BIO_TYPE_COLORS } from '@/lib/types'
 import WorkoutActions from './DeleteButton'
-import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers } from 'lucide-react'
+import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock } from 'lucide-react'
 
 interface WorkoutUser { id: string; email: string }
 interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string } }
@@ -15,8 +15,10 @@ interface Workout {
   movements: WorkoutMovementItem[]
   user?: WorkoutUser | null
   isSaved?: boolean
+  isFavorite?: boolean
   _savedSource?: string
   _savedAt?: string
+  _lastViewedAt?: string | null
 }
 
 const fmtMin = (min: number) => min < 60 ? `~${min}min` : `~${Math.floor(min / 60)}h${min % 60 > 0 ? `${min % 60}min` : ''}`
@@ -107,16 +109,19 @@ function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => voi
 
 // ── Workout card ─────────────────────────────────────────────────────────────
 function WorkoutCard({
-  w, context, onShare, onToggleSave, onDelete,
+  w, context, onShare, onToggleSave, onDelete, onToggleFavorite,
 }: {
   w: Workout
   context: 'mine' | 'saved' | 'community'
   onShare?: () => void
   onToggleSave?: (saved: boolean) => void
   onDelete?: () => void
+  onToggleFavorite?: (fav: boolean) => void
 }) {
   const [saving, setSaving] = useState(false)
+  const [toggling, setToggling] = useState(false)
   const [isSaved, setIsSaved] = useState(w.isSaved ?? false)
+  const [isFavorite, setIsFavorite] = useState(w.isFavorite ?? false)
   const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
   const estMin = Math.round(w.movements.reduce((sum, wm) => sum + (wm.sets ?? 2), 0))
   const initiale = w.user?.email?.[0]?.toUpperCase() ?? '?'
@@ -131,6 +136,16 @@ function WorkoutCard({
     onToggleSave?.(next)
   }
 
+  async function handleToggleFavorite(e: React.MouseEvent) {
+    e.preventDefault()
+    setToggling(true)
+    const res = await fetch(`/api/workouts/${w.id}/favorite`, { method: 'POST' })
+    const data = await res.json()
+    setIsFavorite(data.favorited)
+    setToggling(false)
+    onToggleFavorite?.(data.favorited)
+  }
+
   const showFooter = context === 'mine' || context === 'saved' || context === 'community'
 
   return (
@@ -138,7 +153,10 @@ function WorkoutCard({
       <Link href={`/workouts/${w.id}`} style={{ textDecoration: 'none', display: 'block', padding: '18px 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>{w.name}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{w.name}</div>
+              {isFavorite && <Star size={12} fill="var(--gold)" color="var(--gold)" style={{ flexShrink: 0 }} />}
+            </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               {new Date(w.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
               {w.duration ? ` · ${w.duration} min cible` : ''}
@@ -183,7 +201,18 @@ function WorkoutCard({
       {showFooter && (
         <div style={{ borderTop: '1px solid var(--border)', padding: '8px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
           <div style={{ display: 'flex', gap: 6 }}>
-            {/* Bouton sauvegarder (communauté) ou retirer (sauvegardés) */}
+            {/* Bouton favori (mine + saved) */}
+            {(context === 'mine' || context === 'saved') && (
+              <button
+                onClick={handleToggleFavorite}
+                disabled={toggling}
+                title={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, background: isFavorite ? 'rgba(200,169,81,0.12)' : 'none', border: `1px solid ${isFavorite ? 'rgba(200,169,81,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 9px', color: isFavorite ? 'var(--gold)' : 'var(--text-muted)', fontSize: 12, cursor: toggling ? 'default' : 'pointer', transition: 'all 0.15s' }}
+              >
+                <Star size={12} fill={isFavorite ? 'var(--gold)' : 'none'} />
+              </button>
+            )}
+            {/* Bouton sauvegarder (communauté) */}
             {context === 'community' && (
               <button
                 onClick={e => { e.preventDefault(); handleToggleSave() }}
@@ -322,6 +351,22 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
     }
   }
 
+  // Sections dérivées
+  const allMine = [...myWorkouts, ...savedWorkouts]
+  const favorites = allMine.filter(w => w.isFavorite)
+  // Récents : triés par lastViewedAt (saved) ou createdAt (mine), top 5, non favoris
+  const nonFavs = allMine.filter(w => !w.isFavorite)
+  const recents = [...nonFavs].sort((a, b) => {
+    const da = new Date(a._lastViewedAt ?? a._savedAt ?? a.createdAt).getTime()
+    const db = new Date(b._lastViewedAt ?? b._savedAt ?? b.createdAt).getTime()
+    return db - da
+  }).slice(0, 5)
+
+  const updateFavorite = (id: string, fav: boolean) => {
+    setMyWorkouts(prev => prev.map(w => w.id === id ? { ...w, isFavorite: fav } : w))
+    setSavedWorkouts(prev => prev.map(w => w.id === id ? { ...w, isFavorite: fav } : w))
+  }
+
   return (
     <>
       {/* Tabs + compteur dynamique */}
@@ -379,6 +424,46 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
             </div>
           )}
 
+          {/* Section Favoris */}
+          {favorites.length > 0 && (
+            <div style={{ marginBottom: 32 }}>
+              <SectionLabel icon={<Star size={13} fill="var(--gold)" color="var(--gold)" />} label="Favoris" count={favorites.length} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {favorites.map(w => (
+                  <WorkoutCard
+                    key={w.id}
+                    w={w}
+                    context={myWorkouts.find(x => x.id === w.id) ? 'mine' : 'saved'}
+                    onShare={myWorkouts.find(x => x.id === w.id) ? () => setSharingWorkout(w) : undefined}
+                    onDelete={myWorkouts.find(x => x.id === w.id) ? () => setMyWorkouts(prev => prev.filter(x => x.id !== w.id)) : undefined}
+                    onToggleSave={savedWorkouts.find(x => x.id === w.id) ? () => setSavedWorkouts(prev => prev.filter(x => x.id !== w.id)) : undefined}
+                    onToggleFavorite={fav => updateFavorite(w.id, fav)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section Récents (non favoris) */}
+          {recents.length > 0 && (
+            <div style={{ marginBottom: 32 }}>
+              <SectionLabel icon={<Clock size={13} />} label="Récents" count={recents.length} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {recents.map(w => (
+                  <WorkoutCard
+                    key={w.id}
+                    w={w}
+                    context={myWorkouts.find(x => x.id === w.id) ? 'mine' : 'saved'}
+                    onShare={myWorkouts.find(x => x.id === w.id) ? () => setSharingWorkout(w) : undefined}
+                    onDelete={myWorkouts.find(x => x.id === w.id) ? () => setMyWorkouts(prev => prev.filter(x => x.id !== w.id)) : undefined}
+                    onToggleSave={savedWorkouts.find(x => x.id === w.id) ? () => setSavedWorkouts(prev => prev.filter(x => x.id !== w.id)) : undefined}
+                    onToggleFavorite={fav => updateFavorite(w.id, fav)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           {myWorkouts.length > 0 && (
             <div style={{ marginBottom: 32 }}>
               <SectionLabel icon={<Zap size={13} />} label="Mes créations" count={myWorkouts.length} />
@@ -390,6 +475,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                     context="mine"
                     onShare={() => setSharingWorkout(w)}
                     onDelete={() => setMyWorkouts(prev => prev.filter(x => x.id !== w.id))}
+                    onToggleFavorite={fav => updateFavorite(w.id, fav)}
                   />
                 ))}
               </div>
@@ -406,6 +492,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                     w={w}
                     context="saved"
                     onToggleSave={() => setSavedWorkouts(prev => prev.filter(x => x.id !== w.id))}
+                    onToggleFavorite={fav => updateFavorite(w.id, fav)}
                   />
                 ))}
               </div>
