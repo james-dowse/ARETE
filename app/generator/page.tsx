@@ -58,6 +58,11 @@ export default function GeneratorPage() {
 
   // Track which block cards are collapsed
   const [collapsedBlocks, setCollapsedBlocks] = useState<Record<string, boolean>>({})
+  // Section-level collapse
+  const [collapsedRandom, setCollapsedRandom] = useState(false)
+  const [collapsedStructure, setCollapsedStructure] = useState(false)
+  // Result panel: collapse per result block
+  const [collapsedResultBlocks, setCollapsedResultBlocks] = useState<Record<string, boolean>>({})
 
   // Random workout
   const [randomDifficulty, setRandomDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
@@ -444,17 +449,21 @@ export default function GeneratorPage() {
           <div>
 
             {/* ── 1. Section aléatoire ── */}
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--gold-border)', borderLeft: '3px solid var(--gold)', padding: '20px 20px 18px', marginBottom: 24, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--gold-border)', borderLeft: '3px solid var(--gold)', marginBottom: 24, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
+              <div onClick={() => setCollapsedRandom(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', cursor: 'pointer', userSelect: 'none' }}>
                 <div style={{ width: 34, height: 34, background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Dices size={16} color="var(--gold)" strokeWidth={2} />
                 </div>
-                <div>
+                <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', letterSpacing: '0.01em' }}>Workout aléatoire</div>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Structure et exercices générés automatiquement · ≤ 60 min</div>
                 </div>
+                <span style={{ color: 'var(--gold)', opacity: 0.7, flexShrink: 0 }}>
+                  {collapsedRandom ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                </span>
               </div>
 
+              {!collapsedRandom && (<div style={{ padding: '0 20px 18px' }}>
               {/* Difficulty selector */}
               <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
                 {([
@@ -485,6 +494,7 @@ export default function GeneratorPage() {
               >
                 {loading ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Génération…</> : <><Dices size={14} /> Générer</>}
               </button>
+              </div>)}
             </div>
 
             {/* ── Séparateur ── */}
@@ -495,17 +505,24 @@ export default function GeneratorPage() {
             </div>
 
             {/* ── 2. Section structurée ── */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, cursor: 'pointer', userSelect: 'none' }} onClick={() => setCollapsedStructure(v => !v)}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>Structure personnalisée</div>
+                <div style={{ fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  Structure personnalisée
+                  <span style={{ color: 'var(--text-dim)', flexShrink: 0 }}>
+                    {collapsedStructure ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                  </span>
+                </div>
                 <div style={{ fontSize: 12, color: targetMovements && !durationOk ? 'var(--orange)' : 'var(--text-muted)', marginTop: 2 }}>
                   {totalMovements} mvts · {fmtMin(totalEstMin)}
                 </div>
               </div>
-              <button onClick={loadTemplates} disabled={loadingTemplates} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <button onClick={e => { e.stopPropagation(); loadTemplates() }} disabled={loadingTemplates} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                 <Save size={12} /> {loadingTemplates ? '…' : 'Mes templates'}
               </button>
             </div>
+
+            {!collapsedStructure && (<>
 
             {showTemplates && templates.length === 0 && (
               <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -779,6 +796,7 @@ export default function GeneratorPage() {
                 </button>
               </div>
             )}
+            </>)}
           </div>
 
           {/* ── Right: Generated workout ── */}
@@ -810,11 +828,15 @@ export default function GeneratorPage() {
                     if (!block) return null
                     // Compute the absolute index offset for this block
                     const offset = generatedByBlock.slice(0, bi).reduce((s, g) => s + g.length, 0)
+                    const resultCollapsed = !!collapsedResultBlocks[block.id]
                     return (
                       <div key={block.id}>
                         {/* Block header */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: resultCollapsed ? 0 : 8 }}>
+                          <div
+                            onClick={() => setCollapsedResultBlocks(prev => ({ ...prev, [block.id]: !prev[block.id] }))}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1, cursor: 'pointer', userSelect: 'none' }}
+                          >
                             <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1 }}>BLOC {bi + 1}</span>
                             {block.bioTypes.map(bt => (
                               <span key={bt} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${BIO_TYPE_COLORS[bt]}22`, color: BIO_TYPE_COLORS[bt], border: `1px solid ${BIO_TYPE_COLORS[bt]}44`, fontWeight: 600 }}>
@@ -830,6 +852,9 @@ export default function GeneratorPage() {
                             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
                               {fmtMin(movs.reduce((s, _, j) => s + minPerMov(params[offset + j]?.sets ?? DEFAULT_SETS, params[offset + j]?.rest ?? DEFAULT_REST), 0))}
                             </span>
+                            <span style={{ color: 'var(--text-dim)', flexShrink: 0 }}>
+                              {resultCollapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+                            </span>
                           </div>
                           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                           <button
@@ -843,7 +868,7 @@ export default function GeneratorPage() {
                           </button>
                         </div>
                         {/* Block instructions preview */}
-                        {block.instructions && (
+                        {!resultCollapsed && block.instructions && (
                           <div
                             className="rich-content"
                             style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 12px', marginBottom: 8, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}
@@ -851,7 +876,7 @@ export default function GeneratorPage() {
                           />
                         )}
                         {/* Movements */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {!resultCollapsed && <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {movs.map((m, j) => {
                             const i = offset + j
                             return (
@@ -920,9 +945,9 @@ export default function GeneratorPage() {
                               </div>
                             )
                           })}
-                        </div>
+                        </div>}
                         {/* Add movement to this block */}
-                        <div style={{ display: 'flex', gap: 6, marginTop: movs.length > 0 ? 8 : 0 }}>
+                        {!resultCollapsed && <div style={{ display: 'flex', gap: 6, marginTop: movs.length > 0 ? 8 : 0 }}>
                           <button
                             onClick={() => addRandomToResultBlock(bi)}
                             disabled={addingRandomToBlock === bi}
@@ -937,7 +962,7 @@ export default function GeneratorPage() {
                           >
                             <Search size={11} /> Depuis la bibliothèque
                           </button>
-                        </div>
+                        </div>}
 
                         {/* Per-gap inter-block rest */}
                         {bi < resultBlocks.length - 1 && (
