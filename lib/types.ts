@@ -1,10 +1,10 @@
 export type BioType = 'Lower body' | 'Push' | 'Pull' | 'Core focus' | 'Compound' | 'Boxing'
 export type Complexity = 'Easy' | 'Common' | 'Hard' | 'Advanced'
-export type Equipment = 'Barre force' | 'Haltère' | 'Kettlebell' | 'Cable' | 'Anneaux' | 'Band' | 'Bodyweight' | 'Barre traction' | 'Box'
+export type Equipment = 'Barre force' | 'Haltère' | 'Kettlebell' | 'Cable' | 'Anneaux' | 'Elastique' | 'Poids corps' | 'Barre traction' | 'Box'
 
 export const BIO_TYPES: BioType[] = ['Lower body', 'Push', 'Pull', 'Core focus', 'Compound', 'Boxing']
 export const COMPLEXITIES: Complexity[] = ['Easy', 'Common', 'Hard', 'Advanced']
-export const EQUIPMENT_TYPES: Equipment[] = ['Barre force', 'Haltère', 'Kettlebell', 'Cable', 'Anneaux', 'Band', 'Bodyweight', 'Barre traction', 'Box']
+export const EQUIPMENT_TYPES: Equipment[] = ['Barre force', 'Haltère', 'Kettlebell', 'Cable', 'Anneaux', 'Elastique', 'Poids corps', 'Barre traction', 'Box']
 
 export const EQUIPMENT_ICONS: Record<string, string> = {
   'Barre force':    '🏋️',
@@ -12,8 +12,8 @@ export const EQUIPMENT_ICONS: Record<string, string> = {
   'Kettlebell':     '🔔',
   'Cable':          '〰️',
   'Anneaux':        '⭕',
-  'Band':           '🪢',
-  'Bodyweight':     '🤸',
+  'Elastique':      '🪢',
+  'Poids corps':    '🤸',
   'Barre traction': '🔝',
   'Box':            '📦',
 }
