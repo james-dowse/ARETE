@@ -459,6 +459,187 @@ function DuplicatesTab() {
   )
 }
 
+// ─── Admin Workouts tab ───────────────────────────────────────────────────────
+interface AdminWorkout {
+  id: string
+  name: string
+  createdAt: string
+  duration?: number | null
+  tags?: string | null
+  isPublic?: boolean
+  user?: { id: string; email: string; firstName: string | null; lastName: string | null } | null
+  _count: { movements: number; savedBy: number }
+}
+
+function WorkoutsAdminTab() {
+  const [workouts, setWorkouts] = useState<AdminWorkout[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/admin/workouts')
+      .then(r => r.json())
+      .then(d => { setWorkouts(Array.isArray(d) ? d : []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2800) }
+
+  const handleDelete = async (id: string) => {
+    const res = await fetch(`/api/workouts/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      setWorkouts(prev => prev.filter(w => w.id !== id))
+      showToast('Workout supprimé ✓')
+    }
+    setDeletingId(null)
+  }
+
+  const filtered = workouts.filter(w =>
+    !search ||
+    w.name.toLowerCase().includes(search.toLowerCase()) ||
+    w.user?.email.toLowerCase().includes(search.toLowerCase()) ||
+    `${w.user?.firstName ?? ''} ${w.user?.lastName ?? ''}`.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const deletingWorkout = workouts.find(w => w.id === deletingId)
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, gap: 16 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Workouts communauté</h2>
+          <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--text-muted)' }}>
+            {loading ? '…' : `${filtered.length} / ${workouts.length} workouts`} — tous utilisateurs confondus.
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, padding: '7px 12px', width: 280, flexShrink: 0 }}>
+          <Search size={14} color="var(--text-muted)" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Nom ou utilisateur…"
+            style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }} />
+          {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={12} color="var(--text-muted)" /></button>}
+        </div>
+      </div>
+
+      {loading && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[1,2,3,4,5].map(i => <div key={i} style={{ height: 58, background: 'var(--bg-card)', borderRadius: 10, opacity: 0.4 }} />)}
+        </div>
+      )}
+
+      {!loading && filtered.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)', fontSize: 14 }}>Aucun workout trouvé</div>
+      )}
+
+      {!loading && filtered.length > 0 && (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+                <th style={{ padding: '9px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: 'var(--text-muted)' }}>NOM</th>
+                <th style={{ padding: '9px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: 'var(--text-muted)' }}>AUTEUR</th>
+                <th style={{ padding: '9px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: 'var(--text-muted)' }}>DATE</th>
+                <th style={{ padding: '9px 12px', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: 'var(--text-muted)' }}>MOUV.</th>
+                <th style={{ padding: '9px 12px', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: 'var(--text-muted)' }}>SAUV.</th>
+                <th style={{ padding: '9px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: 'var(--text-muted)' }}>TAGS</th>
+                <th style={{ padding: '9px 12px', width: 80 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((w, i) => {
+                const author = w.user
+                  ? ((w.user.firstName || w.user.lastName)
+                    ? `${w.user.firstName ?? ''} ${w.user.lastName ?? ''}`.trim()
+                    : w.user.email.split('@')[0])
+                  : '—'
+                const dateStr = new Date(w.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' })
+                const tags = w.tags ? w.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+                return (
+                  <tr key={w.id} style={{ borderTop: i > 0 ? '1px solid var(--border)' : 'none', transition: 'background 0.1s' }} className="admin-wod-row">
+                    <td style={{ padding: '11px 14px' }}>
+                      <a href={`/workouts/${w.id}`} target="_blank" rel="noopener noreferrer"
+                        style={{ fontWeight: 600, color: 'var(--text-primary)', textDecoration: 'none' }}
+                        onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--accent)' }}
+                        onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)' }}>
+                        {w.name}
+                      </a>
+                      {w.duration && <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-dim)' }}>{w.duration} min</span>}
+                    </td>
+                    <td style={{ padding: '11px 12px', fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{author}</td>
+                    <td style={{ padding: '11px 12px', fontSize: 12, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{dateStr}</td>
+                    <td style={{ padding: '11px 12px', textAlign: 'center', fontWeight: 700, fontSize: 13 }}>{w._count.movements}</td>
+                    <td style={{ padding: '11px 12px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+                      {w._count.savedBy > 0 ? <span style={{ fontWeight: 700, color: 'var(--gold)' }}>{w._count.savedBy}</span> : '—'}
+                    </td>
+                    <td style={{ padding: '11px 12px', maxWidth: 180 }}>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {tags.map(tag => (
+                          <span key={tag} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: 'rgba(200,169,81,0.1)', color: 'var(--gold)', border: '1px solid rgba(200,169,81,0.2)' }}>#{tag}</span>
+                        ))}
+                      </div>
+                    </td>
+                    <td style={{ padding: '11px 10px', textAlign: 'right' }}>
+                      <button
+                        onClick={() => setDeletingId(w.id)}
+                        title="Supprimer ce workout"
+                        style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }}
+                        className="admin-wod-del"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          <div style={{ padding: '9px 14px', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-dim)' }}>
+            {filtered.length} workout{filtered.length > 1 ? 's' : ''} — cliquer le nom pour ouvrir dans un nouvel onglet
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm */}
+      {deletingWorkout && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={() => setDeletingId(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
+          <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px', width: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.6)', textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Supprimer ce workout ?</div>
+            <div style={{ fontSize: 14, color: 'var(--accent)', marginBottom: 4, fontWeight: 600 }}>{deletingWorkout.name}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
+              par {deletingWorkout.user?.email ?? '—'} · {deletingWorkout._count.movements} mouvements
+            </div>
+            {deletingWorkout._count.savedBy > 0 && (
+              <div style={{ fontSize: 12, color: '#f59e0b', marginBottom: 4 }}>
+                ⚠ Sauvegardé par {deletingWorkout._count.savedBy} utilisateur{deletingWorkout._count.savedBy > 1 ? 's' : ''}
+              </div>
+            )}
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 22 }}>Cette action est irréversible.</div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button onClick={() => setDeletingId(null)} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={() => handleDelete(deletingWorkout.id)} style={{ padding: '8px 20px', background: '#ff4444', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, background: 'var(--bg-elevated)', border: '1px solid var(--accent)', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, color: 'var(--accent)', zIndex: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+          {toast}
+        </div>
+      )}
+
+      <style>{`
+        .admin-wod-row:hover .admin-wod-del { opacity: 1 !important; transition: opacity 0.15s; }
+        .admin-wod-del { transition: opacity 0.15s; }
+        .admin-wod-del:hover { background: rgba(239,68,68,0.1) !important; border-color: rgba(239,68,68,0.3) !important; color: #ef4444 !important; }
+      `}</style>
+    </div>
+  )
+}
+
 // ─── Stats tab ────────────────────────────────────────────────────────────────
 interface StatsData {
   totals: { users: number; workouts: number; movements: number; saved: number; favorites: number }
@@ -566,7 +747,7 @@ export default function AdminClient({
   initialMovements: Movement[]
   usageMap: Record<string, number>
 }) {
-  const [activeTab, setActiveTab] = useState<'mouvements' | 'referentiels' | 'doublons' | 'stats'>('mouvements')
+  const [activeTab, setActiveTab] = useState<'mouvements' | 'referentiels' | 'doublons' | 'stats' | 'workouts'>('mouvements')
   const [movements, setMovements] = useState<Movement[]>(initialMovements)
   const [search, setSearch] = useState('')
   const [bioFilter, setBioFilter] = useState('')
@@ -770,6 +951,7 @@ export default function AdminClient({
           { key: 'referentiels' as const, label: 'Référentiels', icon: null },
           { key: 'doublons' as const, label: 'Doublons', icon: <Copy size={13} /> },
           { key: 'stats' as const, label: 'Stats', icon: <BarChart2 size={13} /> },
+          { key: 'workouts' as const, label: 'Workouts', icon: null },
         ]).map(({ key, label, icon }) => (
           <button key={key} onClick={() => setActiveTab(key)}
             style={{
@@ -1175,6 +1357,9 @@ export default function AdminClient({
 
       {/* ── Stats tab ── */}
       {activeTab === 'stats' && <StatsTab />}
+
+      {/* ── Workouts tab ── */}
+      {activeTab === 'workouts' && <WorkoutsAdminTab />}
 
       {/* Toast (global) */}
       {toast && (
