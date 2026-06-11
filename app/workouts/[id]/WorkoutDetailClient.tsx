@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ArrowLeft, Clock, Copy,
   RefreshCw, Search, X, Save, Undo2, Pencil, Minus, Plus,
-  AlignLeft, ImageIcon, Trash2,
+  AlignLeft, ImageIcon, Trash2, ChevronDown, ChevronUp,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -343,12 +343,18 @@ function MovementRowEdit({ es, original, index, allMovementIds, onUpdate, onReve
 }
 
 // ─── Block Header (view) ──────────────────────────────────────────────────────
-function BlockHeaderView({ block, index, movements }: { block: WorkoutBlock; index: number; movements: WorkoutMovement[] }) {
+function BlockHeaderView({ block, index, movements, collapsed, onToggle }: {
+  block: WorkoutBlock; index: number; movements: WorkoutMovement[]
+  collapsed: boolean; onToggle: () => void
+}) {
   const color = block.bioType ? BIO_TYPE_COLORS[block.bioType] : 'var(--text-muted)'
   const estMin = movements.reduce((sum, wm) => sum + (wm.sets ?? 2) * 1, 0)
   return (
-    <div style={{ marginTop: index === 0 ? 0 : 10, marginBottom: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: block.instructions ? 8 : 0 }}>
+    <div style={{ marginTop: index === 0 ? 0 : 10, marginBottom: collapsed ? 0 : 8 }}>
+      <div
+        onClick={onToggle}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: (!collapsed && block.instructions) ? 8 : 0, cursor: 'pointer', userSelect: 'none' }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1 }}>BLOC {index + 1}</span>
           {block.bioType && (
@@ -359,10 +365,13 @@ function BlockHeaderView({ block, index, movements }: { block: WorkoutBlock; ind
           {movements.length > 0 && (
             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{fmtMin(estMin)}</span>
           )}
+          <span style={{ color: 'var(--text-dim)', display: 'flex', alignItems: 'center' }}>
+            {collapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+          </span>
         </div>
         <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
       </div>
-      {block.instructions && (
+      {!collapsed && block.instructions && (
         <div style={{ background: `${color}0d`, border: `1px solid ${color}25`, borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
             <AlignLeft size={11} color={color} />
@@ -509,6 +518,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
   const [removedWmIds, setRemovedWmIds] = useState<Set<string>>(new Set())
   const [removedBlockIds, setRemovedBlockIds] = useState<Set<string>>(new Set())
+  const [collapsedViewBlocks, setCollapsedViewBlocks] = useState<Record<string, boolean>>({})
+  const toggleViewBlock = (id: string) => setCollapsedViewBlocks(prev => ({ ...prev, [id]: !prev[id] }))
 
   // ── Dirty checks ──
   const isDirtyMovements = editMode && editStates.some((es, i) => {
@@ -780,6 +791,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
             initial.blocks.filter(block => !removedBlockIds.has(block.id)).map((block, bi) => {
               const blockMovements = blockMovementsMap[block.id] || []
               const blockES = (blockEditStatesMap[block.id] || []).filter(({ orig }) => !removedWmIds.has(orig.id))
+              const blockCollapsed = !editMode && !!collapsedViewBlocks[block.id]
               return (
                 <div key={block.id}>
                   {editMode ? (
@@ -791,19 +803,24 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                       onRemove={() => setRemovedBlockIds(prev => new Set([...prev, block.id]))}
                     />
                   ) : (
-                    <BlockHeaderView block={block} index={bi} movements={blockMovementsMap[block.id] || []} />
+                    <BlockHeaderView
+                      block={block} index={bi} movements={blockMovementsMap[block.id] || []}
+                      collapsed={blockCollapsed} onToggle={() => toggleViewBlock(block.id)}
+                    />
                   )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {editMode
-                      ? blockES.map(({ es, orig, absIdx }) => (
-                          <MovementRowEdit key={orig.id} es={es} original={orig} index={absIdx} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
-                            onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))} />
-                        ))
-                      : blockMovements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
-                    }
-                  </div>
+                  {!blockCollapsed && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {editMode
+                        ? blockES.map(({ es, orig, absIdx }) => (
+                            <MovementRowEdit key={orig.id} es={es} original={orig} index={absIdx} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
+                              onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))} />
+                          ))
+                        : blockMovements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
+                      }
+                    </div>
+                  )}
                   {/* Inter-block rest */}
-                  {!editMode && bi < initial.blocks.length - 1 && (block.restAfter != null || initial.blockRest != null) && (
+                  {!editMode && !blockCollapsed && bi < initial.blocks.length - 1 && (block.restAfter != null || initial.blockRest != null) && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
                       <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
