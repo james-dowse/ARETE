@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { BIO_TYPE_COLORS } from '@/lib/types'
 import WorkoutActions from './DeleteButton'
-import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock } from 'lucide-react'
+import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface WorkoutUser { id: string; email: string }
 interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string } }
@@ -276,6 +276,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const [sharingWorkout, setSharingWorkout] = useState<Workout | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [claiming, setClaiming] = useState(false)
+  const [recentsOpen, setRecentsOpen] = useState(false)
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
@@ -447,8 +448,16 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
           {/* Section Récents (non favoris) */}
           {recents.length > 0 && (
             <div style={{ marginBottom: 32 }}>
-              <SectionLabel icon={<Clock size={13} />} label="Récents" count={recents.length} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div
+                onClick={() => setRecentsOpen(o => !o)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: recentsOpen ? 12 : 0, marginTop: 4, cursor: 'pointer', userSelect: 'none' }}
+              >
+                <span style={{ color: 'var(--text-dim)', display: 'flex' }}><Clock size={13} /></span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.6, textTransform: 'uppercase' }}>Récents</span>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{recents.length}</span>
+                <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', display: 'flex' }}>{recentsOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</span>
+              </div>
+              {recentsOpen && <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {recents.map(w => (
                   <WorkoutCard
                     key={w.id}
@@ -460,7 +469,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                     onToggleFavorite={fav => updateFavorite(w.id, fav)}
                   />
                 ))}
-              </div>
+              </div>}
             </div>
           )}
 
