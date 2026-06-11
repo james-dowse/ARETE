@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ArrowLeft, Clock, Copy,
   RefreshCw, Search, X, Save, Undo2, Pencil, Minus, Plus,
-  AlignLeft, ImageIcon, Trash2, ChevronDown, ChevronUp,
+  AlignLeft, ImageIcon, Trash2, ChevronDown, ChevronUp, Star,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -45,6 +45,7 @@ function LibraryPicker({ current, onPick, onClose }: {
   const [search, setSearch] = useState('')
   const [bioFilter, setBioFilter] = useState('')
   const [complexityFilter, setComplexityFilter] = useState('')
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [results, setResults] = useState<Movement[]>([])
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -55,10 +56,11 @@ function LibraryPicker({ current, onPick, onClose }: {
     if (bioFilter) p.set('bioType', bioFilter)
     if (complexityFilter) p.set('complexity', complexityFilter)
     if (search) p.set('search', search)
+    if (favoritesOnly) p.set('favorites', '1')
     const res = await fetch(`/api/movements?${p}`)
     setResults(await res.json())
     setLoading(false)
-  }, [bioFilter, complexityFilter, search])
+  }, [bioFilter, complexityFilter, search, favoritesOnly])
 
   useEffect(() => { const t = setTimeout(doFetch, 200); return () => clearTimeout(t) }, [doFetch])
   useEffect(() => { inputRef.current?.focus() }, [])
@@ -76,10 +78,28 @@ function LibraryPicker({ current, onPick, onClose }: {
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={17} /></button>
         </div>
+
+        {/* Tabs Tous / Favoris */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
+          <button
+            onClick={() => setFavoritesOnly(false)}
+            style={{ flex: 1, padding: '9px 12px', background: 'none', border: 'none', borderBottom: `2px solid ${!favoritesOnly ? 'var(--accent)' : 'transparent'}`, color: !favoritesOnly ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: !favoritesOnly ? 700 : 400, fontSize: 13, cursor: 'pointer' }}
+          >
+            Tous les mouvements
+          </button>
+          <button
+            onClick={() => setFavoritesOnly(true)}
+            style={{ flex: 1, padding: '9px 12px', background: 'none', border: 'none', borderBottom: `2px solid ${favoritesOnly ? 'var(--gold)' : 'transparent'}`, color: favoritesOnly ? 'var(--gold)' : 'var(--text-muted)', fontWeight: favoritesOnly ? 700 : 400, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
+          >
+            <Star size={13} fill={favoritesOnly ? 'currentColor' : 'none'} />
+            Favoris
+          </button>
+        </div>
+
         <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 7 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 11px' }}>
             <Search size={13} color="var(--text-muted)" />
-            <input ref={inputRef} value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…" style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }} />
+            <input ref={inputRef} value={search} onChange={e => setSearch(e.target.value)} placeholder={favoritesOnly ? 'Rechercher dans mes favoris…' : 'Rechercher…'} style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }} />
             {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={11} color="var(--text-muted)" /></button>}
           </div>
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
@@ -101,7 +121,14 @@ function LibraryPicker({ current, onPick, onClose }: {
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '6px 10px' }}>
           {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Chargement…</div>}
-          {!loading && results.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Aucun résultat</div>}
+          {!loading && results.length === 0 && (
+            <div style={{ padding: 28, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              {favoritesOnly
+                ? <><Star size={28} strokeWidth={1.2} color="var(--text-dim)" /><span>Aucun favori — ajoute des ★ depuis la Bibliothèque.</span></>
+                : 'Aucun résultat'
+              }
+            </div>
+          )}
           {!loading && results.map(m => {
             const isCurrent = m.id === current.movement.id
             return (
