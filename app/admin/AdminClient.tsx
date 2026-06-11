@@ -2,7 +2,7 @@
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
 import { useAttributes, invalidateAttributesCache, type AttributeOption } from '@/lib/useAttributes'
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown, Upload, Download, CheckSquare } from 'lucide-react'
+import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown, Upload, Download, CheckSquare, Copy, BarChart2 } from 'lucide-react'
 
 interface Movement {
   id: string; name: string; bioType: string; complexity: string; equipment?: string | null
@@ -400,6 +400,165 @@ function AttributesTab() {
   )
 }
 
+// ─── Doublons tab ────────────────────────────────────────────────────────────
+function DuplicatesTab() {
+  const [data, setData] = useState<{ key: string; group: { id: string; name: string; bioType: string }[] }[] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/admin/duplicates')
+      .then(r => r.json())
+      .then(d => { setData(d.duplicates ?? []); setLoading(false) })
+      .catch(e => { setError(String(e)); setLoading(false) })
+  }, [])
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Doublons</h2>
+        <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--text-muted)' }}>
+          Mouvements dont le nom normalisé est identique (casse, accents, ponctuation ignorés).
+        </p>
+      </div>
+      {loading && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[1,2,3].map(i => <div key={i} style={{ height: 80, background: 'var(--bg-card)', borderRadius: 10, opacity: 0.5 }} />)}
+        </div>
+      )}
+      {error && <div style={{ color: 'var(--red)', fontSize: 13 }}>{error}</div>}
+      {data && data.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+          <Copy size={36} style={{ margin: '0 auto 12px', opacity: 0.3, display: 'block' }} />
+          <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--text-primary)', marginBottom: 4 }}>Aucun doublon détecté</div>
+          <div style={{ fontSize: 13 }}>Tous les mouvements ont un nom unique.</div>
+        </div>
+      )}
+      {data && data.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {data.map(({ key, group }) => (
+            <div key={key} style={{ background: 'var(--bg-card)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ padding: '8px 14px', background: 'rgba(239,68,68,0.06)', borderBottom: '1px solid rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Copy size={12} color="#ef4444" />
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                  {group.length} entrées · clé : «{key}»
+                </span>
+              </div>
+              {group.map((m, i) => (
+                <div key={m.id} style={{ display: 'flex', gap: 12, padding: '9px 14px', borderTop: i > 0 ? '1px solid var(--border)' : 'none', alignItems: 'center' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-dim)', minWidth: 48 }}>{m.id}</span>
+                  <span style={{ fontWeight: 600, fontSize: 13, flex: 1 }}>{m.name}</span>
+                  <span style={{ fontSize: 11, color: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)', padding: '2px 8px', borderRadius: 10, background: `${BIO_TYPE_COLORS[m.bioType]}15` }}>{BIO_TYPE_ICONS[m.bioType]} {m.bioType}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Stats tab ────────────────────────────────────────────────────────────────
+interface StatsData {
+  totals: { users: number; workouts: number; movements: number; saved: number; favorites: number }
+  topMovements: { movement: { id: string; name: string; bioType: string }; count: number }[]
+  workoutsByUser: { email: string; count: number }[]
+}
+
+function StatsTab() {
+  const [data, setData] = useState<StatsData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/admin/stats')
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false) })
+      .catch(e => { setError(String(e)); setLoading(false) })
+  }, [])
+
+  if (loading) return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {[1,2,3].map(i => <div key={i} style={{ height: 120, background: 'var(--bg-card)', borderRadius: 12, opacity: 0.5 }} />)}
+    </div>
+  )
+  if (error) return <div style={{ color: 'var(--red)', fontSize: 13 }}>{error}</div>
+  if (!data) return null
+
+  const { totals, topMovements, workoutsByUser } = data
+  const maxMov = topMovements[0]?.count ?? 1
+  const maxUser = workoutsByUser[0]?.count ?? 1
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Statistiques</h2>
+        <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--text-muted)' }}>Données agrégées tous utilisateurs confondus.</p>
+      </div>
+
+      {/* Totaux */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 28 }}>
+        {[
+          { label: 'Utilisateurs', value: totals.users },
+          { label: 'Workouts', value: totals.workouts },
+          { label: 'Mouvements', value: totals.movements },
+          { label: 'Sauvegardés', value: totals.saved },
+          { label: 'Favoris', value: totals.favorites },
+        ].map(({ label, value }) => (
+          <div key={label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--gold)' }}>{value}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginTop: 4, letterSpacing: 0.5, textTransform: 'uppercase' }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        {/* Top mouvements */}
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.07em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Top 10 mouvements</span>
+          </div>
+          <div>
+            {topMovements.map((m, i) => (
+              <div key={m.movement.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)', minWidth: 18, textAlign: 'right' }}>{i + 1}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.movement.name}</div>
+                  <div style={{ fontSize: 10, color: BIO_TYPE_COLORS[m.movement.bioType] || 'var(--text-dim)' }}>{m.movement.bioType}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 80 }}>
+                  <div style={{ height: 4, borderRadius: 2, background: 'var(--gold)', width: `${Math.round((m.count / maxMov) * 60)}px`, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)', minWidth: 20 }}>{m.count}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Workouts par user */}
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.07em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Workouts par utilisateur</span>
+          </div>
+          <div>
+            {workoutsByUser.map((u, i) => (
+              <div key={u.email} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)', minWidth: 18, textAlign: 'right' }}>{i + 1}</span>
+                <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 80 }}>
+                  <div style={{ height: 4, borderRadius: 2, background: 'var(--accent)', width: `${Math.round((u.count / maxUser) * 60)}px`, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', minWidth: 20 }}>{u.count}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function AdminClient({
   initialMovements, usageMap,
@@ -407,7 +566,7 @@ export default function AdminClient({
   initialMovements: Movement[]
   usageMap: Record<string, number>
 }) {
-  const [activeTab, setActiveTab] = useState<'mouvements' | 'referentiels'>('mouvements')
+  const [activeTab, setActiveTab] = useState<'mouvements' | 'referentiels' | 'doublons' | 'stats'>('mouvements')
   const [movements, setMovements] = useState<Movement[]>(initialMovements)
   const [search, setSearch] = useState('')
   const [bioFilter, setBioFilter] = useState('')
@@ -606,21 +765,22 @@ export default function AdminClient({
 
       {/* ── Tab bar ── */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 28, gap: 0 }}>
-        {(['mouvements', 'referentiels'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
+        {([
+          { key: 'mouvements' as const, label: 'Mouvements', icon: null },
+          { key: 'referentiels' as const, label: 'Référentiels', icon: null },
+          { key: 'doublons' as const, label: 'Doublons', icon: <Copy size={13} /> },
+          { key: 'stats' as const, label: 'Stats', icon: <BarChart2 size={13} /> },
+        ]).map(({ key, label, icon }) => (
+          <button key={key} onClick={() => setActiveTab(key)}
             style={{
-              padding: '10px 22px',
-              background: 'none',
-              border: 'none',
-              borderBottom: activeTab === tab ? '2px solid var(--accent)' : '2px solid transparent',
-              color: activeTab === tab ? 'var(--accent)' : 'var(--text-muted)',
-              fontWeight: activeTab === tab ? 700 : 500,
-              fontSize: 14,
-              cursor: 'pointer',
-              transition: 'color 0.15s',
-              marginBottom: -1,
+              padding: '10px 22px', display: 'flex', alignItems: 'center', gap: 6,
+              background: 'none', border: 'none',
+              borderBottom: activeTab === key ? '2px solid var(--accent)' : '2px solid transparent',
+              color: activeTab === key ? 'var(--accent)' : 'var(--text-muted)',
+              fontWeight: activeTab === key ? 700 : 500,
+              fontSize: 14, cursor: 'pointer', transition: 'color 0.15s', marginBottom: -1,
             }}>
-            {tab === 'mouvements' ? 'Mouvements' : 'Référentiels'}
+            {icon}{label}
           </button>
         ))}
       </div>
@@ -1009,6 +1169,12 @@ export default function AdminClient({
 
       {/* ── Référentiels tab ── */}
       {activeTab === 'referentiels' && <AttributesTab />}
+
+      {/* ── Doublons tab ── */}
+      {activeTab === 'doublons' && <DuplicatesTab />}
+
+      {/* ── Stats tab ── */}
+      {activeTab === 'stats' && <StatsTab />}
 
       {/* Toast (global) */}
       {toast && (

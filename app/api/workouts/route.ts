@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   try {
   const currentUserId = await getCurrentUserId()
   const filter = req.nextUrl.searchParams.get('filter') // 'mine' | 'saved' | 'community'
+  const tagFilter = req.nextUrl.searchParams.get('tag') // optional tag filter
 
   // ── Workouts importés (SavedWorkout) ──────────────────────────────────────
   if (filter === 'saved') {
@@ -21,7 +22,10 @@ export async function GET(req: NextRequest) {
       prisma.savedWorkout.findMany({
         where: {
           userId: currentUserId,
-          workout: { NOT: { userId: currentUserId } }, // jamais ses propres créations
+          workout: {
+            NOT: { userId: currentUserId },
+            ...(tagFilter ? { tags: { contains: tagFilter } } : {}),
+          },
         },
         orderBy: { savedAt: 'desc' },
         include: { workout: { include: WORKOUT_INCLUDE } },
@@ -47,16 +51,15 @@ export async function GET(req: NextRequest) {
 
   if (filter === 'mine') {
     // Authentifié → ses workouts ; pas de session → workouts sans propriétaire (données legacy)
-    where = currentUserId
-      ? { userId: currentUserId }
-      : { userId: null }
+    const base = currentUserId ? { userId: currentUserId } : { userId: null }
+    where = tagFilter ? { ...base, tags: { contains: tagFilter } } : base
   } else if (filter === 'community') {
     // Workouts d'autres utilisateurs identifiés — jamais les siens, jamais les anonymes
+    const tagPart = tagFilter ? { tags: { contains: tagFilter } } : {}
     if (!currentUserId) {
-      // Pas de session : communauté = workouts avec un userId (pas les anonymes qui sont "les siens")
-      where = { userId: { not: null } }
+      where = { userId: { not: null }, ...tagPart }
     } else {
-      where = { userId: { not: null }, NOT: { userId: currentUserId } }
+      where = { userId: { not: null }, NOT: { userId: currentUserId }, ...tagPart }
     }
   }
 

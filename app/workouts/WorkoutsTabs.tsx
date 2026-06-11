@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { BIO_TYPE_COLORS } from '@/lib/types'
 import WorkoutActions from './DeleteButton'
-import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus } from 'lucide-react'
 
 interface WorkoutUser { id: string; email: string }
 interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string } }
@@ -16,12 +16,83 @@ interface Workout {
   user?: WorkoutUser | null
   isSaved?: boolean
   isFavorite?: boolean
+  tags?: string | null
   _savedSource?: string
   _savedAt?: string
   _lastViewedAt?: string | null
 }
 
 const fmtMin = (min: number) => min < 60 ? `~${min}min` : `~${Math.floor(min / 60)}h${min % 60 > 0 ? `${min % 60}min` : ''}`
+
+// ── Helpers semaine ─────────────────────────────────────────────────────────
+function getMonday(d: Date): Date {
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  const mon = new Date(d)
+  mon.setDate(d.getDate() + diff)
+  mon.setHours(0, 0, 0, 0)
+  return mon
+}
+function toISODate(d: Date): string { return d.toISOString().split('T')[0] }
+
+// ── Modale ajout au planner ──────────────────────────────────────────────────
+const DAYS_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+
+function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: string; onClose: () => void; onAdded: () => void }) {
+  const [selected, setSelected] = useState<number | null>(null)
+  const [saving, setSaving] = useState(false)
+  const weekStart = toISODate(getMonday(new Date()))
+  const todayIdx = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1 })()
+
+  async function handleAdd() {
+    if (selected === null) return
+    setSaving(true)
+    await fetch('/api/planner', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workoutId, dayOfWeek: selected, weekStart }),
+    })
+    setSaving(false)
+    onAdded()
+    onClose()
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: 24 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 380, padding: '24px 24px 20px', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CalendarPlus size={16} color="var(--gold)" />
+            <span style={{ fontWeight: 700, fontSize: 16 }}>Ajouter à ma semaine</span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)' }}><X size={16} /></button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 20 }}>
+          {DAYS_FR.map((day, i) => (
+            <button
+              key={i}
+              onClick={() => setSelected(i)}
+              style={{
+                padding: '10px 4px', borderRadius: 10, border: `2px solid ${selected === i ? 'var(--gold)' : i === todayIdx ? 'rgba(200,169,81,0.3)' : 'var(--border)'}`,
+                background: selected === i ? 'rgba(200,169,81,0.15)' : 'var(--bg-elevated)',
+                color: selected === i ? 'var(--gold)' : i === todayIdx ? 'rgba(200,169,81,0.8)' : 'var(--text-muted)',
+                fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
+              }}
+            >{day}</button>
+          ))}
+        </div>
+        <button
+          onClick={handleAdd}
+          disabled={selected === null || saving}
+          style={{ width: '100%', padding: '11px', background: 'var(--gold)', color: '#000', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: selected === null || saving ? 'default' : 'pointer', opacity: selected === null ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+        >
+          <CalendarPlus size={14} />
+          {saving ? 'Ajout…' : selected !== null ? `Ajouter — ${DAYS_FR[selected]}` : 'Choisir un jour'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 // ── Modale de partage ────────────────────────────────────────────────────────
 function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => void }) {
@@ -122,6 +193,7 @@ function WorkoutCard({
   const [toggling, setToggling] = useState(false)
   const [isSaved, setIsSaved] = useState(w.isSaved ?? false)
   const [isFavorite, setIsFavorite] = useState(w.isFavorite ?? false)
+  const [addingToWeek, setAddingToWeek] = useState(false)
   const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
   const estMin = Math.round(w.movements.reduce((sum, wm) => sum + (wm.sets ?? 2), 0))
   const initiale = w.user?.email?.[0]?.toUpperCase() ?? '?'
@@ -195,6 +267,9 @@ function WorkoutCard({
           {bioTypes.map(bt => (
             <span key={bt} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${BIO_TYPE_COLORS[bt] || '#fff'}15`, color: BIO_TYPE_COLORS[bt] || 'var(--text-muted)', border: `1px solid ${BIO_TYPE_COLORS[bt] || '#fff'}28` }}>{bt}</span>
           ))}
+          {w.tags && w.tags.split(',').map(t => t.trim()).filter(Boolean).map(tag => (
+            <span key={tag} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'var(--gold-ghost)', color: 'var(--gold)', border: '1px solid var(--gold-border)' }}>#{tag}</span>
+          ))}
         </div>
       </Link>
 
@@ -246,9 +321,26 @@ function WorkoutCard({
                 Recommander
               </button>
             )}
+            {/* Bouton planner (mine + saved) */}
+            {(context === 'mine' || context === 'saved') && (
+              <button
+                onClick={e => { e.preventDefault(); setAddingToWeek(true) }}
+                title="Ajouter à ma semaine"
+                style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}
+              >
+                <CalendarPlus size={12} />
+              </button>
+            )}
           </div>
           {context === 'mine' && <WorkoutActions workoutId={w.id} onDelete={onDelete} />}
         </div>
+      )}
+      {addingToWeek && (
+        <AddToWeekModal
+          workoutId={w.id}
+          onClose={() => setAddingToWeek(false)}
+          onAdded={() => {}}
+        />
       )}
     </div>
   )
@@ -277,6 +369,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const [toast, setToast] = useState<string | null>(null)
   const [claiming, setClaiming] = useState(false)
   const [recentsOpen, setRecentsOpen] = useState(false)
+  const [activeTag, setActiveTag] = useState<string | null>(null)
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
@@ -292,16 +385,17 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
     return () => clearTimeout(t)
   }, [toast])
 
-  const loadMine = useCallback(async () => {
+  const loadMine = useCallback(async (tag?: string | null) => {
     setFetchError(null)
     try {
+      const tagParam = tag ? `&tag=${encodeURIComponent(tag)}` : ''
       const [rMine, rSaved] = await Promise.all([
-        fetch('/api/workouts?filter=mine').then(async r => {
+        fetch(`/api/workouts?filter=mine${tagParam}`).then(async r => {
           const data = await r.json()
           if (!r.ok) throw new Error(data?.details ?? data?.error ?? `HTTP ${r.status}`)
           return Array.isArray(data) ? data : []
         }),
-        fetch('/api/workouts?filter=saved').then(async r => {
+        fetch(`/api/workouts?filter=saved${tagParam}`).then(async r => {
           const data = await r.json()
           if (!r.ok) throw new Error(data?.details ?? data?.error ?? `HTTP ${r.status}`)
           return Array.isArray(data) ? data : []
@@ -314,16 +408,17 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
     }
   }, [])
 
-  const loadCommunity = useCallback(async () => {
-    const data = await fetch('/api/workouts?filter=community').then(r => r.json())
+  const loadCommunity = useCallback(async (tag?: string | null) => {
+    const tagParam = tag ? `&tag=${encodeURIComponent(tag)}` : ''
+    const data = await fetch(`/api/workouts?filter=community${tagParam}`).then(r => r.json())
     setCommunityWorkouts(data)
   }, [])
 
   useEffect(() => {
     setLoading(true)
-    const p = tab === 'mine' ? loadMine() : loadCommunity()
+    const p = tab === 'mine' ? loadMine(activeTag) : loadCommunity(activeTag)
     p.finally(() => setLoading(false))
-  }, [tab, loadMine, loadCommunity])
+  }, [tab, activeTag, loadMine, loadCommunity])
 
   const tabStyle = (t: 'mine' | 'community'): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: 7,
@@ -351,6 +446,12 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
       setClaiming(false)
     }
   }
+
+  // Tags disponibles dans l'onglet courant
+  const allTagsSet = new Set<string>()
+  const allSrc = tab === 'mine' ? [...myWorkouts, ...savedWorkouts] : communityWorkouts
+  allSrc.forEach(w => w.tags?.split(',').map(t => t.trim()).filter(Boolean).forEach(t => allTagsSet.add(t)))
+  const availableTags = Array.from(allTagsSet).sort()
 
   // Sections dérivées
   const allMine = [...myWorkouts, ...savedWorkouts]
@@ -385,6 +486,31 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
           </span>
         )}
       </div>
+
+      {/* Filtre tags */}
+      {availableTags.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+          {availableTags.map(tag => (
+            <button
+              key={tag}
+              onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+              style={{
+                padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                background: activeTag === tag ? 'rgba(200,169,81,0.18)' : 'var(--bg-card)',
+                color: activeTag === tag ? 'var(--gold)' : 'var(--text-muted)',
+                border: `1px solid ${activeTag === tag ? 'var(--gold-border)' : 'var(--border)'}`,
+                transition: 'all 0.15s',
+              }}
+            >#{tag}</button>
+          ))}
+          {activeTag && (
+            <button
+              onClick={() => setActiveTag(null)}
+              style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'none', border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+            ><X size={11} /> Tout</button>
+          )}
+        </div>
+      )}
 
       {/* Erreur de chargement */}
       {fetchError && (

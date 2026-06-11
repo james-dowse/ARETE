@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ArrowLeft, Clock, Copy,
   RefreshCw, Search, X, Save, Undo2, Pencil, Minus, Plus,
-  AlignLeft, ImageIcon, Trash2, ChevronDown, ChevronUp, Star,
+  AlignLeft, ImageIcon, Trash2, ChevronDown, ChevronUp, Star, CalendarPlus,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -33,6 +33,7 @@ interface Workout {
   duration?: number | null
   notes?: string | null; description?: string | null; imageUrl?: string | null
   blockRest?: number | null
+  tags?: string | null
   movements: WorkoutMovement[]
   blocks: WorkoutBlock[]
 }
@@ -504,6 +505,70 @@ function Stepper({ value, min, max, onChange, highlight }: { value: number; min:
   )
 }
 
+// ─── Add to week modal ────────────────────────────────────────────────────────
+const DAYS_FR = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+
+function getMonday(d: Date): Date {
+  const day = d.getDay(); const diff = day === 0 ? -6 : 1 - day
+  const mon = new Date(d); mon.setDate(d.getDate() + diff); mon.setHours(0, 0, 0, 0); return mon
+}
+
+function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: string; onClose: () => void; onAdded: () => void }) {
+  const [selectedDay, setSelectedDay] = useState<number | null>(null)
+  const [saving, setSaving] = useState(false)
+  const weekStart = getMonday(new Date())
+  const weekStartStr = weekStart.toISOString().split('T')[0]
+
+  async function handleAdd() {
+    if (selectedDay === null) return
+    setSaving(true)
+    await fetch('/api/planner', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workoutId, dayOfWeek: selectedDay, weekStart: weekStartStr }),
+    })
+    setSaving(false)
+    onAdded()
+    onClose()
+  }
+
+  const today = new Date().getDay() // 0=Sun, 1=Mon…
+  const todayIdx = today === 0 ? 6 : today - 1
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: 24 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 380, padding: '24px', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CalendarPlus size={16} color="var(--gold)" />
+            <span style={{ fontWeight: 700, fontSize: 15 }}>Ajouter à cette semaine</span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={16} /></button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+          {DAYS_FR.map((day, i) => (
+            <button
+              key={i}
+              onClick={() => setSelectedDay(i)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 9, border: `1px solid ${selectedDay === i ? 'var(--gold)' : i === todayIdx ? 'var(--gold-border)' : 'var(--border)'}`, background: selectedDay === i ? 'var(--gold-ghost)' : 'var(--bg-elevated)', cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s' }}
+            >
+              <span style={{ fontWeight: 600, fontSize: 14, color: selectedDay === i ? 'var(--gold)' : 'var(--text-primary)', flex: 1 }}>{day}</span>
+              {i === todayIdx && <span style={{ fontSize: 10, color: 'var(--gold)', fontWeight: 600 }}>Aujourd'hui</span>}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={handleAdd}
+          disabled={selectedDay === null || saving}
+          style={{ width: '100%', padding: '11px', background: selectedDay !== null ? 'var(--accent)' : 'var(--bg-elevated)', color: selectedDay !== null ? 'var(--on-accent)' : 'var(--text-dim)', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: selectedDay !== null ? 'pointer' : 'default', transition: 'all 0.15s' }}
+        >
+          {saving ? 'Ajout…' : 'Ajouter'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Stat ─────────────────────────────────────────────────────────────────────
 function Stat({ value, label, color }: { value: number; label: string; color: string }) {
   return (
@@ -541,12 +606,16 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
 
   const [duplicating, setDuplicating] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showAddToWeek, setShowAddToWeek] = useState(false)
+  const [addedToast, setAddedToast] = useState(false)
   const [saving, setSaving] = useState(false)
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
   const [removedWmIds, setRemovedWmIds] = useState<Set<string>>(new Set())
   const [removedBlockIds, setRemovedBlockIds] = useState<Set<string>>(new Set())
   const [collapsedViewBlocks, setCollapsedViewBlocks] = useState<Record<string, boolean>>({})
   const toggleViewBlock = (id: string) => setCollapsedViewBlocks(prev => ({ ...prev, [id]: !prev[id] }))
+  const [editTags, setEditTags] = useState<string[]>(() => initial.tags ? initial.tags.split(',').map(t => t.trim()).filter(Boolean) : [])
+  const [tagInput, setTagInput] = useState('')
 
   // Track last viewed (fire-and-forget)
   useEffect(() => {
@@ -563,7 +632,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   )
   const isDirtyDescription = editMode && stripHtml(editDescription) !== stripHtml(initial.description ?? '')
   const isDirtyImage = editMode && (imageFile !== null || removeImage)
-  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyDescription || isDirtyImage || removedWmIds.size > 0 || removedBlockIds.size > 0
+  const isDirtyTags = editMode && editTags.join(',') !== (initial.tags ?? '')
+  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyDescription || isDirtyImage || isDirtyTags || removedWmIds.size > 0 || removedBlockIds.size > 0
 
   const pendingCount = editMode
     ? editStates.filter((es, i) => {
@@ -633,10 +703,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
           body: JSON.stringify({ instructions: blockInstructions[b.id] }),
         })
       ),
-      ...(isDirtyDescription ? [
+      ...((isDirtyDescription || isDirtyTags) ? [
         fetch(`/api/workouts/${initial.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description: editDescription }),
+          body: JSON.stringify({
+            ...(isDirtyDescription ? { description: editDescription } : {}),
+            ...(isDirtyTags ? { tags: editTags.join(',') || null } : {}),
+          }),
         })
       ] : []),
       ...(removeImage ? [
@@ -722,6 +795,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             {!editMode ? (
               <>
+                <button onClick={() => setShowAddToWeek(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', borderRadius: 9, color: 'var(--gold)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  <CalendarPlus size={14} /> Semaine
+                </button>
                 <button onClick={handleDuplicate} disabled={duplicating}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: duplicating ? 'wait' : 'pointer', opacity: duplicating ? 0.7 : 1 }}>
                   <Copy size={14} /> {duplicating ? 'Copie…' : 'Dupliquer'}
@@ -817,6 +894,58 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
           )
         )}
 
+        {/* ── TAGS ── */}
+        {editMode ? (
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: isDirtyTags ? 'var(--dirty-text)' : 'var(--text-muted)', letterSpacing: 0.6, display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+              TAGS {isDirtyTags && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 20, background: 'var(--dirty)', fontWeight: 600 }}>modifié</span>}
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+              {editTags.map(tag => (
+                <span key={tag} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 20, background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', color: 'var(--gold)', fontSize: 12, fontWeight: 600 }}>
+                  #{tag}
+                  <button onClick={() => setEditTags(prev => prev.filter(t => t !== tag))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--gold)', display: 'flex', lineHeight: 1 }}>
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ''))}
+                onKeyDown={e => {
+                  if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
+                    e.preventDefault()
+                    const t = tagInput.trim()
+                    if (!editTags.includes(t)) setEditTags(prev => [...prev, t])
+                    setTagInput('')
+                  }
+                }}
+                placeholder="Ajouter un tag…"
+                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', flex: 1 }}
+              />
+              <button
+                onClick={() => { const t = tagInput.trim(); if (t && !editTags.includes(t)) { setEditTags(prev => [...prev, t]); setTagInput('') } }}
+                disabled={!tagInput.trim()}
+                style={{ padding: '6px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}
+              >
+                + Ajouter
+              </button>
+            </div>
+          </div>
+        ) : (
+          initial.tags && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+              {initial.tags.split(',').map(t => t.trim()).filter(Boolean).map(tag => (
+                <span key={tag} style={{ padding: '2px 10px', borderRadius: 20, background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', color: 'var(--gold)', fontSize: 12, fontWeight: 600 }}>
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )
+        )}
+
         {/* ── MOVEMENTS ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {hasBlocks ? (
@@ -897,6 +1026,21 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       )}
 
       <MovementModal movementId={selectedMovementId} onClose={() => setSelectedMovementId(null)} />
+
+      {showAddToWeek && (
+        <AddToWeekModal
+          workoutId={initial.id}
+          onClose={() => setShowAddToWeek(false)}
+          onAdded={() => setAddedToast(true)}
+        />
+      )}
+
+      {addedToast && (
+        <div onAnimationEnd={() => setTimeout(() => setAddedToast(false), 2500)}
+          style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#22c55e', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000 }}>
+          Ajouté au planner ✓
+        </div>
+      )}
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

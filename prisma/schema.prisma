@@ -30,11 +30,13 @@ model Workout {
   templateId  String?
   userId      String?
   blockRest   Int?
+  tags        String?
   movements   WorkoutMovement[]
   blocks      WorkoutBlock[]
   shares      WorkoutShare[]
   savedBy     SavedWorkout[]
   favoritedBy FavoriteWorkout[]
+  planEntries WeekPlanEntry[]
   template    WorkoutTemplate?  @relation(fields: [templateId], references: [id])
   user        InvitedUser?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
@@ -104,6 +106,27 @@ model InvitedUser {
   savedWorkouts    SavedWorkout[]
   favorites        FavoriteMovement[]
   favoriteWorkouts FavoriteWorkout[]
+  weekPlans        WeekPlan[]
+}
+
+model WeekPlan {
+  id        String         @id @default(cuid())
+  userId    String
+  weekStart DateTime
+  user      InvitedUser    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries   WeekPlanEntry[]
+
+  @@unique([userId, weekStart])
+}
+
+model WeekPlanEntry {
+  id         String    @id @default(cuid())
+  weekPlanId String
+  workoutId  String
+  dayOfWeek  Int       // 0=Lun … 6=Dim
+  order      Int       @default(0)
+  weekPlan   WeekPlan  @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
+  workout    Workout   @relation(fields: [workoutId], references: [id], onDelete: Cascade)
 }
 
 model FavoriteMovement {
