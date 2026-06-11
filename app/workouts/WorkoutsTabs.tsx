@@ -1,9 +1,9 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { BIO_TYPE_COLORS } from '@/lib/types'
-import WorkoutActions from './DeleteButton'
-import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus } from 'lucide-react'
+import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2 } from 'lucide-react'
 
 interface WorkoutUser { id: string; email: string }
 interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string } }
@@ -189,14 +189,35 @@ function WorkoutCard({
   onDelete?: () => void
   onToggleFavorite?: (fav: boolean) => void
 }) {
+  const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [isSaved, setIsSaved] = useState(w.isSaved ?? false)
   const [isFavorite, setIsFavorite] = useState(w.isFavorite ?? false)
   const [addingToWeek, setAddingToWeek] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
   const estMin = Math.round(w.movements.reduce((sum, wm) => sum + (wm.sets ?? 2), 0))
   const initiale = w.user?.email?.[0]?.toUpperCase() ?? '?'
+
+  async function handleDuplicate(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation()
+    setDuplicating(true)
+    const res = await fetch(`/api/workouts/${w.id}/duplicate`, { method: 'POST' })
+    const copy = await res.json()
+    setDuplicating(false)
+    router.push(`/workouts/${copy.id}`)
+  }
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation()
+    if (!confirm('Supprimer ce workout ?')) return
+    setDeleting(true)
+    await fetch(`/api/workouts/${w.id}`, { method: 'DELETE' })
+    setDeleting(false)
+    onDelete?.()
+  }
 
   async function handleToggleSave() {
     setSaving(true)
@@ -275,64 +296,66 @@ function WorkoutCard({
 
       {showFooter && (
         <div style={{ borderTop: '1px solid var(--border)', padding: '8px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          {/* Gauche : favori + actions contextuelles */}
           <div style={{ display: 'flex', gap: 6 }}>
-            {/* Bouton favori (mine + saved) */}
             {(context === 'mine' || context === 'saved') && (
-              <button
-                onClick={handleToggleFavorite}
-                disabled={toggling}
+              <button onClick={handleToggleFavorite} disabled={toggling}
                 title={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, background: isFavorite ? 'rgba(200,169,81,0.12)' : 'none', border: `1px solid ${isFavorite ? 'rgba(200,169,81,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 9px', color: isFavorite ? 'var(--gold)' : 'var(--text-muted)', fontSize: 12, cursor: toggling ? 'default' : 'pointer', transition: 'all 0.15s' }}
-              >
+                style={{ display: 'flex', alignItems: 'center', gap: 4, background: isFavorite ? 'rgba(200,169,81,0.12)' : 'none', border: `1px solid ${isFavorite ? 'rgba(200,169,81,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 9px', color: isFavorite ? 'var(--gold)' : 'var(--text-muted)', fontSize: 12, cursor: toggling ? 'default' : 'pointer', transition: 'all 0.15s' }}>
                 <Star size={12} fill={isFavorite ? 'var(--gold)' : 'none'} />
               </button>
             )}
-            {/* Bouton sauvegarder (communauté) */}
             {context === 'community' && (
-              <button
-                onClick={e => { e.preventDefault(); handleToggleSave() }}
-                disabled={saving}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, background: isSaved ? 'rgba(201,165,53,0.1)' : 'none', border: `1px solid ${isSaved ? 'rgba(201,165,53,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 10px', color: isSaved ? '#C9A535' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: saving ? 'default' : 'pointer', transition: 'all 0.15s' }}
-              >
+              <button onClick={e => { e.preventDefault(); handleToggleSave() }} disabled={saving}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: isSaved ? 'rgba(201,165,53,0.1)' : 'none', border: `1px solid ${isSaved ? 'rgba(201,165,53,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 10px', color: isSaved ? '#C9A535' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: saving ? 'default' : 'pointer', transition: 'all 0.15s' }}>
                 {isSaved ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
                 {isSaved ? 'Sauvegardé' : 'Sauvegarder'}
               </button>
             )}
-            {/* Bouton retirer (sauvegardés) */}
             {context === 'saved' && (
-              <button
-                onClick={e => { e.preventDefault(); handleToggleSave() }}
-                disabled={saving}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}
-              >
-                <X size={11} />
-                Retirer
+              <button onClick={e => { e.preventDefault(); handleToggleSave() }} disabled={saving}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}>
+                <X size={11} /> Retirer
               </button>
             )}
-            {/* Bouton recommander (mes créations) */}
             {context === 'mine' && onShare && (
-              <button
-                onClick={e => { e.preventDefault(); onShare() }}
+              <button onClick={e => { e.preventDefault(); onShare() }}
                 style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold,#C9A535)'; e.currentTarget.style.color = 'var(--gold,#C9A535)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
-              >
-                <Share2 size={12} />
-                Recommander
-              </button>
-            )}
-            {/* Bouton planner (mine + saved) */}
-            {(context === 'mine' || context === 'saved') && (
-              <button
-                onClick={e => { e.preventDefault(); setAddingToWeek(true) }}
-                title="Ajouter à ma semaine"
-                style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}
-              >
-                <CalendarPlus size={12} />
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}>
+                <Share2 size={12} /> Recommander
               </button>
             )}
           </div>
-          {context === 'mine' && <WorkoutActions workoutId={w.id} onDelete={onDelete} />}
+
+          {/* Droite : Semaine → Dupliquer → Modifier → Supprimer (même ordre que la page détail) */}
+          <div style={{ display: 'flex', gap: 4 }}>
+            {(context === 'mine' || context === 'saved') && (
+              <button onClick={e => { e.preventDefault(); setAddingToWeek(true) }}
+                title="Ajouter à ma semaine"
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', borderRadius: 6, padding: '5px 10px', color: 'var(--gold)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                <CalendarPlus size={12} /> Semaine
+              </button>
+            )}
+            {context === 'mine' && (
+              <>
+                <button onClick={handleDuplicate} disabled={duplicating}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: duplicating ? 'wait' : 'pointer', opacity: duplicating ? 0.6 : 1 }}>
+                  <Copy size={12} /> {duplicating ? '…' : 'Dupliquer'}
+                </button>
+                <button onClick={e => { e.preventDefault(); router.push(`/workouts/${w.id}?edit=1`) }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  <Pencil size={12} /> Modifier
+                </button>
+                <button onClick={handleDelete} disabled={deleting}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: deleting ? 'var(--text-dim)' : '#ef4444', fontSize: 12, cursor: deleting ? 'wait' : 'pointer', opacity: deleting ? 0.6 : 1 }}
+                  onMouseEnter={e => { if (!deleting) { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor = '#ef4444' } }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+                  <Trash2 size={12} />
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
       {addingToWeek && (

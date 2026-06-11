@@ -622,6 +622,15 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     fetch(`/api/workouts/${initial.id}/view`, { method: 'POST' }).catch(() => {})
   }, [initial.id])
 
+  // Auto-enter edit mode if navigated with ?edit=1
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('edit') === '1') {
+      handleEnterEdit()
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── Dirty checks ──
   const isDirtyMovements = editMode && editStates.some((es, i) => {
     const orig = originals[i]
