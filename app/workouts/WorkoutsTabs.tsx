@@ -198,7 +198,8 @@ function WorkoutCard({
   const [duplicating, setDuplicating] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
-  const estMin = Math.round(w.movements.reduce((sum, wm) => sum + (wm.sets ?? 2), 0))
+  const totalSets = w.movements.reduce((sum, wm) => sum + (wm.sets ?? 3), 0)
+  const estMin = Math.max(1, Math.round(totalSets * 1.5))
   const initiale = w.user?.email?.[0]?.toUpperCase() ?? '?'
 
   async function handleDuplicate(e: React.MouseEvent) {

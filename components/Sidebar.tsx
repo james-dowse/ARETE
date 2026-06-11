@@ -3,7 +3,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon, Calendar } from 'lucide-react'
+import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon, Calendar, Search, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useRef, useCallback } from 'react'
 
 const allNav = [
   { href: '/',            label: 'Dashboard',    icon: LayoutDashboard, admin: false },
@@ -19,11 +21,22 @@ const allNav = [
 const EXPANDED_WIDTH = 224
 const COLLAPSED_WIDTH = 56
 
+interface SearchResult {
+  workouts: { id: string; name: string; duration?: number | null; movements: { movement: { bioType: string } }[] }[]
+  movements: { id: string; name: string; bioType: string; complexity: string }[]
+}
+
 export default function Sidebar() {
   const path = usePathname()
+  const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchQ, setSearchQ] = useState('')
+  const [searchResults, setSearchResults] = useState<SearchResult | null>(null)
+  const [searchLoading, setSearchLoading] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/me').then(r => r.json()).then(data => {
@@ -45,6 +58,45 @@ export default function Sidebar() {
     if (saved) { setTheme(saved); document.documentElement.setAttribute('data-theme', saved) }
   }, [])
 
+  // Global search
+  const doSearch = useCallback(async (q: string) => {
+    if (q.length < 2) { setSearchResults(null); return }
+    setSearchLoading(true)
+    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
+    const data = await res.json()
+    setSearchResults(data)
+    setSearchLoading(false)
+  }, [])
+
+  useEffect(() => {
+    const t = setTimeout(() => doSearch(searchQ), 220)
+    return () => clearTimeout(t)
+  }, [searchQ, doSearch])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setShowSearch(s => !s)
+        setSearchQ('')
+        setSearchResults(null)
+        setTimeout(() => searchRef.current?.focus(), 50)
+      }
+      if (e.key === 'Escape') { setShowSearch(false); setSearchQ('') }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  const openSearch = () => {
+    setShowSearch(true); setSearchQ(''); setSearchResults(null)
+    setTimeout(() => searchRef.current?.focus(), 50)
+  }
+
+  const navigate = (href: string) => {
+    setShowSearch(false); setSearchQ(''); router.push(href)
+  }
+
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark'
     setTheme(next)
@@ -61,6 +113,7 @@ export default function Sidebar() {
   const w = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH
 
   return (
+    <>
     <aside style={{
       position: 'fixed',
       top: 0,
@@ -135,6 +188,28 @@ export default function Sidebar() {
         })}
       </nav>
 
+      {/* ── Recherche ── */}
+      <div style={{ padding: collapsed ? '8px 8px 0' : '8px 12px 0', flexShrink: 0 }}>
+        <button
+          onClick={openSearch}
+          title="Recherche globale (Ctrl+K)"
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 8, padding: collapsed ? '8px' : '7px 10px', cursor: 'pointer',
+            color: 'rgba(255,255,255,0.35)', transition: 'color 0.15s, background 0.15s, border-color 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(200,169,81,0.4)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+        >
+          <Search size={14} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 12, flex: 1, textAlign: 'left', maxWidth: collapsed ? 0 : 120, opacity: collapsed ? 0 : 1, overflow: 'hidden', whiteSpace: 'nowrap', transition: 'max-width 0.22s, opacity 0.15s' }}>
+            Rechercher…
+          </span>
+          {!collapsed && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', whiteSpace: 'nowrap', letterSpacing: '0.04em' }}>Ctrl K</span>}
+        </button>
+      </div>
+
       {/* ── Bouton toggle — collé sous les liens ── */}
       <div style={{ padding: collapsed ? '10px 8px' : '10px 12px', flexShrink: 0 }}>
         <button
@@ -203,5 +278,110 @@ export default function Sidebar() {
         )}
       </div>
     </aside>
+
+    {/* ── Search overlay ── */}
+
+    {showSearch && (
+      <div
+        onClick={() => { setShowSearch(false); setSearchQ('') }}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+          paddingTop: '12vh',
+        }}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            width: 560, maxWidth: 'calc(100vw - 32px)',
+            background: 'var(--card-bg, #1a1a1a)', borderRadius: 14,
+            border: '1px solid rgba(200,169,81,0.25)',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Input */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <Search size={16} style={{ color: 'rgba(200,169,81,0.7)', flexShrink: 0 }} />
+            <input
+              ref={searchRef}
+              value={searchQ}
+              onChange={e => setSearchQ(e.target.value)}
+              placeholder="Rechercher un workout, un mouvement…"
+              style={{
+                flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                color: 'var(--text, #fff)', fontSize: 15, fontFamily: 'inherit',
+              }}
+            />
+            {searchQ && (
+              <button onClick={() => setSearchQ('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', padding: 0, display: 'flex' }}>
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Results */}
+          <div style={{ maxHeight: 380, overflowY: 'auto' }}>
+            {searchLoading && (
+              <div style={{ padding: '20px 16px', fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>Recherche…</div>
+            )}
+            {!searchLoading && searchResults && searchResults.workouts.length === 0 && searchResults.movements.length === 0 && (
+              <div style={{ padding: '20px 16px', fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>Aucun résultat</div>
+            )}
+            {!searchLoading && searchResults && searchResults.workouts.length > 0 && (
+              <>
+                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(200,169,81,0.6)' }}>Workouts</div>
+                {searchResults.workouts.map(w => (
+                  <button
+                    key={w.id}
+                    onClick={() => navigate(`/workouts/${w.id}`)}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '9px 16px', background: 'none', border: 'none', cursor: 'pointer',
+                      textAlign: 'left', color: 'var(--text, #fff)',
+                      transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,169,81,0.08)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+                  >
+                    <BookOpen size={13} style={{ color: 'rgba(200,169,81,0.6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: 14, flex: 1 }}>{w.name}</span>
+                    {w.duration && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{w.duration} min</span>}
+                  </button>
+                ))}
+              </>
+            )}
+            {!searchLoading && searchResults && searchResults.movements.length > 0 && (
+              <>
+                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(200,169,81,0.6)', borderTop: searchResults.workouts.length > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', marginTop: searchResults.workouts.length > 0 ? 4 : 0 }}>Mouvements</div>
+                {searchResults.movements.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => navigate(`/library?movement=${m.id}`)}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '9px 16px', background: 'none', border: 'none', cursor: 'pointer',
+                      textAlign: 'left', color: 'var(--text, #fff)',
+                      transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,169,81,0.08)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+                  >
+                    <Library size={13} style={{ color: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
+                    <span style={{ fontSize: 14, flex: 1 }}>{m.name}</span>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{m.bioType}</span>
+                  </button>
+                ))}
+              </>
+            )}
+            {!searchQ && (
+              <div style={{ padding: '18px 16px', fontSize: 13, color: 'rgba(255,255,255,0.25)', textAlign: 'center' }}>Tapez pour rechercher…</div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

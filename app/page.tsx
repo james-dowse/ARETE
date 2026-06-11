@@ -61,7 +61,7 @@ export default async function DashboardPage() {
     ? (user.firstName?.trim() || getDisplayName(user.email))
     : null
 
-  const [movementCount, workoutCount, templateCount, recentWorkouts, bioStats, complexityStats] = await Promise.all([
+  const [movementCount, workoutCount, templateCount, recentWorkouts, bioStats, complexityStats, recentSessions] = await Promise.all([
     prisma.movement.count(),
     prisma.workout.count(),
     prisma.workoutTemplate.count(),
@@ -72,6 +72,14 @@ export default async function DashboardPage() {
     }),
     prisma.movement.groupBy({ by: ['bioType'], _count: true }),
     prisma.movement.groupBy({ by: ['complexity'], _count: true }),
+    user
+      ? prisma.workoutSession.findMany({
+          where: { userId: user.id },
+          take: 5,
+          orderBy: { doneAt: 'desc' },
+          include: { workout: { select: { id: true, name: true, duration: true, movements: { select: { movement: { select: { bioType: true } } } } } } },
+        })
+      : Promise.resolve([]),
   ])
 
   const complexityOrder = ['Easy', 'Common', 'Hard', 'Advanced']
@@ -287,6 +295,62 @@ export default async function DashboardPage() {
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                         <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
                       </svg>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Dernières séances ────────────────────────────────── */}
+        {recentSessions.length > 0 && (
+          <div style={{ marginTop: 40 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={SECTION_LABEL_GOLD}>Dernières séances</p>
+              <Link href="/workouts" style={{ fontSize: 13, color: 'var(--gold-dim)', textDecoration: 'none', letterSpacing: '0.06em', fontWeight: 600, textTransform: 'uppercase' }}>
+                Mes workouts →
+              </Link>
+            </div>
+            <div style={{ border: '1px solid var(--border)', background: 'var(--bg-card)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
+              {recentSessions.map((s, i) => {
+                const bioTypes = Array.from(new Set(s.workout.movements.map(m => m.movement.bioType))).slice(0, 3)
+                const doneStr = new Date(s.doneAt).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+                const timeStr = new Date(s.doneAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                return (
+                  <Link key={s.id} href={`/workouts/${s.workout.id}`} style={{ textDecoration: 'none' }}>
+                    <div style={{
+                      padding: '14px 24px',
+                      display: 'flex', alignItems: 'center', gap: 16,
+                      borderTop: i > 0 ? '1px solid var(--border)' : 'none',
+                      transition: 'background 0.15s', cursor: 'pointer',
+                    }} className="workout-row">
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(200,169,81,0.1)', border: '1px solid rgba(200,169,81,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {s.workout.name}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                          {doneStr} à {timeStr}
+                          {s.note && <span style={{ marginLeft: 8, color: 'var(--text-dim)' }}>· {s.note}</span>}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                        {bioTypes.map(bt => (
+                          <span key={bt} style={{
+                            fontSize: 10, fontWeight: 600, padding: '2px 7px', letterSpacing: '0.04em',
+                            border: `1px solid ${BIO_TYPE_COLORS[bt] || 'var(--border)'}40`,
+                            color: BIO_TYPE_COLORS[bt] || 'var(--text-muted)',
+                            background: `${BIO_TYPE_COLORS[bt] || 'transparent'}12`,
+                          }}>
+                            {bt}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </Link>
                 )

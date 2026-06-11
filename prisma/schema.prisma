@@ -37,6 +37,7 @@ model Workout {
   savedBy     SavedWorkout[]
   favoritedBy FavoriteWorkout[]
   planEntries WeekPlanEntry[]
+  sessions    WorkoutSession[]
   template    WorkoutTemplate?  @relation(fields: [templateId], references: [id])
   user        InvitedUser?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
@@ -107,6 +108,7 @@ model InvitedUser {
   favorites        FavoriteMovement[]
   favoriteWorkouts FavoriteWorkout[]
   weekPlans        WeekPlan[]
+  workoutSessions  WorkoutSession[]
 }
 
 model WeekPlan {
@@ -151,6 +153,16 @@ model SavedWorkout {
   lastViewedAt DateTime?
 
   @@unique([workoutId, userId])
+}
+
+model WorkoutSession {
+  id        String      @id @default(cuid())
+  userId    String
+  workoutId String
+  doneAt    DateTime    @default(now())
+  note      String?
+  user      InvitedUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workout   Workout     @relation(fields: [workoutId], references: [id], onDelete: Cascade)
 }
 
 model FavoriteWorkout {

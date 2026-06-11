@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ArrowLeft, Clock, Copy,
   RefreshCw, Search, X, Save, Undo2, Pencil, Minus, Plus,
-  AlignLeft, ImageIcon, Trash2, ChevronDown, ChevronUp, Star, CalendarPlus,
+  AlignLeft, ImageIcon, Trash2, ChevronDown, ChevronUp, Star, CalendarPlus, CheckCircle2, History, FileText,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -609,6 +609,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [showAddToWeek, setShowAddToWeek] = useState(false)
   const [addedToast, setAddedToast] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [sessions, setSessions] = useState<{ id: string; doneAt: string; note?: string | null }[]>([])
+  const [sessionsOpen, setSessionsOpen] = useState(false)
+  const [loggingSession, setLoggingSession] = useState(false)
+  const [sessionToast, setSessionToast] = useState(false)
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
   const [removedWmIds, setRemovedWmIds] = useState<Set<string>>(new Set())
   const [removedBlockIds, setRemovedBlockIds] = useState<Set<string>>(new Set())
@@ -621,6 +625,26 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   useEffect(() => {
     fetch(`/api/workouts/${initial.id}/view`, { method: 'POST' }).catch(() => {})
   }, [initial.id])
+
+  // Load sessions
+  useEffect(() => {
+    fetch(`/api/workouts/${initial.id}/sessions`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setSessions(data) })
+      .catch(() => {})
+  }, [initial.id])
+
+  const handleLogSession = async () => {
+    setLoggingSession(true)
+    const res = await fetch(`/api/workouts/${initial.id}/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+    const s = await res.json()
+    setSessions(prev => [s, ...prev])
+    setLoggingSession(false)
+    setSessionToast(true)
+    setTimeout(() => setSessionToast(false), 3000)
+  }
+
+  // Session toast auto-hide already handled above
 
   // Auto-enter edit mode if navigated with ?edit=1
   useEffect(() => {
@@ -804,6 +828,15 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             {!editMode ? (
               <>
+                <button onClick={handleLogSession} disabled={loggingSession}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 9, color: '#22c55e', fontSize: 13, fontWeight: 600, cursor: loggingSession ? 'wait' : 'pointer' }}>
+                  <CheckCircle2 size={14} /> {loggingSession ? '…' : 'J\'ai fait'}
+                </button>
+                <button onClick={() => window.open(`/workouts/${initial.id}/print`, '_blank')}
+                  title="Exporter en PDF"
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>
+                  <FileText size={14} />
+                </button>
                 <button onClick={() => setShowAddToWeek(true)}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', borderRadius: 9, color: 'var(--gold)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                   <CalendarPlus size={14} /> Semaine
@@ -1048,6 +1081,49 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         <div onAnimationEnd={() => setTimeout(() => setAddedToast(false), 2500)}
           style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#22c55e', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000 }}>
           Ajouté au planner ✓
+        </div>
+      )}
+
+      {sessionToast && (
+        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#22c55e', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CheckCircle2 size={15} /> Séance enregistrée !
+        </div>
+      )}
+
+      {/* Historique des séances */}
+      {sessions.length > 0 && !editMode && (
+        <div style={{ maxWidth: 700, marginTop: 32 }}>
+          <div
+            onClick={() => setSessionsOpen(o => !o)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none', marginBottom: sessionsOpen ? 12 : 0 }}
+          >
+            <History size={14} color="var(--text-muted)" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.6, textTransform: 'uppercase' }}>Historique</span>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{sessions.length} séance{sessions.length > 1 ? 's' : ''}</span>
+            {sessions[0] && (
+              <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 4 }}>
+                · dernière {new Date(sessions[0].doneAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+              </span>
+            )}
+            <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', display: 'flex' }}>
+              {sessionsOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </span>
+          </div>
+          {sessionsOpen && (
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+              {sessions.map((s, i) => (
+                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                  <CheckCircle2 size={13} color="#22c55e" />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {new Date(s.doneAt).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--text-dim)', marginLeft: 'auto' }}>
+                    {new Date(s.doneAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
