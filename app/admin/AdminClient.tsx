@@ -474,15 +474,20 @@ interface AdminWorkout {
 function WorkoutsAdminTab() {
   const [workouts, setWorkouts] = useState<AdminWorkout[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/workouts')
-      .then(r => r.json())
-      .then(d => { setWorkouts(Array.isArray(d) ? d : []); setLoading(false) })
-      .catch(() => setLoading(false))
+      .then(async r => {
+        const d = await r.json()
+        if (!r.ok) { setFetchError(d.error ?? `HTTP ${r.status}`); setLoading(false); return }
+        setWorkouts(Array.isArray(d) ? d : [])
+        setLoading(false)
+      })
+      .catch(e => { setFetchError(String(e)); setLoading(false) })
   }, [])
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2800) }
@@ -528,11 +533,18 @@ function WorkoutsAdminTab() {
         </div>
       )}
 
-      {!loading && filtered.length === 0 && (
+      {fetchError && (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '12px 16px', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.25)', borderRadius: 10, fontSize: 13, color: 'var(--red)', marginBottom: 16 }}>
+          <AlertTriangle size={15} />
+          <span style={{ flex: 1 }}><b>Erreur :</b> {fetchError}</span>
+        </div>
+      )}
+
+      {!loading && !fetchError && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)', fontSize: 14 }}>Aucun workout trouvé</div>
       )}
 
-      {!loading && filtered.length > 0 && (
+      {!loading && !fetchError && filtered.length > 0 && (
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
