@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     const name = String(row['MOVE'] ?? '').trim()
     const bioType = String(row['TYPE BIOMECANIQUE'] ?? '').trim()
     const complexity = String(row['COMPLEXITY'] ?? '').trim()
+    const equipment = row['EQUIPMENT'] ? String(row['EQUIPMENT']).trim() : null
     const description = row['DESCRIPTION'] ? String(row['DESCRIPTION']).trim() : null
     const videoUrl = row['VIDEO'] ? String(row['VIDEO']).trim() : null
 
@@ -32,8 +33,8 @@ export async function POST(req: NextRequest) {
     try {
       await prisma.movement.upsert({
         where: { id },
-        update: { name, bioType, complexity, description, videoUrl },
-        create: { id, name, bioType, complexity, description, videoUrl },
+        update: { name, bioType, complexity, equipment, description, videoUrl },
+        create: { id, name, bioType, complexity, equipment, description, videoUrl },
       })
       imported++
     } catch (e) {

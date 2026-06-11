@@ -1,7 +1,7 @@
 'use client'
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown, Upload, CheckSquare } from 'lucide-react'
+import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown, Upload, Download, CheckSquare } from 'lucide-react'
 
 interface Movement {
   id: string; name: string; bioType: string; complexity: string; equipment?: string | null
@@ -391,6 +391,10 @@ export default function AdminClient({
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <input ref={importRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: 'none' }} />
+          <a href="/api/movements/export" download
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
+            <Download size={15} /> Exporter XLS
+          </a>
           <button onClick={() => importRef.current?.click()} disabled={importing}
             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: importing ? 'wait' : 'pointer', opacity: importing ? 0.6 : 1 }}>
             <Upload size={15} /> {importing ? 'Import...' : 'Importer XLS'}
