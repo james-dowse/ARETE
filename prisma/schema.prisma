@@ -49,7 +49,6 @@ model WorkoutBlock {
   bioType      String?
   instructions String?
   restAfter    Int?
-  superset     Boolean           @default(false)
   workout      Workout           @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   movements    WorkoutMovement[]
 }

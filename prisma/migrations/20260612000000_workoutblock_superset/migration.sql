@@ -1,1 +1,0 @@
-ALTER TABLE "WorkoutBlock" ADD COLUMN "superset" BOOLEAN NOT NULL DEFAULT false;
