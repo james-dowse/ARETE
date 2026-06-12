@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { BIO_TYPE_COLORS } from '@/lib/types'
-import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2 } from 'lucide-react'
+import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle } from 'lucide-react'
 
 interface WorkoutUser { id: string; email: string }
 interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string } }
@@ -329,8 +329,12 @@ function WorkoutCard({
             )}
           </div>
 
-          {/* Droite : Semaine → Dupliquer → Modifier → Supprimer (même ordre que la page détail) */}
+          {/* Droite : Démarrer → Semaine → Dupliquer → Modifier → Supprimer */}
           <div style={{ display: 'flex', gap: 4 }}>
+            <button onClick={e => { e.preventDefault(); router.push(`/workouts/${w.id}/active`) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(201,165,53,0.12)', border: '1px solid rgba(201,165,53,0.35)', borderRadius: 6, padding: '5px 11px', color: '#C9A535', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+              <PlayCircle size={13} /> Démarrer
+            </button>
             {(context === 'mine' || context === 'saved') && (
               <button onClick={e => { e.preventDefault(); setAddingToWeek(true) }}
                 title="Ajouter à ma semaine"

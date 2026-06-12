@@ -1,0 +1,340 @@
+'use client'
+import { useEffect, useState, useRef, useCallback } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { BIO_TYPE_COLORS } from '@/lib/types'
+
+interface Movement { id: string; name: string; bioType: string; videoUrl?: string | null }
+interface WM { id: string; order: number; sets?: number | null; reps?: string | null; rest?: number | null; blockId?: string | null; movement: Movement }
+interface Block { id: string; order: number; bioType?: string | null; instructions?: string | null }
+interface Workout { id: string; name: string; duration?: number | null; movements: WM[]; blocks: Block[] }
+
+const REST_OPTIONS = [30, 60, 90, 120]
+const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+
+const ytId = (url: string) => {
+  const m = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)
+  return m ? m[1] : null
+}
+
+export default function ActivePage() {
+  const { id } = useParams<{ id: string }>()
+  const router = useRouter()
+  const [workout, setWorkout] = useState<Workout | null>(null)
+
+  const [done, setDone] = useState<Record<string, number>>({})
+  const [rest, setRest] = useState<{ sec: number; total: number; wmId: string } | null>(null)
+  const [defaultRest, setDefaultRest] = useState(60)
+  const [elapsed, setElapsed] = useState(0)
+  const [started, setStarted] = useState(false)
+  const [finishing, setFinishing] = useState(false)
+  const [note, setNote] = useState('')
+  const [showFinish, setShowFinish] = useState(false)
+  const [videoPlaying, setVideoPlaying] = useState(false)
+
+  const elapsedRef = useRef(elapsed)
+  elapsedRef.current = elapsed
+
+  // load workout
+  useEffect(() => {
+    fetch(`/api/workouts/${id}`).then(r => r.json()).then(setWorkout)
+  }, [id])
+
+  // stopwatch
+  useEffect(() => {
+    if (!started) return
+    const t = setInterval(() => setElapsed(e => e + 1), 1000)
+    return () => clearInterval(t)
+  }, [started])
+
+  // rest countdown
+  useEffect(() => {
+    if (!rest) return
+    if (rest.sec <= 0) { setRest(null); return }
+    const t = setTimeout(() => setRest(r => r ? { ...r, sec: r.sec - 1 } : null), 1000)
+    return () => clearTimeout(t)
+  }, [rest])
+
+  const totalSets = useCallback(() => {
+    if (!workout) return 0
+    return workout.movements.reduce((s, wm) => s + (wm.sets ?? 3), 0)
+  }, [workout])
+
+  const doneSets = Object.values(done).reduce((a, b) => a + b, 0)
+  const pct = workout ? Math.round((doneSets / Math.max(totalSets(), 1)) * 100) : 0
+  const allDone = workout ? workout.movements.every(wm => (done[wm.id] ?? 0) >= (wm.sets ?? 3)) : false
+
+  // Current movement = first incomplete
+  const currentWm = workout?.movements.find(wm => (done[wm.id] ?? 0) < (wm.sets ?? 3)) ?? null
+  const currentVid = currentWm?.movement.videoUrl ? ytId(currentWm.movement.videoUrl) : null
+
+  // Reset video player when movement changes
+  const prevWmIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (prevWmIdRef.current !== (currentWm?.id ?? null)) {
+      prevWmIdRef.current = currentWm?.id ?? null
+      setVideoPlaying(false)
+    }
+  }, [currentWm?.id])
+
+  const handleSet = (wm: WM) => {
+    if (!started) setStarted(true)
+    const target = wm.sets ?? 3
+    const current = done[wm.id] ?? 0
+    if (current >= target) return
+    const next = current + 1
+    setDone(d => ({ ...d, [wm.id]: next }))
+    const restDur = (wm.rest && wm.rest >= 10) ? wm.rest : defaultRest
+    if (next < target) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+  }
+
+  const handleUndo = (wm: WM) => {
+    const current = done[wm.id] ?? 0
+    if (current <= 0) return
+    setDone(d => ({ ...d, [wm.id]: current - 1 }))
+    setRest(null)
+  }
+
+  const handleFinish = async () => {
+    setFinishing(true)
+    await fetch(`/api/workouts/${id}/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: note || undefined }),
+    }).catch(() => {})
+    router.push(`/workouts/${id}`)
+  }
+
+  if (!workout) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>
+        Chargement…
+      </div>
+    )
+  }
+
+  const hasBlocks = workout.blocks.length > 0
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: '#0a0a0a', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+
+      {/* ── Header ── */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <button onClick={() => router.push(`/workouts/${id}`)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0, display: 'flex', lineHeight: 1 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workout.name}</div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
+            {workout.movements.length} mouvement{workout.movements.length > 1 ? 's' : ''} · {doneSets}/{totalSets()} séries
+          </div>
+        </div>
+        <div style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 700, color: started ? '#C9A535' : 'rgba(255,255,255,0.2)', letterSpacing: '0.04em', flexShrink: 0 }}>
+          {fmt(elapsed)}
+        </div>
+      </div>
+
+      {/* ── Progress bar ── */}
+      <div style={{ height: 3, background: 'rgba(255,255,255,0.06)' }}>
+        <div style={{ height: '100%', background: allDone ? '#22c55e' : '#C9A535', width: `${pct}%`, transition: 'width 0.4s ease' }} />
+      </div>
+
+      {/* ── Video panel (current movement) ── */}
+      {currentVid && (
+        <div style={{ position: 'relative', width: '100%', maxWidth: 680, margin: '0 auto', background: '#000', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          {/* movement name badge */}
+          <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 2, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.85)', pointerEvents: 'none' }}>
+            {currentWm?.movement.name}
+          </div>
+          <div style={{ position: 'relative', width: '100%', paddingBottom: '42%', overflow: 'hidden' }}>
+            {videoPlaying ? (
+              <iframe
+                src={`https://www.youtube.com/embed/${currentVid}?autoplay=1&rel=0&modestbranding=1`}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <button onClick={() => setVideoPlaying(true)}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', cursor: 'pointer', padding: 0, background: 'none' }}>
+                <img
+                  src={`https://img.youtube.com/vi/${currentVid}/hqdefault.jpg`}
+                  alt={currentWm?.movement.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'brightness(0.75)' }}
+                />
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(201,165,53,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="#000"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                </div>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Default rest selector ── */}
+      <div style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Repos par défaut</span>
+        <div style={{ display: 'flex', gap: 4, marginLeft: 4 }}>
+          {REST_OPTIONS.map(s => (
+            <button key={s} onClick={() => setDefaultRest(s)}
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${defaultRest === s ? '#C9A535' : 'rgba(255,255,255,0.1)'}`, background: defaultRest === s ? 'rgba(201,165,53,0.15)' : 'transparent', color: defaultRest === s ? '#C9A535' : 'rgba(255,255,255,0.4)', transition: 'all 0.15s' }}>
+              {s}s
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Movements ── */}
+      <div style={{ flex: 1, padding: '16px 16px 160px', maxWidth: 680, margin: '0 auto', width: '100%' }}>
+        {(hasBlocks ? workout.blocks : [null]).map((block, bi) => {
+          const movs = hasBlocks ? workout.movements.filter(wm => wm.blockId === block!.id) : workout.movements
+          return (
+            <div key={block?.id ?? 'solo'} style={{ marginBottom: hasBlocks ? 20 : 0 }}>
+              {hasBlocks && (
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 10, paddingLeft: 4 }}>
+                  Bloc {bi + 1}{block?.bioType ? ` · ${block.bioType}` : ''}{block?.instructions ? ` · ${block.instructions}` : ''}
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {movs.map(wm => {
+                  const target = wm.sets ?? 3
+                  const setsNow = done[wm.id] ?? 0
+                  const isComplete = setsNow >= target
+                  const isCurrent = currentWm?.id === wm.id
+                  const isResting = rest?.wmId === wm.id
+                  const color = BIO_TYPE_COLORS[wm.movement.bioType] || '#888'
+
+                  return (
+                    <div key={wm.id} style={{
+                      background: isComplete ? 'rgba(34,197,94,0.06)' : isCurrent ? 'rgba(201,165,53,0.05)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${isComplete ? 'rgba(34,197,94,0.25)' : isCurrent ? 'rgba(201,165,53,0.35)' : isResting ? 'rgba(201,165,53,0.2)' : 'rgba(255,255,255,0.08)'}`,
+                      borderRadius: 12, padding: '14px 16px',
+                      transition: 'border-color 0.2s, background 0.2s',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: isComplete ? '#22c55e' : isCurrent ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+                          {wm.movement.name}
+                        </span>
+                        {isComplete && (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <div style={{ display: 'flex', gap: 5 }}>
+                          {Array.from({ length: target }).map((_, i) => (
+                            <span key={i} style={{
+                              width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700,
+                              background: i < setsNow ? (isComplete ? '#22c55e' : '#C9A535') : 'rgba(255,255,255,0.07)',
+                              color: i < setsNow ? '#000' : 'rgba(255,255,255,0.3)',
+                              border: `1px solid ${i < setsNow ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
+                              transition: 'all 0.2s',
+                            }}>
+                              {i + 1}
+                            </span>
+                          ))}
+                        </div>
+                        {wm.reps && (
+                          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginLeft: 4 }}>{wm.reps}</span>
+                        )}
+                        {wm.rest && wm.rest >= 10 && wm.rest !== defaultRest && (
+                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginLeft: 'auto' }}>repos {wm.rest}s</span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => handleSet(wm)} disabled={isComplete}
+                          style={{
+                            flex: 1, padding: '10px', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: isComplete ? 'default' : 'pointer',
+                            background: isComplete ? 'rgba(34,197,94,0.08)' : 'rgba(201,165,53,0.12)',
+                            border: `1px solid ${isComplete ? 'rgba(34,197,94,0.2)' : 'rgba(201,165,53,0.3)'}`,
+                            color: isComplete ? '#22c55e' : '#C9A535',
+                            transition: 'all 0.15s',
+                          }}>
+                          {isComplete ? '✓ Terminé' : `Série ${setsNow + 1} / ${target}`}
+                        </button>
+                        {setsNow > 0 && !isComplete && (
+                          <button onClick={() => handleUndo(wm)}
+                            style={{ padding: '10px 14px', borderRadius: 9, fontSize: 12, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.35)' }}>
+                            ↩
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ── Rest timer overlay ── */}
+      {rest && (
+        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 20, background: 'rgba(20,20,20,0.97)', border: '1px solid rgba(201,165,53,0.4)', borderRadius: 16, padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 20, boxShadow: '0 8px 40px rgba(0,0,0,0.6)', minWidth: 280 }}>
+          <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
+            <svg width="52" height="52" style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' }}>
+              <circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3" />
+              <circle cx="26" cy="26" r="22" fill="none" stroke="#C9A535" strokeWidth="3"
+                strokeDasharray={`${2 * Math.PI * 22}`}
+                strokeDashoffset={`${2 * Math.PI * 22 * (1 - rest.sec / rest.total)}`}
+                style={{ transition: 'stroke-dashoffset 1s linear' }} />
+            </svg>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: '#C9A535' }}>
+              {rest.sec}
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Repos</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+              {workout.movements.find(wm => wm.id === rest.wmId)?.movement.name}
+            </div>
+          </div>
+          <button onClick={() => setRest(null)}
+            style={{ padding: '7px 14px', borderRadius: 8, background: 'rgba(201,165,53,0.15)', border: '1px solid rgba(201,165,53,0.3)', color: '#C9A535', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+            Passer
+          </button>
+        </div>
+      )}
+
+      {/* ── Bottom bar ── */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(10,10,10,0.97)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'center' }}>
+        {showFinish ? (
+          <>
+            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Note optionnelle…"
+              style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9, padding: '10px 14px', color: '#fff', fontSize: 13, outline: 'none' }} />
+            <button onClick={handleFinish} disabled={finishing}
+              style={{ padding: '10px 20px', borderRadius: 9, background: '#22c55e', border: 'none', color: '#000', fontSize: 13, fontWeight: 800, cursor: finishing ? 'wait' : 'pointer', flexShrink: 0 }}>
+              {finishing ? '…' : 'Enregistrer'}
+            </button>
+            <button onClick={() => setShowFinish(false)}
+              style={{ padding: '10px 14px', borderRadius: 9, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)', fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>
+              ✕
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
+              {allDone ? '🎉 Toutes les séries terminées !' : `${pct}% · ${doneSets}/${totalSets()} séries`}
+            </div>
+            <button onClick={() => setShowFinish(true)}
+              style={{
+                padding: '11px 24px', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: 'pointer', flexShrink: 0,
+                background: allDone ? '#22c55e' : 'rgba(201,165,53,0.15)',
+                border: `1px solid ${allDone ? 'transparent' : 'rgba(201,165,53,0.3)'}`,
+                color: allDone ? '#000' : '#C9A535',
+                boxShadow: allDone ? '0 0 20px rgba(34,197,94,0.4)' : 'none',
+                transition: 'all 0.3s',
+              }}>
+              {allDone ? '🏁 Terminer la séance' : 'Terminer'}
+            </button>
+          </>
+        )}
+      </div>
+
+    </div>
+  )
+}

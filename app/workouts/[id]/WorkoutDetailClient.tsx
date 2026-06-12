@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ArrowLeft, Clock, Copy,
   RefreshCw, Search, X, Save, Undo2, Pencil, Minus, Plus,
-  AlignLeft, ImageIcon, Trash2, ChevronDown, ChevronUp, Star, CalendarPlus, CheckCircle2, History, FileText,
+  AlignLeft, ImageIcon, Trash2, ChevronDown, ChevronUp, Star, CalendarPlus, CheckCircle2, History, FileText, PlayCircle,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -828,6 +828,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             {!editMode ? (
               <>
+                <button onClick={() => router.push(`/workouts/${initial.id}/active`)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'rgba(201,165,53,0.12)', border: '1px solid rgba(201,165,53,0.35)', borderRadius: 9, color: '#C9A535', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  <PlayCircle size={14} /> Démarrer
+                </button>
                 <button onClick={handleLogSession} disabled={loggingSession}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 9, color: '#22c55e', fontSize: 13, fontWeight: 600, cursor: loggingSession ? 'wait' : 'pointer' }}>
                   <CheckCircle2 size={14} /> {loggingSession ? '…' : 'J\'ai fait'}
