@@ -30,6 +30,14 @@ export default function ActivePage() {
   const [note, setNote] = useState('')
   const [showFinish, setShowFinish] = useState(false)
   const [videoPlaying, setVideoPlaying] = useState(false)
+  const [supersetBlocs, setSupersetBlocs] = useState<Set<string>>(new Set())
+
+  const toggleSuperset = (blockId: string) =>
+    setSupersetBlocs(prev => {
+      const next = new Set(prev)
+      if (next.has(blockId)) next.delete(blockId); else next.add(blockId)
+      return next
+    })
 
   const elapsedRef = useRef(elapsed)
   elapsedRef.current = elapsed
@@ -82,9 +90,18 @@ export default function ActivePage() {
     const current = done[wm.id] ?? 0
     if (current >= target) return
     const next = current + 1
-    setDone(d => ({ ...d, [wm.id]: next }))
+    const updatedDone = { ...done, [wm.id]: next }
+    setDone(() => updatedDone)
     const restDur = (wm.rest && wm.rest >= 10) ? wm.rest : defaultRest
-    if (next < target) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+    if (wm.blockId && supersetBlocs.has(wm.blockId)) {
+      const blocMovs = workout!.movements.filter(m => m.blockId === wm.blockId)
+      const allInRound = blocMovs.every(m => (updatedDone[m.id] ?? 0) >= next)
+      if (allInRound && next < Math.max(...blocMovs.map(m => m.sets ?? 3))) {
+        setRest({ sec: restDur, total: restDur, wmId: wm.id })
+      }
+    } else {
+      if (next < target) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+    }
   }
 
   const handleUndo = (wm: WM) => {
@@ -190,11 +207,25 @@ export default function ActivePage() {
       <div style={{ flex: 1, padding: '16px 16px 160px', maxWidth: 680, margin: '0 auto', width: '100%' }}>
         {(hasBlocks ? workout.blocks : [null]).map((block, bi) => {
           const movs = hasBlocks ? workout.movements.filter(wm => wm.blockId === block!.id) : workout.movements
+          const isSuperset = !!(block?.id && supersetBlocs.has(block.id))
+          const completedRounds = isSuperset ? Math.min(...movs.map(m => done[m.id] ?? 0)) : 0
+          const maxRounds = isSuperset ? Math.max(...movs.map(m => m.sets ?? 3)) : 0
+          const blocAllDone = isSuperset && movs.every(m => (done[m.id] ?? 0) >= (m.sets ?? 3))
           return (
             <div key={block?.id ?? 'solo'} style={{ marginBottom: hasBlocks ? 20 : 0 }}>
               {hasBlocks && (
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 10, paddingLeft: 4 }}>
-                  Bloc {bi + 1}{block?.bioType ? ` · ${block.bioType}` : ''}{block?.instructions ? ` · ${block.instructions}` : ''}
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10, paddingLeft: 4, gap: 8 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', flex: 1 }}>
+                    Bloc {bi + 1}{block?.bioType ? ` · ${block.bioType}` : ''}{block?.instructions ? ` · ${block.instructions}` : ''}
+                    {isSuperset && !blocAllDone && <span style={{ color: '#C9A535', marginLeft: 6 }}>· Round {completedRounds + 1}/{maxRounds}</span>}
+                    {isSuperset && blocAllDone && <span style={{ color: '#22c55e', marginLeft: 6 }}>· Terminé</span>}
+                  </div>
+                  {movs.length > 1 && block?.id && (
+                    <button onClick={() => toggleSuperset(block.id)}
+                      style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: `1px solid ${isSuperset ? '#C9A535' : 'rgba(255,255,255,0.15)'}`, background: isSuperset ? 'rgba(201,165,53,0.15)' : 'transparent', color: isSuperset ? '#C9A535' : 'rgba(255,255,255,0.3)', transition: 'all 0.15s', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      ⚡ Superset
+                    </button>
+                  )}
                 </div>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -202,23 +233,29 @@ export default function ActivePage() {
                   const target = wm.sets ?? 3
                   const setsNow = done[wm.id] ?? 0
                   const isComplete = setsNow >= target
-                  const isCurrent = currentWm?.id === wm.id
+                  const isCurrent = !isSuperset && currentWm?.id === wm.id
+                  const isDoneInRound = isSuperset && setsNow > completedRounds
+                  const isActiveInRound = isSuperset && !isDoneInRound && !isComplete
                   const isResting = rest?.wmId === wm.id
                   const color = BIO_TYPE_COLORS[wm.movement.bioType] || '#888'
 
+                  const cardBg = isComplete ? 'rgba(34,197,94,0.06)' : isDoneInRound ? 'rgba(34,197,94,0.04)' : isActiveInRound ? 'rgba(201,165,53,0.07)' : isCurrent ? 'rgba(201,165,53,0.05)' : 'rgba(255,255,255,0.04)'
+                  const cardBorder = isComplete ? 'rgba(34,197,94,0.25)' : isDoneInRound ? 'rgba(34,197,94,0.15)' : isActiveInRound ? 'rgba(201,165,53,0.4)' : isCurrent ? 'rgba(201,165,53,0.35)' : isResting ? 'rgba(201,165,53,0.2)' : 'rgba(255,255,255,0.08)'
+                  const nameColor = isComplete ? '#22c55e' : isDoneInRound ? '#22c55e' : isActiveInRound ? '#fff' : isCurrent ? '#fff' : 'rgba(255,255,255,0.55)'
+
                   return (
                     <div key={wm.id} style={{
-                      background: isComplete ? 'rgba(34,197,94,0.06)' : isCurrent ? 'rgba(201,165,53,0.05)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${isComplete ? 'rgba(34,197,94,0.25)' : isCurrent ? 'rgba(201,165,53,0.35)' : isResting ? 'rgba(201,165,53,0.2)' : 'rgba(255,255,255,0.08)'}`,
+                      background: cardBg,
+                      border: `1px solid ${cardBorder}`,
                       borderRadius: 12, padding: '14px 16px',
                       transition: 'border-color 0.2s, background 0.2s',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                        <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: isComplete ? '#22c55e' : isCurrent ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+                        <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: nameColor }}>
                           {wm.movement.name}
                         </span>
-                        {isComplete && (
+                        {(isComplete || isDoneInRound) && (
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         )}
                       </div>
