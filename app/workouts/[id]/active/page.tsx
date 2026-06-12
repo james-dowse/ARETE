@@ -85,8 +85,24 @@ export default function ActivePage() {
   const pct = workout ? Math.round((doneSets / Math.max(totalSets(), 1)) * 100) : 0
   const allDone = workout ? workout.movements.every(wm => (done[wm.id] ?? 0) >= (wm.sets ?? 3)) : false
 
-  // Current movement = first incomplete
-  const currentWm = workout?.movements.find(wm => (done[wm.id] ?? 0) < (wm.sets ?? 3)) ?? null
+  const hasBlocks = !!(workout && workout.blocks.length > 0)
+
+  // Current movement = next to do, superset-aware (picks active movement in current round)
+  const currentWm = (() => {
+    if (!workout) return null
+    const blocks = hasBlocks ? workout.blocks : [null as null]
+    for (const block of blocks) {
+      const movs = block ? workout.movements.filter(wm => wm.blockId === block.id) : workout.movements
+      const incomplete = movs.filter(m => (done[m.id] ?? 0) < (m.sets ?? 3))
+      if (incomplete.length === 0) continue
+      if (block && supersetBlocs.has(block.id)) {
+        const completedRounds = Math.min(...movs.map(m => done[m.id] ?? 0))
+        return incomplete.find(m => (done[m.id] ?? 0) === completedRounds) ?? incomplete[0]
+      }
+      return incomplete[0]
+    }
+    return null
+  })()
   const currentVid = currentWm?.movement.videoUrl ? ytId(currentWm.movement.videoUrl) : null
 
   // Reset video player when movement changes
@@ -103,17 +119,29 @@ export default function ActivePage() {
     const target = wm.sets ?? 3
     const current = done[wm.id] ?? 0
     if (current >= target) return
-    const next = current + 1
-    const updatedDone = { ...done, [wm.id]: next }
-    setDone(() => updatedDone)
     const restDur = (wm.rest && wm.rest >= 10) ? wm.rest : defaultRest
+
     if (wm.blockId && supersetBlocs.has(wm.blockId)) {
       const blocMovs = workout!.movements.filter(m => m.blockId === wm.blockId)
-      const allInRound = blocMovs.every(m => (updatedDone[m.id] ?? 0) >= next)
-      if (allInRound && next < Math.max(...blocMovs.map(m => m.sets ?? 3))) {
-        setRest({ sec: restDur, total: restDur, wmId: wm.id })
+      const completedRounds = Math.min(...blocMovs.map(m => done[m.id] ?? 0))
+      // Enforce order: only the active movement in the current round can be clicked
+      if (current > completedRounds) return
+      const next = current + 1
+      const updatedDone = { ...done, [wm.id]: next }
+      setDone(() => updatedDone)
+      // Round is done when every movement has completed >= completedRounds+1 or hit its target
+      const newRound = completedRounds + 1
+      const roundDone = blocMovs.every(m => {
+        const d = updatedDone[m.id] ?? 0
+        return d >= newRound || d >= (m.sets ?? 3)
+      })
+      if (roundDone) {
+        const allComplete = blocMovs.every(m => (updatedDone[m.id] ?? 0) >= (m.sets ?? 3))
+        if (!allComplete) setRest({ sec: restDur, total: restDur, wmId: wm.id })
       }
     } else {
+      const next = current + 1
+      setDone(d => ({ ...d, [wm.id]: next }))
       if (next < target) setRest({ sec: restDur, total: restDur, wmId: wm.id })
     }
   }
@@ -142,8 +170,6 @@ export default function ActivePage() {
       </div>
     )
   }
-
-  const hasBlocks = workout.blocks.length > 0
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#0a0a0a', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
@@ -225,6 +251,9 @@ export default function ActivePage() {
           const completedRounds = isSuperset ? Math.min(...movs.map(m => done[m.id] ?? 0)) : 0
           const maxRounds = isSuperset ? Math.max(...movs.map(m => m.sets ?? 3)) : 0
           const blocAllDone = isSuperset && movs.every(m => (done[m.id] ?? 0) >= (m.sets ?? 3))
+          // Active movement in current superset round = first incomplete that hasn't done this round yet
+          const incompleteMovs = isSuperset ? movs.filter(m => (done[m.id] ?? 0) < (m.sets ?? 3)) : []
+          const activeMovId = isSuperset ? incompleteMovs.find(m => (done[m.id] ?? 0) === completedRounds)?.id : undefined
           return (
             <div key={block?.id ?? 'solo'} style={{ marginBottom: hasBlocks ? 20 : 0 }}>
               {hasBlocks && (
@@ -248,8 +277,8 @@ export default function ActivePage() {
                   const setsNow = done[wm.id] ?? 0
                   const isComplete = setsNow >= target
                   const isCurrent = !isSuperset && currentWm?.id === wm.id
-                  const isDoneInRound = isSuperset && setsNow > completedRounds
-                  const isActiveInRound = isSuperset && !isDoneInRound && !isComplete
+                  const isDoneInRound = isSuperset && !isComplete && setsNow > completedRounds
+                  const isActiveInRound = isSuperset && !isComplete && wm.id === activeMovId
                   const isResting = rest?.wmId === wm.id
                   const color = BIO_TYPE_COLORS[wm.movement.bioType] || '#888'
 
@@ -297,7 +326,7 @@ export default function ActivePage() {
                       </div>
 
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => handleSet(wm)} disabled={isComplete}
+                        <button onClick={() => handleSet(wm)} disabled={isComplete || (isSuperset && wm.id !== activeMovId)}
                           style={{
                             flex: 1, padding: '10px', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: isComplete ? 'default' : 'pointer',
                             background: isComplete ? 'rgba(34,197,94,0.08)' : 'rgba(201,165,53,0.12)',
