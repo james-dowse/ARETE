@@ -3,6 +3,7 @@ import AppShell from '@/components/AppShell'
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, type GeneratedMovement } from '@/lib/types'
 import RichEditor from '@/components/RichEditor'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Zap, Save, RefreshCw, Clock, Minus, ChevronDown, ChevronUp, Dices, Search } from 'lucide-react'
 import MovementModal from '@/components/MovementModal'
 import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
@@ -28,6 +29,7 @@ const DEFAULT_REPS = '10'
 const DEFAULT_REST = 1
 
 export default function GeneratorPage() {
+  const router = useRouter()
   const [blocks, setBlocks] = useState<Block[]>([
     { id: uid(), bioTypes: [], complexities: [], equipments: [], count: 3, order: 0, instructions: '', sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST },
   ])
