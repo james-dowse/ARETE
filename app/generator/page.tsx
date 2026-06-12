@@ -1058,7 +1058,7 @@ export default function GeneratorPage() {
                     {!showLaunchConfirm ? (
                       <button onClick={() => setShowLaunchConfirm(true)}
                         style={{ width: '100%', marginTop: 8, padding: '9px', background: 'rgba(201,165,53,0.1)', border: '1px solid rgba(201,165,53,0.3)', borderRadius: 8, color: '#C9A535', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                        <Zap size={13} /> Lancer à la volée
+                        <Zap size={13} /> Démarrage rapide
                       </button>
                     ) : (
                       <div style={{ marginTop: 8, padding: '10px 12px', background: 'rgba(201,165,53,0.07)', border: '1px solid rgba(201,165,53,0.25)', borderRadius: 8 }}>
