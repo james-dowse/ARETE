@@ -50,8 +50,8 @@ export default function GeneratorPage() {
   const [saving, setSaving] = useState(false)
   const [savedId, setSavedId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [showLaunchConfirm, setShowLaunchConfirm] = useState(false)
   const [launching, setLaunching] = useState(false)
+  const [launchError, setLaunchError] = useState<string | null>(null)
   const [savingTemplate, setSavingTemplate] = useState(false)
   const [templateName, setTemplateName] = useState('')
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
@@ -280,6 +280,7 @@ export default function GeneratorPage() {
   const launchNow = async () => {
     if (!generated) return
     setLaunching(true)
+    setLaunchError(null)
     try {
       const tempName = `Séance éclair · ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`
       const res = await fetch('/api/workouts', {
@@ -307,15 +308,15 @@ export default function GeneratorPage() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error)
+      if (!res.ok) throw new Error(data?.error ?? `Erreur ${res.status}`)
       const supersetOrders = resultBlocks.map((b, i) => b.superset ? i : -1).filter(i => i >= 0)
       if (supersetOrders.length > 0) {
         localStorage.setItem(`arete_superset_init_${data.id}`, JSON.stringify(supersetOrders))
       }
       router.push(`/workouts/${data.id}/active`)
-    } catch {
+    } catch (err) {
+      setLaunchError(err instanceof Error ? err.message : 'Erreur réseau')
       setLaunching(false)
-      setShowLaunchConfirm(false)
     }
   }
 
@@ -1071,28 +1072,15 @@ export default function GeneratorPage() {
                       <Save size={14} /> {saving ? 'Sauvegarde...' : 'Sauvegarder'}
                     </button>
 
-                    {!showLaunchConfirm ? (
-                      <button onClick={() => setShowLaunchConfirm(true)}
-                        style={{ width: '100%', marginTop: 8, padding: '9px', background: 'rgba(201,165,53,0.1)', border: '1px solid rgba(201,165,53,0.3)', borderRadius: 8, color: '#C9A535', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                        <Zap size={13} /> Démarrage rapide
-                      </button>
-                    ) : (
-                      <div style={{ marginTop: 8, padding: '10px 12px', background: 'rgba(201,165,53,0.07)', border: '1px solid rgba(201,165,53,0.25)', borderRadius: 8 }}>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 8, textAlign: 'center' }}>
-                          ⚠ Lancer sans sauvegarder ?
-                        </div>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={() => setShowLaunchConfirm(false)}
-                            style={{ flex: 1, padding: '7px', background: 'none', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
-                            Annuler
-                          </button>
-                          <button onClick={launchNow} disabled={launching}
-                            style={{ flex: 2, padding: '7px', background: 'rgba(201,165,53,0.15)', border: '1px solid rgba(201,165,53,0.4)', borderRadius: 7, color: '#C9A535', fontSize: 12, fontWeight: 700, cursor: launching ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                            <Zap size={12} /> {launching ? 'Lancement…' : 'Oui, lancer'}
-                          </button>
-                        </div>
+                    {launchError && (
+                      <div style={{ marginTop: 8, padding: '7px 12px', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.25)', borderRadius: 7, fontSize: 12, color: 'var(--red)' }}>
+                        ⚠ {launchError}
                       </div>
                     )}
+                    <button onClick={launchNow} disabled={launching}
+                      style={{ width: '100%', marginTop: 8, padding: '9px', background: 'rgba(201,165,53,0.1)', border: '1px solid rgba(201,165,53,0.3)', borderRadius: 8, color: '#C9A535', fontWeight: 700, fontSize: 13, cursor: launching ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: launching ? 0.7 : 1 }}>
+                      <Zap size={13} /> {launching ? 'Lancement…' : 'Démarrage rapide'}
+                    </button>
                   </div>
                 ) : (
                   <div style={{ background: 'var(--bg-card)', border: '1px solid var(--green)', borderRadius: 10, padding: 16, textAlign: 'center' }}>
