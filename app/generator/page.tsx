@@ -19,6 +19,7 @@ interface Block {
   sets: number
   reps: string
   rest: number
+  superset?: boolean
 }
 interface MovementParams { sets: number; reps: string; rest: number }
 
@@ -182,12 +183,14 @@ export default function GeneratorPage() {
     setResultBlocks(prev => [...prev, {
       id: uid(), bioTypes: [], complexities: [], equipments: [],
       count: 0, order: prev.length, instructions: '',
-      sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST,
+      sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST, superset: false,
     }])
     setBlockRests(prev => [...prev, globalBlockRest])
   }
 
-  const addBlock = () => setBlocks(prev => [...prev, { id: uid(), bioTypes: [], complexities: [], equipments: [], count: 3, order: prev.length, instructions: '', sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST }])
+  const addBlock = () => setBlocks(prev => [...prev, { id: uid(), bioTypes: [], complexities: [], equipments: [], count: 3, order: prev.length, instructions: '', sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST, superset: false }])
+  const toggleResultSuperset = (bi: number) =>
+    setResultBlocks(prev => prev.map((b, i) => i === bi ? { ...b, superset: !b.superset } : b))
   const removeBlock = (id: string) => setBlocks(prev => prev.filter(b => b.id !== id))
   const updateBlock = (id: string, field: keyof Block, value: string | number | null) =>
     setBlocks(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b))
@@ -305,6 +308,10 @@ export default function GeneratorPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error)
+      const supersetOrders = resultBlocks.map((b, i) => b.superset ? i : -1).filter(i => i >= 0)
+      if (supersetOrders.length > 0) {
+        localStorage.setItem(`arete_superset_init_${data.id}`, JSON.stringify(supersetOrders))
+      }
       router.push(`/workouts/${data.id}/active`)
     } catch {
       setLaunching(false)
@@ -899,6 +906,15 @@ export default function GeneratorPage() {
                             </span>
                           </div>
                           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                          {movs.length >= 2 && (
+                            <button
+                              onClick={() => toggleResultSuperset(bi)}
+                              title={block.superset ? 'Désactiver superset' : 'Activer superset pour ce bloc'}
+                              style={{ flexShrink: 0, background: block.superset ? 'rgba(201,165,53,0.15)' : 'none', border: block.superset ? '1px solid rgba(201,165,53,0.4)' : '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: '2px 8px', color: block.superset ? '#C9A535' : 'var(--text-dim)', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}
+                            >
+                              <Zap size={11} /> Superset
+                            </button>
+                          )}
                           <button
                             onClick={() => removeGeneratedBlock(bi)}
                             title="Supprimer ce bloc du résultat"

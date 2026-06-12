@@ -44,7 +44,21 @@ export default function ActivePage() {
 
   // load workout
   useEffect(() => {
-    fetch(`/api/workouts/${id}`).then(r => r.json()).then(setWorkout)
+    fetch(`/api/workouts/${id}`).then(r => r.json()).then(w => {
+      setWorkout(w)
+      const key = `arete_superset_init_${id}`
+      const stored = localStorage.getItem(key)
+      if (stored) {
+        try {
+          const orders: number[] = JSON.parse(stored)
+          const ids = new Set<string>(
+            (w.blocks as Block[]).filter((b: Block) => orders.includes(b.order)).map((b: Block) => b.id)
+          )
+          if (ids.size > 0) setSupersetBlocs(ids)
+          localStorage.removeItem(key)
+        } catch {}
+      }
+    })
   }, [id])
 
   // stopwatch
