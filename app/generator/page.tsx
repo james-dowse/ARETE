@@ -1040,6 +1040,16 @@ export default function GeneratorPage() {
                                               </button>
                                             ))}
                                           </div>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                                            <input
+                                              type="number" min={5} max={3600}
+                                              value={![15,20,30,45,60,90,120].includes(params[i]?.duration ?? 0) ? (params[i]?.duration ?? '') : ''}
+                                              placeholder="libre"
+                                              onChange={e => { const v = Number(e.target.value); if (v >= 5) setParam(i, 'duration', v) }}
+                                              style={{ width: 54, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 6px', color: '#63b3ed', fontSize: 11, fontWeight: 700, outline: 'none', textAlign: 'center' }}
+                                            />
+                                            <span style={{ fontSize: 10, color: '#63b3ed' }}>s</span>
+                                          </div>
                                         </>
                                       ) : (
                                         <>
