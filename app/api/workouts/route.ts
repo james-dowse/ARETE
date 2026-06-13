@@ -129,13 +129,14 @@ export async function POST(req: NextRequest) {
     }
 
     await prisma.workoutMovement.createMany({
-      data: (movements as { movementId: string; order: number; sets?: number; reps?: string; rest?: number; blockIndex?: number }[]).map((m) => ({
+      data: (movements as { movementId: string; order: number; sets?: number; reps?: string; rest?: number; duration?: number | null; blockIndex?: number }[]).map((m) => ({
         workoutId: workout.id,
         movementId: m.movementId,
         order: m.order,
         sets: m.sets || null,
         reps: m.reps || null,
         rest: m.rest != null ? Number(m.rest) : null,
+        duration: m.duration != null ? Number(m.duration) : null,
         blockId: m.blockIndex !== undefined ? (blockIdMap[m.blockIndex] ?? null) : null,
       })),
     })

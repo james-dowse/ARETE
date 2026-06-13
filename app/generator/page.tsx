@@ -21,7 +21,7 @@ interface Block {
   rest: number
   superset?: boolean
 }
-interface MovementParams { sets: number; reps: string; rest: number }
+interface MovementParams { sets: number; reps: string; rest: number; duration: number | null }
 
 function uid() { return Math.random().toString(36).slice(2) }
 
@@ -151,7 +151,7 @@ export default function GeneratorPage() {
       const bi = addingToBlockIndex
       const rb = resultBlocks[bi]
       setGenerated(prev => [...(prev ?? []), { id: m.id, name: m.name, bioType: m.bioType, complexity: m.complexity, videoUrl: m.videoUrl ?? null, blockIndex: bi }])
-      setParams(prev => [...prev, { sets: rb?.sets ?? DEFAULT_SETS, reps: rb?.reps ?? DEFAULT_REPS, rest: rb?.rest ?? DEFAULT_REST }])
+      setParams(prev => [...prev, { sets: rb?.sets ?? DEFAULT_SETS, reps: rb?.reps ?? DEFAULT_REPS, rest: rb?.rest ?? DEFAULT_REST, duration: null }])
       setAddingToBlockIndex(null)
     }
   }
@@ -172,7 +172,7 @@ export default function GeneratorPage() {
       const newMov = data.movements?.[0]
       if (newMov) {
         setGenerated(prev => [...(prev ?? []), { ...newMov, blockIndex: bi }])
-        setParams(prev => [...prev, { sets: rb?.sets ?? DEFAULT_SETS, reps: rb?.reps ?? DEFAULT_REPS, rest: rb?.rest ?? DEFAULT_REST }])
+        setParams(prev => [...prev, { sets: rb?.sets ?? DEFAULT_SETS, reps: rb?.reps ?? DEFAULT_REPS, rest: rb?.rest ?? DEFAULT_REST, duration: null }])
       }
     } finally {
       setAddingRandomToBlock(null)
@@ -191,6 +191,15 @@ export default function GeneratorPage() {
   const addBlock = () => setBlocks(prev => [...prev, { id: uid(), bioTypes: [], complexities: [], equipments: [], count: 3, order: prev.length, instructions: '', sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST, superset: false }])
   const toggleResultSuperset = (bi: number) =>
     setResultBlocks(prev => prev.map((b, i) => i === bi ? { ...b, superset: !b.superset } : b))
+  const toggleBlockDuration = (bi: number, movs: typeof generated, offset: number) => {
+    if (!movs) return
+    const allTimed = movs.every((_, j) => params[offset + j]?.duration != null)
+    setParams(prev => prev.map((p, i) => {
+      const j = i - offset
+      if (j < 0 || j >= movs.length) return p
+      return { ...p, duration: allTimed ? null : (p.duration ?? 45) }
+    }))
+  }
   const removeBlock = (id: string) => setBlocks(prev => prev.filter(b => b.id !== id))
   const updateBlock = (id: string, field: keyof Block, value: string | number | null) =>
     setBlocks(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b))
@@ -203,7 +212,7 @@ export default function GeneratorPage() {
   const toggleCollapse = (id: string) =>
     setCollapsedBlocks(prev => ({ ...prev, [id]: !prev[id] }))
 
-  const setParam = (idx: number, field: keyof MovementParams, value: string | number) =>
+  const setParam = (idx: number, field: keyof MovementParams, value: string | number | null) =>
     setParams(prev => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p))
 
   const generate = async () => {
@@ -221,7 +230,7 @@ export default function GeneratorPage() {
       setGenerated(data.movements)
       setParams(data.movements.map((m: { blockIndex: number }) => {
         const b = blocks[m.blockIndex]
-        return { sets: b?.sets ?? DEFAULT_SETS, reps: b?.reps ?? DEFAULT_REPS, rest: b?.rest ?? DEFAULT_REST }
+        return { sets: b?.sets ?? DEFAULT_SETS, reps: b?.reps ?? DEFAULT_REPS, rest: b?.rest ?? DEFAULT_REST, duration: null }
       }))
       if (!workoutName) {
         const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
@@ -249,8 +258,9 @@ export default function GeneratorPage() {
             movementId: m.id,
             order: i,
             sets: params[i]?.sets ?? DEFAULT_SETS,
-            reps: params[i]?.reps ?? DEFAULT_REPS,
+            reps: params[i]?.duration != null ? null : (params[i]?.reps ?? DEFAULT_REPS),
             rest: params[i]?.rest ?? DEFAULT_REST,
+            duration: params[i]?.duration ?? null,
             blockIndex: m.blockIndex,
           })),
           blocks: resultBlocks.map((b, i) => ({
@@ -295,8 +305,9 @@ export default function GeneratorPage() {
             movementId: m.id,
             order: i,
             sets: params[i]?.sets ?? DEFAULT_SETS,
-            reps: params[i]?.reps ?? DEFAULT_REPS,
+            reps: params[i]?.duration != null ? null : (params[i]?.reps ?? DEFAULT_REPS),
             rest: params[i]?.rest ?? DEFAULT_REST,
+            duration: params[i]?.duration ?? null,
             blockIndex: m.blockIndex,
           })),
           blocks: resultBlocks.map((b, i) => ({
@@ -476,7 +487,7 @@ export default function GeneratorPage() {
       setGenerated(data.movements)
       setParams(data.movements.map((m: { blockIndex: number }) => {
         const b = randomBlocks[m.blockIndex]
-        return { sets: b?.sets ?? sets, reps: b?.reps ?? DEFAULT_REPS, rest: b?.rest ?? DEFAULT_REST }
+        return { sets: b?.sets ?? sets, reps: b?.reps ?? DEFAULT_REPS, rest: b?.rest ?? DEFAULT_REST, duration: null }
       }))
       const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
       setWorkoutName(`Workout ${label} ${date}`)
@@ -907,6 +918,18 @@ export default function GeneratorPage() {
                             </span>
                           </div>
                           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                          {(() => {
+                            const allTimed = movs.length > 0 && movs.every((_, j) => params[offset + j]?.duration != null)
+                            return (
+                              <button
+                                onClick={e => { e.stopPropagation(); toggleBlockDuration(bi, movs, offset) }}
+                                title={allTimed ? 'Repasser en mode reps' : 'Tout le bloc en mode durée'}
+                                style={{ flexShrink: 0, background: allTimed ? 'rgba(99,179,237,0.15)' : 'none', border: allTimed ? '1px solid rgba(99,179,237,0.4)' : '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: '2px 8px', color: allTimed ? '#63b3ed' : 'var(--text-dim)', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}
+                              >
+                                <Clock size={11} /> Durée
+                              </button>
+                            )
+                          })()}
                           {movs.length >= 2 && (
                             <button
                               onClick={() => toggleResultSuperset(bi)}
@@ -986,19 +1009,49 @@ export default function GeneratorPage() {
                                   </div>
                                 </div>
 
-                                {/* Séries · Reps · Repos */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Séries</span>
-                                    <Stepper value={params[i]?.sets ?? DEFAULT_SETS} min={1} max={10} onChange={v => setParam(i, 'sets', v)} />
+                                {/* Séries · Reps/Durée · Repos */}
+                                <div style={{ paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                                  {/* Mode toggle */}
+                                  <div style={{ display: 'flex', gap: 4, marginBottom: 10, justifyContent: 'center' }}>
+                                    {(['reps', 'durée'] as const).map(mode => {
+                                      const active = mode === 'durée' ? params[i]?.duration != null : params[i]?.duration == null
+                                      return (
+                                        <button key={mode} onClick={() => setParam(i, 'duration', mode === 'durée' ? (params[i]?.duration ?? 45) : null)}
+                                          style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${active ? (mode === 'durée' ? 'rgba(99,179,237,0.5)' : 'rgba(201,165,53,0.5)') : 'var(--border)'}`, background: active ? (mode === 'durée' ? 'rgba(99,179,237,0.12)' : 'rgba(201,165,53,0.1)') : 'transparent', color: active ? (mode === 'durée' ? '#63b3ed' : '#C9A535') : 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                          {mode === 'durée' ? '⏱ Durée' : 'Reps'}
+                                        </button>
+                                      )
+                                    })}
                                   </div>
-                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Reps</span>
-                                    <RepsInput value={params[i]?.reps ?? DEFAULT_REPS} onChange={v => setParam(i, 'reps', v)} />
-                                  </div>
-                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Repos (min)</span>
-                                    <Stepper value={params[i]?.rest ?? DEFAULT_REST} min={0} max={10} onChange={v => setParam(i, 'rest', v)} />
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Séries</span>
+                                      <Stepper value={params[i]?.sets ?? DEFAULT_SETS} min={1} max={10} onChange={v => setParam(i, 'sets', v)} />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                                      {params[i]?.duration != null ? (
+                                        <>
+                                          <span style={{ fontSize: 10, fontWeight: 700, color: '#63b3ed', letterSpacing: 0.5, textTransform: 'uppercase' }}>Durée (s)</span>
+                                          <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
+                                            {[15, 20, 30, 45, 60, 90].map(s => (
+                                              <button key={s} onClick={() => setParam(i, 'duration', s)}
+                                                style={{ padding: '3px 7px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${params[i]?.duration === s ? 'rgba(99,179,237,0.5)' : 'var(--border)'}`, background: params[i]?.duration === s ? 'rgba(99,179,237,0.15)' : 'var(--bg-elevated)', color: params[i]?.duration === s ? '#63b3ed' : 'var(--text-dim)' }}>
+                                                {s}s
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Reps</span>
+                                          <RepsInput value={params[i]?.reps ?? DEFAULT_REPS} onChange={v => setParam(i, 'reps', v)} />
+                                        </>
+                                      )}
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Repos (min)</span>
+                                      <Stepper value={params[i]?.rest ?? DEFAULT_REST} min={0} max={10} onChange={v => setParam(i, 'rest', v)} />
+                                    </div>
                                   </div>
                                 </div>
                               </div>

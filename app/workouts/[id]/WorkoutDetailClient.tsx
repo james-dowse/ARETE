@@ -22,7 +22,7 @@ interface Movement {
 }
 interface WorkoutMovement {
   id: string; movementId: string; order: number
-  sets?: number | null; reps?: string | null; rest?: number | null; movement: Movement
+  sets?: number | null; reps?: string | null; rest?: number | null; duration?: number | null; movement: Movement
   blockId?: string | null
 }
 interface WorkoutBlock {
@@ -37,7 +37,7 @@ interface Workout {
   movements: WorkoutMovement[]
   blocks: WorkoutBlock[]
 }
-interface EditState { movementId: string; movement: Movement; sets: number; reps: string }
+interface EditState { movementId: string; movement: Movement; sets: number; reps: string; duration: number | null }
 
 // ─── Library Picker Modal ─────────────────────────────────────────────────────
 function LibraryPicker({ current, onPick, onClose }: {
@@ -234,7 +234,7 @@ function ImageEditZone({ current, file, preview, onChange, onRemove }: {
 // ─── View Row ─────────────────────────────────────────────────────────────────
 function MovementRowView({ wm, index, onMovementClick }: { wm: WorkoutMovement; index: number; onMovementClick: (id: string) => void }) {
   const m = wm.movement
-  const hasSetsReps = wm.sets || wm.reps
+  const hasSetsReps = wm.sets || wm.reps || wm.duration != null
   return (
     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', flexShrink: 0 }}>{index + 1}</div>
@@ -258,8 +258,8 @@ function MovementRowView({ wm, index, onMovementClick }: { wm: WorkoutMovement; 
             {hasSetsReps && (
               <>
                 <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>·</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '1px 8px' }}>
-                  {wm.sets ?? '—'} × {wm.reps ?? '—'}
+                <span style={{ fontSize: 12, fontWeight: 700, color: wm.duration != null ? '#63b3ed' : 'var(--text-primary)', background: 'var(--bg-elevated)', border: `1px solid ${wm.duration != null ? 'rgba(99,179,237,0.3)' : 'var(--border)'}`, borderRadius: 6, padding: '1px 8px' }}>
+                  {wm.sets ?? '—'} × {wm.duration != null ? `${wm.duration}s` : (wm.reps ?? '—')}
                 </span>
                 {wm.rest != null && (
                   <>
@@ -289,7 +289,8 @@ function MovementRowEdit({ es, original, index, allMovementIds, onUpdate, onReve
   const isDirtyMovement = es.movementId !== original.movementId
   const isDirtySets = es.sets !== (original.sets ?? 2)
   const isDirtyReps = es.reps !== (original.reps ?? '10')
-  const isDirty = isDirtyMovement || isDirtySets || isDirtyReps
+  const isDirtyDuration = es.duration !== (original.duration ?? null)
+  const isDirty = isDirtyMovement || isDirtySets || isDirtyReps || isDirtyDuration
 
   const handleRandom = async () => {
     setLoadingRandom(true)
@@ -353,9 +354,35 @@ function MovementRowEdit({ es, original, index, allMovementIds, onUpdate, onReve
           </div>
           <span style={{ fontSize: 14, color: 'var(--text-dim)', fontWeight: 700 }}>×</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-            <span style={{ fontSize: 11, color: isDirtyReps ? 'var(--dirty-text)' : 'var(--text-muted)', width: 46, flexShrink: 0, fontWeight: isDirtyReps ? 600 : 400 }}>Reps</span>
-            <input value={es.reps} onChange={e => onUpdate(index, { reps: e.target.value })}
-              style={{ width: 80, background: isDirtyReps ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyReps ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '5px 10px', color: isDirtyReps ? 'var(--dirty-text)' : 'var(--text-primary)', fontSize: 14, fontWeight: 700, outline: 'none', textAlign: 'center', transition: 'all 0.2s' }} />
+            <button
+              onClick={() => onUpdate(index, es.duration != null ? { duration: null } : { duration: 45, reps: '' })}
+              style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: es.duration != null ? 'rgba(99,179,237,0.12)' : 'var(--bg-elevated)', border: `1px solid ${(es.duration != null ? isDirtyDuration : isDirtyReps) ? 'var(--dirty-border)' : (es.duration != null ? 'rgba(99,179,237,0.4)' : 'var(--border)')}`, color: es.duration != null ? '#63b3ed' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
+            >
+              {es.duration != null ? '⏱ Durée' : '🔢 Reps'}
+            </button>
+            {es.duration != null ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <input
+                    type="number" min={5} max={600} value={es.duration ?? 45}
+                    onChange={e => onUpdate(index, { duration: Number(e.target.value) })}
+                    style={{ width: 60, background: isDirtyDuration ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyDuration ? 'var(--dirty-border)' : 'rgba(99,179,237,0.4)'}`, borderRadius: 8, padding: '5px 8px', color: isDirtyDuration ? 'var(--dirty-text)' : '#63b3ed', fontSize: 14, fontWeight: 700, outline: 'none', textAlign: 'center' }}
+                  />
+                  <span style={{ fontSize: 11, color: '#63b3ed', fontWeight: 600 }}>s</span>
+                </div>
+                <div style={{ display: 'flex', gap: 3 }}>
+                  {[15, 20, 30, 45, 60, 90].map(s => (
+                    <button key={s} onClick={() => onUpdate(index, { duration: s })}
+                      style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: es.duration === s ? 'rgba(99,179,237,0.2)' : 'var(--bg-elevated)', border: `1px solid ${es.duration === s ? 'rgba(99,179,237,0.5)' : 'var(--border)'}`, color: es.duration === s ? '#63b3ed' : 'var(--text-dim)', cursor: 'pointer' }}>
+                      {s}s
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <input value={es.reps} onChange={e => onUpdate(index, { reps: e.target.value })}
+                style={{ width: 80, background: isDirtyReps ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyReps ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '5px 10px', color: isDirtyReps ? 'var(--dirty-text)' : 'var(--text-primary)', fontSize: 14, fontWeight: 700, outline: 'none', textAlign: 'center', transition: 'all 0.2s' }} />
+            )}
           </div>
         </div>
       </div>
@@ -581,7 +608,7 @@ function Stat({ value, label, color }: { value: number; label: string; color: st
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toEditState(wm: WorkoutMovement): EditState {
-  return { movementId: wm.movementId, movement: wm.movement, sets: wm.sets ?? 2, reps: wm.reps ?? '10' }
+  return { movementId: wm.movementId, movement: wm.movement, sets: wm.sets ?? 2, reps: wm.reps ?? '10', duration: wm.duration ?? null }
 }
 function stripHtml(html: string) { return html.replace(/<[^>]*>/g, '').trim() }
 function fmtMin(min: number) {
@@ -658,7 +685,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   // ── Dirty checks ──
   const isDirtyMovements = editMode && editStates.some((es, i) => {
     const orig = originals[i]
-    return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10')
+    return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10') || es.duration !== (orig.duration ?? null)
   })
   const isDirtyBlocks = editMode && initial.blocks.some(
     b => (blockInstructions[b.id] ?? '') !== (b.instructions ?? '')
@@ -671,7 +698,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const pendingCount = editMode
     ? editStates.filter((es, i) => {
         const orig = originals[i]
-        return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10')
+        return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10') || es.duration !== (orig.duration ?? null)
       }).length
       + initial.blocks.filter(b => (blockInstructions[b.id] ?? '') !== (b.instructions ?? '')).length
       + (isDirtyDescription ? 1 : 0)
@@ -726,6 +753,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         if (es.movementId !== orig.movementId) body.newMovementId = es.movementId
         if (es.sets !== (orig.sets ?? 2)) body.sets = es.sets
         if (es.reps !== (orig.reps ?? '10')) body.reps = es.reps
+        if (es.duration !== (orig.duration ?? null)) body.duration = es.duration
         return fetch(`/api/workouts/${initial.id}/movements/${orig.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
         })

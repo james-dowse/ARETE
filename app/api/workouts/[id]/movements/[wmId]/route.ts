@@ -8,13 +8,14 @@ export async function PATCH(
 ) {
   const { wmId } = await params
   const body = await req.json()
-  const { newMovementId, sets, reps } = body
+  const { newMovementId, sets, reps, duration } = body
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: Record<string, any> = {}
   if (newMovementId !== undefined) data.movementId = newMovementId
   if (sets !== undefined) data.sets = sets === '' || sets === null ? null : Number(sets)
   if (reps !== undefined) data.reps = reps === '' || reps === null ? null : String(reps)
+  if (duration !== undefined) data.duration = duration === '' || duration === null ? null : Number(duration)
 
   const updated = await prisma.workoutMovement.update({
     where: { id: wmId },

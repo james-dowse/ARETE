@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { BIO_TYPE_COLORS } from '@/lib/types'
 
 interface Movement { id: string; name: string; bioType: string; videoUrl?: string | null }
-interface WM { id: string; order: number; sets?: number | null; reps?: string | null; rest?: number | null; blockId?: string | null; movement: Movement }
+interface WM { id: string; order: number; sets?: number | null; reps?: string | null; rest?: number | null; duration?: number | null; blockId?: string | null; movement: Movement }
 interface Block { id: string; order: number; bioType?: string | null; instructions?: string | null }
 interface Workout { id: string; name: string; duration?: number | null; movements: WM[]; blocks: Block[] }
 
@@ -31,6 +31,7 @@ export default function ActivePage() {
   const [showFinish, setShowFinish] = useState(false)
   const [videoPlaying, setVideoPlaying] = useState(false)
   const [supersetBlocs, setSupersetBlocs] = useState<Set<string>>(new Set())
+  const [exerciseTimer, setExerciseTimer] = useState<{ wmId: string; sec: number; total: number } | null>(null)
 
   const toggleSuperset = (blockId: string) =>
     setSupersetBlocs(prev => {
@@ -41,6 +42,8 @@ export default function ActivePage() {
 
   const elapsedRef = useRef(elapsed)
   elapsedRef.current = elapsed
+  const doneRef = useRef(done)
+  useEffect(() => { doneRef.current = done }, [done])
 
   // load workout
   useEffect(() => {
@@ -75,6 +78,43 @@ export default function ActivePage() {
     const t = setTimeout(() => setRest(r => r ? { ...r, sec: r.sec - 1 } : null), 1000)
     return () => clearTimeout(t)
   }, [rest])
+
+  // exercise countdown (timed movements)
+  useEffect(() => {
+    if (!exerciseTimer) return
+    if (exerciseTimer.sec <= 0) {
+      setExerciseTimer(null)
+      const wm = workout?.movements.find(m => m.id === exerciseTimer.wmId)
+      if (!wm) return
+      const target = wm.sets ?? 3
+      const current = doneRef.current[wm.id] ?? 0
+      if (current >= target) return
+      const next = current + 1
+      const restDur = (wm.rest && wm.rest >= 10) ? wm.rest : defaultRest
+      if (wm.blockId && supersetBlocs.has(wm.blockId)) {
+        const blocMovs = workout!.movements.filter(m => m.blockId === wm.blockId)
+        const completedRounds = Math.min(...blocMovs.map(m => doneRef.current[m.id] ?? 0))
+        const updatedDone = { ...doneRef.current, [wm.id]: next }
+        setDone(() => updatedDone)
+        const newRound = completedRounds + 1
+        const roundDone = blocMovs.every(m => {
+          const d = updatedDone[m.id] ?? 0
+          return d >= newRound || d >= (m.sets ?? 3)
+        })
+        if (roundDone) {
+          const allComplete = blocMovs.every(m => (updatedDone[m.id] ?? 0) >= (m.sets ?? 3))
+          if (!allComplete) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+        }
+      } else {
+        setDone(d => ({ ...d, [wm.id]: next }))
+        if (next < target) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+      }
+      return
+    }
+    const t = setTimeout(() => setExerciseTimer(e => e ? { ...e, sec: e.sec - 1 } : null), 1000)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exerciseTimer])
 
   const totalSets = useCallback(() => {
     if (!workout) return 0
@@ -115,6 +155,14 @@ export default function ActivePage() {
   }, [currentWm?.id])
 
   const handleSet = (wm: WM) => {
+    if (wm.duration != null) {
+      if (!started) setStarted(true)
+      const target = wm.sets ?? 3
+      const current = done[wm.id] ?? 0
+      if (current >= target) return
+      setExerciseTimer({ wmId: wm.id, sec: wm.duration, total: wm.duration })
+      return
+    }
     if (!started) setStarted(true)
     const target = wm.sets ?? 3
     const current = done[wm.id] ?? 0
@@ -303,12 +351,13 @@ export default function ActivePage() {
                         )}
                       </div>
 
+                      {/* Set circles + label */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                         <div style={{ display: 'flex', gap: 5 }}>
                           {Array.from({ length: target }).map((_, i) => (
                             <span key={i} style={{
                               width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700,
-                              background: i < setsNow ? (isComplete ? '#22c55e' : '#C9A535') : 'rgba(255,255,255,0.07)',
+                              background: i < setsNow ? (isComplete ? '#22c55e' : (wm.duration != null ? '#63b3ed' : '#C9A535')) : 'rgba(255,255,255,0.07)',
                               color: i < setsNow ? '#000' : 'rgba(255,255,255,0.3)',
                               border: `1px solid ${i < setsNow ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
                               transition: 'all 0.2s',
@@ -317,30 +366,72 @@ export default function ActivePage() {
                             </span>
                           ))}
                         </div>
-                        {wm.reps && (
+                        {wm.duration != null ? (
+                          <span style={{ fontSize: 13, color: '#63b3ed', marginLeft: 4, fontWeight: 600 }}>{wm.duration}s</span>
+                        ) : wm.reps ? (
                           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginLeft: 4 }}>{wm.reps}</span>
-                        )}
+                        ) : null}
                         {wm.rest && wm.rest >= 10 && wm.rest !== defaultRest && (
                           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginLeft: 'auto' }}>repos {wm.rest}s</span>
                         )}
                       </div>
 
+                      {/* Exercise timer in-card (timed mode, currently running) */}
+                      {wm.duration != null && exerciseTimer?.wmId === wm.id && (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ height: 4, borderRadius: 2, background: 'rgba(99,179,237,0.15)', overflow: 'hidden', marginBottom: 6 }}>
+                            <div style={{ height: '100%', background: '#63b3ed', width: `${(exerciseTimer.sec / exerciseTimer.total) * 100}%`, transition: 'width 1s linear' }} />
+                          </div>
+                          <div style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 22, fontWeight: 700, color: '#63b3ed', letterSpacing: '0.06em' }}>
+                            {fmt(exerciseTimer.sec)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action button */}
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => handleSet(wm)} disabled={isComplete || (isSuperset && wm.id !== activeMovId)}
-                          style={{
-                            flex: 1, padding: '10px', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: isComplete ? 'default' : 'pointer',
-                            background: isComplete ? 'rgba(34,197,94,0.08)' : 'rgba(201,165,53,0.12)',
-                            border: `1px solid ${isComplete ? 'rgba(34,197,94,0.2)' : 'rgba(201,165,53,0.3)'}`,
-                            color: isComplete ? '#22c55e' : '#C9A535',
-                            transition: 'all 0.15s',
-                          }}>
-                          {isComplete ? '✓ Terminé' : `Série ${setsNow + 1} / ${target}`}
-                        </button>
-                        {setsNow > 0 && !isComplete && (
-                          <button onClick={() => handleUndo(wm)}
-                            style={{ padding: '10px 14px', borderRadius: 9, fontSize: 12, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.35)' }}>
-                            ↩
-                          </button>
+                        {wm.duration != null ? (
+                          <>
+                            <button
+                              onClick={() => handleSet(wm)}
+                              disabled={isComplete || (isSuperset && wm.id !== activeMovId) || exerciseTimer?.wmId === wm.id}
+                              style={{
+                                flex: 1, padding: '10px', borderRadius: 9, fontSize: 13, fontWeight: 700,
+                                cursor: isComplete || exerciseTimer?.wmId === wm.id ? 'default' : 'pointer',
+                                background: isComplete ? 'rgba(34,197,94,0.08)' : exerciseTimer?.wmId === wm.id ? 'rgba(99,179,237,0.08)' : 'rgba(99,179,237,0.12)',
+                                border: `1px solid ${isComplete ? 'rgba(34,197,94,0.2)' : 'rgba(99,179,237,0.3)'}`,
+                                color: isComplete ? '#22c55e' : '#63b3ed',
+                                transition: 'all 0.15s',
+                              }}>
+                              {isComplete ? '✓ Terminé' : exerciseTimer?.wmId === wm.id ? '⏱ En cours…' : `▶ Démarrer · ${wm.duration}s`}
+                            </button>
+                            {exerciseTimer?.wmId === wm.id && (
+                              <button onClick={() => setExerciseTimer(e => e ? { ...e, sec: 0 } : null)}
+                                style={{ padding: '10px 14px', borderRadius: 9, fontSize: 12, cursor: 'pointer', background: 'rgba(99,179,237,0.08)', border: '1px solid rgba(99,179,237,0.2)', color: '#63b3ed' }}
+                                title="Valider maintenant sans attendre la fin du timer">
+                                ✓ Skip
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => handleSet(wm)} disabled={isComplete || (isSuperset && wm.id !== activeMovId)}
+                              style={{
+                                flex: 1, padding: '10px', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: isComplete ? 'default' : 'pointer',
+                                background: isComplete ? 'rgba(34,197,94,0.08)' : 'rgba(201,165,53,0.12)',
+                                border: `1px solid ${isComplete ? 'rgba(34,197,94,0.2)' : 'rgba(201,165,53,0.3)'}`,
+                                color: isComplete ? '#22c55e' : '#C9A535',
+                                transition: 'all 0.15s',
+                              }}>
+                              {isComplete ? '✓ Terminé' : `Série ${setsNow + 1} / ${target}`}
+                            </button>
+                            {setsNow > 0 && !isComplete && (
+                              <button onClick={() => handleUndo(wm)}
+                                style={{ padding: '10px 14px', borderRadius: 9, fontSize: 12, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.35)' }}>
+                                ↩
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
