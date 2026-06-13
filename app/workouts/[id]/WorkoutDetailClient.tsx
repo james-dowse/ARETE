@@ -371,7 +371,7 @@ function MovementRowEdit({ es, original, index, allMovementIds, onUpdate, onReve
                   <span style={{ fontSize: 11, color: '#63b3ed', fontWeight: 600 }}>s</span>
                 </div>
                 <div style={{ display: 'flex', gap: 3 }}>
-                  {[15, 20, 30, 45, 60, 90].map(s => (
+                  {[15, 20, 30, 45, 60, 90, 120].map(s => (
                     <button key={s} onClick={() => onUpdate(index, { duration: s })}
                       style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: es.duration === s ? 'rgba(99,179,237,0.2)' : 'var(--bg-elevated)', border: `1px solid ${es.duration === s ? 'rgba(99,179,237,0.5)' : 'var(--border)'}`, color: es.duration === s ? '#63b3ed' : 'var(--text-dim)', cursor: 'pointer' }}>
                       {s}s

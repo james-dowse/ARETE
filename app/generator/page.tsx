@@ -1033,7 +1033,7 @@ export default function GeneratorPage() {
                                         <>
                                           <span style={{ fontSize: 10, fontWeight: 700, color: '#63b3ed', letterSpacing: 0.5, textTransform: 'uppercase' }}>Durée (s)</span>
                                           <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
-                                            {[15, 20, 30, 45, 60, 90].map(s => (
+                                            {[15, 20, 30, 45, 60, 90, 120].map(s => (
                                               <button key={s} onClick={() => setParam(i, 'duration', s)}
                                                 style={{ padding: '3px 7px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${params[i]?.duration === s ? 'rgba(99,179,237,0.5)' : 'var(--border)'}`, background: params[i]?.duration === s ? 'rgba(99,179,237,0.15)' : 'var(--bg-elevated)', color: params[i]?.duration === s ? '#63b3ed' : 'var(--text-dim)' }}>
                                                 {s}s
