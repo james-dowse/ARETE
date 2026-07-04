@@ -93,6 +93,8 @@ model InvitedUser {
   id             String            @id @default(cuid())
   email          String            @unique
   token          String            @unique @default(cuid())
+  loginToken     String?           @unique
+  loginTokenExp  DateTime?
   status         String            @default("pending")
   invitedAt      DateTime          @default(now())
   acceptedAt     DateTime?

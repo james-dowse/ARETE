@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { SESSION_COOKIE } from '@/lib/session'
+import { sendMagicLinkEmail, sendLoginRelayEmail } from '@/lib/email'
+
+const TOKEN_TTL_MS = 15 * 60 * 1000 // 15 minutes
 
 export async function POST(req: NextRequest) {
   const { email } = await req.json()
@@ -15,21 +18,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Adresse non reconnue' }, { status: 404 })
   }
 
-  // Marquer comme accepté si encore pending
-  if (user.status === 'pending') {
-    await prisma.invitedUser.update({
-      where: { id: user.id },
-      data: { status: 'accepted', acceptedAt: new Date() },
-    })
+  const loginToken = randomBytes(32).toString('hex')
+  await prisma.invitedUser.update({
+    where: { id: user.id },
+    data: { loginToken, loginTokenExp: new Date(Date.now() + TOKEN_TTL_MS) },
+  })
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3040'
+  const loginUrl = `${appUrl}/api/auth/verify?token=${loginToken}`
+
+  // Envoi direct ; si Resend refuse (plan sans domaine vérifié), relais vers l'admin
+  let relayed = false
+  try {
+    await sendMagicLinkEmail(user.email, loginUrl)
+  } catch (err) {
+    console.error('[magic link email error]', err)
+    const ownerEmail = process.env.RESEND_OWNER_EMAIL
+    if (!ownerEmail) {
+      return NextResponse.json({ error: "L'email de connexion n'a pas pu être envoyé. Réessaie ou contacte l'administrateur." }, { status: 502 })
+    }
+    try {
+      await sendLoginRelayEmail(ownerEmail, user.email, loginUrl)
+      relayed = true
+    } catch (relayErr) {
+      console.error('[login relay email error]', relayErr)
+      return NextResponse.json({ error: "L'email de connexion n'a pas pu être envoyé. Réessaie ou contacte l'administrateur." }, { status: 502 })
+    }
   }
 
-  const res = NextResponse.json({ ok: true })
-  res.cookies.set(SESSION_COOKIE, user.id, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 365, // 1 an
-  })
-  return res
+  return NextResponse.json({ ok: true, relayed })
 }
