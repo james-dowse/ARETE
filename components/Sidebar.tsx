@@ -293,11 +293,12 @@ export default function Sidebar() {
       >
         <div
           onClick={e => e.stopPropagation()}
+          className="modal-in"
           style={{
             width: 560, maxWidth: 'calc(100vw - 32px)',
-            background: 'var(--card-bg, #1a1a1a)', borderRadius: 14,
-            border: '1px solid rgba(200,169,81,0.25)',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
+            background: 'var(--bg-card)', borderRadius: 'var(--r-lg)',
+            border: '1px solid var(--gold-border)',
+            boxShadow: 'var(--elev-3)',
             overflow: 'hidden',
           }}
         >

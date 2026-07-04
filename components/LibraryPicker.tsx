@@ -61,11 +61,11 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)' }} />
-      <div style={{
+      <div className="modal-in" style={{
         position: 'relative', zIndex: 1,
-        background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16,
-        width: 560, maxHeight: '82vh', display: 'flex', flexDirection: 'column',
-        overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
+        background: 'var(--bg-card)', border: '1px solid var(--gold-border)', borderRadius: 'var(--r-lg)',
+        width: 560, maxWidth: 'calc(100vw - 32px)', maxHeight: '82vh', display: 'flex', flexDirection: 'column',
+        overflow: 'hidden', boxShadow: 'var(--elev-3)',
       }}>
         {/* Header */}
         <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
