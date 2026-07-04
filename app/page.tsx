@@ -1,4 +1,5 @@
 import AppShell from '@/components/AppShell'
+import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import { prisma } from '@/lib/prisma'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
 import { getCurrentUser } from '@/lib/session'
@@ -24,6 +25,22 @@ function formatDate(): string {
 
 function getDisplayName(email: string): string {
   return email.split('@')[0].split('.')[0].toUpperCase()
+}
+
+// Date du jour et lundi de la semaine côté Europe/Paris (le serveur tourne en UTC).
+// Le planner stocke weekStart = date ISO du lundi minuit local → selon le fuseau du
+// client au moment de l'enregistrement, ça donne le lundi OU le dimanche en UTC ;
+// on interroge donc les deux variantes.
+function parisWeekInfo() {
+  const parisNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }))
+  const day = parisNow.getDay() // 0=Dim … 6=Sam
+  const dayIdx = (day + 6) % 7 // 0=Lun … 6=Dim (convention planner)
+  const monday = new Date(parisNow)
+  monday.setDate(parisNow.getDate() + (day === 0 ? -6 : 1 - day))
+  const iso = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
+  const mondayUTC = new Date(iso)
+  const sundayUTC = new Date(mondayUTC.getTime() - 86400000)
+  return { dayIdx, weekStartCandidates: [sundayUTC, mondayUTC], weekBegin: sundayUTC }
 }
 
 const COMPLEXITY_COLORS: Record<string, string> = {
@@ -83,12 +100,33 @@ export default async function DashboardPage() {
       }).catch(() => [])
     : []
 
+  // Séance(s) prévue(s) aujourd'hui (planner) + nombre de séances cette semaine
+  const { dayIdx, weekStartCandidates, weekBegin } = parisWeekInfo()
+  const [todayPlan, weekSessionCount] = user
+    ? await Promise.all([
+        prisma.weekPlan.findFirst({
+          where: { userId: user.id, weekStart: { in: weekStartCandidates } },
+          include: {
+            entries: {
+              where: { dayOfWeek: dayIdx },
+              orderBy: { order: 'asc' },
+              include: { workout: { select: { id: true, name: true, duration: true, movements: { select: { id: true } } } } },
+            },
+          },
+        }).catch(() => null),
+        prisma.workoutSession.count({ where: { userId: user.id, doneAt: { gte: weekBegin } } }).catch(() => 0),
+      ])
+    : [null, 0]
+  const todayEntries = todayPlan?.entries ?? []
+
   const complexityOrder = ['Easy', 'Common', 'Hard', 'Advanced']
   const maxBio = Math.max(...bioStats.map(s => s._count), 1)
 
   return (
     <AppShell>
       <div style={{ maxWidth: 960 }}>
+
+        <ResumeSessionBanner />
 
         {/* ── Hero ─────────────────────────────────────────────── */}
         <div style={{ marginBottom: 48 }}>
@@ -132,7 +170,7 @@ export default async function DashboardPage() {
           {[
             { value: workoutCount,   label: 'Workouts' },
             { value: movementCount,  label: 'Mouvements' },
-            { value: templateCount,  label: 'Templates' },
+            { value: user ? weekSessionCount : templateCount, label: user ? 'Séances cette semaine' : 'Templates' },
           ].map(({ value, label }, i) => (
             <div key={label} className="r-stat-cell" style={{
               background: 'var(--bg-card)',
@@ -149,6 +187,41 @@ export default async function DashboardPage() {
             </div>
           ))}
         </div>
+
+        {/* ── Séance du jour (planner) ─────────────────────────── */}
+        {todayEntries.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <p style={{ ...SECTION_LABEL_GOLD, marginBottom: 12 }}>Séance du jour</p>
+            {todayEntries.map(entry => (
+              <div key={entry.id} style={{
+                display: 'flex', alignItems: 'center', gap: 16,
+                background: 'var(--bg-card)',
+                border: '1px solid var(--gold-border)',
+                borderLeft: '3px solid var(--gold)',
+                padding: '18px 24px',
+                marginBottom: 8,
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)',
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Link href={`/workouts/${entry.workout.id}`} style={{ textDecoration: 'none' }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {entry.workout.name}
+                    </div>
+                  </Link>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+                    {entry.workout.movements.length} mouvements
+                    {entry.workout.duration ? ` · ${entry.workout.duration} min` : ''}
+                  </div>
+                </div>
+                <Link href={`/workouts/${entry.workout.id}/active`} style={{ textDecoration: 'none', flexShrink: 0 }}>
+                  <span style={{ display: 'inline-block', background: 'var(--gold)', color: '#080808', fontSize: 13, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 20px', cursor: 'pointer' }} className="cta-generate">
+                    Démarrer →
+                  </span>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ── CTA principal ────────────────────────────────────── */}
         <Link href="/generator" style={{ textDecoration: 'none', display: 'block', marginTop: 24, marginBottom: 40 }}>

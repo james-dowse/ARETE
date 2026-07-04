@@ -48,6 +48,62 @@ export default function ActivePage() {
   const storageKey = `arete_active_${id}`
   const startedAtRef = useRef<number | null>(null)
 
+  // ── Audio + vibration à la fin des timers ──
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  // L'AudioContext doit être créé/relancé sur un geste utilisateur (politique iOS/Chrome)
+  const ensureAudio = () => {
+    try {
+      if (!audioCtxRef.current) {
+        const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+        if (AC) audioCtxRef.current = new AC()
+      }
+      if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume()
+    } catch {}
+  }
+  const notifyTimerEnd = () => {
+    try { navigator.vibrate?.([200, 100, 200]) } catch {}
+    const ctx = audioCtxRef.current
+    if (!ctx || ctx.state !== 'running') return
+    try {
+      const beep = (delay: number, freq: number) => {
+        const o = ctx.createOscillator()
+        const g = ctx.createGain()
+        o.connect(g); g.connect(ctx.destination)
+        o.frequency.value = freq
+        const t = ctx.currentTime + delay
+        g.gain.setValueAtTime(0.001, t)
+        g.gain.exponentialRampToValueAtTime(0.25, t + 0.02)
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.25)
+        o.start(t); o.stop(t + 0.3)
+      }
+      beep(0, 880); beep(0.3, 1175)
+    } catch {}
+  }
+
+  // ── Wake lock : garder l'écran allumé pendant la séance ──
+  useEffect(() => {
+    if (!started) return
+    type WakeLockSentinel = { release: () => Promise<void> }
+    let lock: WakeLockSentinel | null = null
+    let cancelled = false
+    const request = async () => {
+      try {
+        const wl = (navigator as unknown as { wakeLock?: { request: (t: string) => Promise<WakeLockSentinel> } }).wakeLock
+        const s = await wl?.request('screen')
+        if (cancelled) { s?.release().catch(() => {}) } else if (s) lock = s
+      } catch {}
+    }
+    request()
+    // Le lock est libéré par le navigateur quand l'onglet passe en arrière-plan → on le redemande au retour
+    const onVisibility = () => { if (document.visibilityState === 'visible') request() }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisibility)
+      lock?.release().catch(() => {})
+    }
+  }, [started])
+
   // load workout + restore session in progress
   useEffect(() => {
     fetch(`/api/workouts/${id}`).then(r => r.json()).then(w => {
@@ -113,7 +169,7 @@ export default function ActivePage() {
   // rest countdown
   useEffect(() => {
     if (!rest) return
-    if (rest.sec <= 0) { setRest(null); return }
+    if (rest.sec <= 0) { setRest(null); notifyTimerEnd(); return }
     const t = setTimeout(() => setRest(r => r ? { ...r, sec: r.sec - 1 } : null), 1000)
     return () => clearTimeout(t)
   }, [rest])
@@ -123,6 +179,7 @@ export default function ActivePage() {
     if (!exerciseTimer) return
     if (exerciseTimer.sec <= 0) {
       setExerciseTimer(null)
+      notifyTimerEnd()
       const wm = workout?.movements.find(m => m.id === exerciseTimer.wmId)
       if (!wm) return
       const target = wm.sets ?? 3
@@ -194,6 +251,7 @@ export default function ActivePage() {
   }, [currentWm?.id])
 
   const handleSet = (wm: WM) => {
+    ensureAudio()
     if (wm.duration != null) {
       if (!started) setStarted(true)
       const target = wm.sets ?? 3

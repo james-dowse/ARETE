@@ -2,6 +2,7 @@
 import AppShell from '@/components/AppShell'
 import RichEditor from '@/components/RichEditor'
 import MovementModal from '@/components/MovementModal'
+import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import {
   BIO_TYPE_COLORS, BIO_TYPE_ICONS, BIO_TYPES,
   COMPLEXITIES, COMPLEXITY_COLORS, EQUIPMENT_ICONS,
@@ -841,6 +842,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         <Link href={backTo ?? '/workouts'} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', textDecoration: 'none', fontSize: 13, marginBottom: 24 }}>
           <ArrowLeft size={14} /> {backTo === '/admin' ? 'Retour à l\'administration' : 'Retour aux workouts'}
         </Link>
+
+        <ResumeSessionBanner workoutId={initial.id} />
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 }}>
