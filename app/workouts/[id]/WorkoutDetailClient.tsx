@@ -5,7 +5,7 @@ import MovementModal from '@/components/MovementModal'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import {
   BIO_TYPE_COLORS, BIO_TYPE_ICONS, BIO_TYPES,
-  COMPLEXITIES, COMPLEXITY_COLORS, EQUIPMENT_ICONS,
+  COMPLEXITIES, COMPLEXITY_COLORS, EQUIPMENT_TYPES, EQUIPMENT_ICONS,
 } from '@/lib/types'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -47,6 +47,7 @@ function LibraryPicker({ current, onPick, onClose }: {
   const [search, setSearch] = useState('')
   const [bioFilter, setBioFilter] = useState('')
   const [complexityFilter, setComplexityFilter] = useState('')
+  const [equipmentFilter, setEquipmentFilter] = useState('')
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [results, setResults] = useState<Movement[]>([])
   const [loading, setLoading] = useState(false)
@@ -57,12 +58,13 @@ function LibraryPicker({ current, onPick, onClose }: {
     const p = new URLSearchParams()
     if (bioFilter) p.set('bioType', bioFilter)
     if (complexityFilter) p.set('complexity', complexityFilter)
+    if (equipmentFilter) p.set('equipment', equipmentFilter)
     if (search) p.set('search', search)
     if (favoritesOnly) p.set('favorites', '1')
     const res = await fetch(`/api/movements?${p}`)
     setResults(await res.json())
     setLoading(false)
-  }, [bioFilter, complexityFilter, search, favoritesOnly])
+  }, [bioFilter, complexityFilter, equipmentFilter, search, favoritesOnly])
 
   useEffect(() => { const t = setTimeout(doFetch, 200); return () => clearTimeout(t) }, [doFetch])
   useEffect(() => { inputRef.current?.focus() }, [])
@@ -120,6 +122,14 @@ function LibraryPicker({ current, onPick, onClose }: {
               </Chip>
             ))}
           </div>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            <Chip active={!equipmentFilter} color="" onClick={() => setEquipmentFilter('')}>Tout équipement</Chip>
+            {EQUIPMENT_TYPES.map(eq => (
+              <Chip key={eq} active={equipmentFilter === eq} color="" onClick={() => setEquipmentFilter(equipmentFilter === eq ? '' : eq)}>
+                {EQUIPMENT_ICONS[eq]} {eq}
+              </Chip>
+            ))}
+          </div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '6px 10px' }}>
           {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Chargement…</div>}
@@ -145,6 +155,12 @@ function LibraryPicker({ current, onPick, onClose }: {
                     <span style={{ color: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)' }}>{m.bioType}</span>
                     <span style={{ color: 'var(--text-dim)' }}> · </span>
                     <span style={{ color: COMPLEXITY_COLORS[m.complexity] || 'var(--text-muted)' }}>{m.complexity}</span>
+                    {m.equipment && (
+                      <>
+                        <span style={{ color: 'var(--text-dim)' }}> · </span>
+                        <span style={{ color: 'var(--text-dim)' }}>{EQUIPMENT_ICONS[m.equipment] || '🔧'} {m.equipment}</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 {isCurrent && <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>Actuel</span>}

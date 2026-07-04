@@ -1,13 +1,14 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Search, X, Heart } from 'lucide-react'
-import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
+import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, EQUIPMENT_ICONS } from '@/lib/types'
 
 export interface PickableMovement {
   id: string
   name: string
   bioType: string
   complexity: string
+  equipment?: string | null
   description?: string | null
   videoUrl?: string | null
 }
@@ -38,6 +39,7 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
   const [search, setSearch] = useState('')
   const [bioFilter, setBioFilter] = useState('')
   const [complexityFilter, setComplexityFilter] = useState('')
+  const [equipmentFilter, setEquipmentFilter] = useState('')
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [results, setResults] = useState<PickableMovement[]>([])
   const [loading, setLoading] = useState(false)
@@ -48,12 +50,13 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
     const p = new URLSearchParams()
     if (bioFilter) p.set('bioType', bioFilter)
     if (complexityFilter) p.set('complexity', complexityFilter)
+    if (equipmentFilter) p.set('equipment', equipmentFilter)
     if (search) p.set('search', search)
     if (favoritesOnly) p.set('favorites', '1')
     const res = await fetch(`/api/movements?${p}`)
     setResults(await res.json())
     setLoading(false)
-  }, [bioFilter, complexityFilter, search, favoritesOnly])
+  }, [bioFilter, complexityFilter, equipmentFilter, search, favoritesOnly])
 
   useEffect(() => { const t = setTimeout(doFetch, 200); return () => clearTimeout(t) }, [doFetch])
   useEffect(() => { inputRef.current?.focus() }, [])
@@ -141,6 +144,14 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
               </Chip>
             ))}
           </div>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            <Chip active={!equipmentFilter} color="" onClick={() => setEquipmentFilter('')}>Tout équipement</Chip>
+            {EQUIPMENT_TYPES.map(eq => (
+              <Chip key={eq} active={equipmentFilter === eq} color="" onClick={() => setEquipmentFilter(equipmentFilter === eq ? '' : eq)}>
+                {EQUIPMENT_ICONS[eq]} {eq}
+              </Chip>
+            ))}
+          </div>
         </div>
 
         {/* Results */}
@@ -175,6 +186,12 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
                   <span style={{ color: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)' }}>{m.bioType}</span>
                   <span style={{ color: 'var(--text-dim)' }}> · </span>
                   <span style={{ color: COMPLEXITY_COLORS[m.complexity] || 'var(--text-muted)' }}>{m.complexity}</span>
+                  {m.equipment && (
+                    <>
+                      <span style={{ color: 'var(--text-dim)' }}> · </span>
+                      <span style={{ color: 'var(--text-dim)' }}>{EQUIPMENT_ICONS[m.equipment] || '🔧'} {m.equipment}</span>
+                    </>
+                  )}
                 </div>
               </div>
             </button>
