@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { writeFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
+import { requireWorkoutOwner } from '@/lib/authz'
 
 const UPLOAD_DIR = 'public/uploads/workout-images'
 const SAFE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif']
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const authz = await requireWorkoutOwner(id)
+  if (!authz.ok) return authz.response
 
   const formData = await req.formData()
   const file = formData.get('file') as File | null
@@ -33,6 +36,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const authz = await requireWorkoutOwner(id)
+  if (!authz.ok) return authz.response
 
   const workout = await prisma.workout.findUnique({ where: { id }, select: { imageUrl: true } })
   if (workout?.imageUrl) {

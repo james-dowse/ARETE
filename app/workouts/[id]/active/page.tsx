@@ -45,10 +45,32 @@ export default function ActivePage() {
   const doneRef = useRef(done)
   useEffect(() => { doneRef.current = done }, [done])
 
-  // load workout
+  const storageKey = `arete_active_${id}`
+  const startedAtRef = useRef<number | null>(null)
+
+  // load workout + restore session in progress
   useEffect(() => {
     fetch(`/api/workouts/${id}`).then(r => r.json()).then(w => {
       setWorkout(w)
+
+      // Reprise d'une séance interrompue (refresh, onglet fermé) — expire après 24h
+      const savedRaw = localStorage.getItem(storageKey)
+      if (savedRaw) {
+        try {
+          const saved = JSON.parse(savedRaw)
+          if (saved.startedAt && Date.now() - saved.startedAt < 24 * 60 * 60 * 1000) {
+            if (saved.done) setDone(saved.done)
+            if (Array.isArray(saved.superset)) setSupersetBlocs(prev => new Set([...prev, ...saved.superset]))
+            if (saved.note) setNote(saved.note)
+            startedAtRef.current = saved.startedAt
+            setElapsed(Math.max(0, Math.floor((Date.now() - saved.startedAt) / 1000)))
+            setStarted(true)
+          } else {
+            localStorage.removeItem(storageKey)
+          }
+        } catch {}
+      }
+
       const key = `arete_superset_init_${id}`
       const stored = localStorage.getItem(key)
       if (stored) {
@@ -57,17 +79,34 @@ export default function ActivePage() {
           const ids = new Set<string>(
             (w.blocks as Block[]).filter((b: Block) => orders.includes(b.order)).map((b: Block) => b.id)
           )
-          if (ids.size > 0) setSupersetBlocs(ids)
+          if (ids.size > 0) setSupersetBlocs(prev => new Set([...prev, ...ids]))
           localStorage.removeItem(key)
         } catch {}
       }
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  // stopwatch
+  // persist session state so a refresh/tab close doesn't lose progress
+  useEffect(() => {
+    if (!started || !workout) return
+    if (startedAtRef.current == null) startedAtRef.current = Date.now() - elapsedRef.current * 1000
+    localStorage.setItem(storageKey, JSON.stringify({
+      done,
+      superset: [...supersetBlocs],
+      note,
+      startedAt: startedAtRef.current,
+    }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done, supersetBlocs, note, started, workout])
+
+  // stopwatch — basé sur l'horloge réelle pour survivre à la mise en veille de l'onglet
   useEffect(() => {
     if (!started) return
-    const t = setInterval(() => setElapsed(e => e + 1), 1000)
+    if (startedAtRef.current == null) startedAtRef.current = Date.now() - elapsedRef.current * 1000
+    const t = setInterval(() => {
+      setElapsed(startedAtRef.current != null ? Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000)) : 0)
+    }, 1000)
     return () => clearInterval(t)
   }, [started])
 
@@ -208,6 +247,7 @@ export default function ActivePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ note: note || undefined }),
     }).catch(() => {})
+    localStorage.removeItem(storageKey)
     router.push(`/workouts/${id}`)
   }
 

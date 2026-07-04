@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireWorkoutOwner } from '@/lib/authz'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -20,6 +21,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const authz = await requireWorkoutOwner(id)
+  if (!authz.ok) return authz.response
   const body = await req.json()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: Record<string, any> = {}
@@ -33,6 +36,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const authz = await requireWorkoutOwner(id)
+  if (!authz.ok) return authz.response
   await prisma.workout.delete({ where: { id } })
   return NextResponse.json({ ok: true })
 }

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireUser } from '@/lib/authz'
 
 export async function POST(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const authz = await requireUser()
+  if (!authz.ok) return authz.response
 
   const original = await prisma.workout.findUnique({
     where: { id },
@@ -20,6 +23,7 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
       duration: original.duration,
       notes: original.notes,
       templateId: original.templateId,
+      userId: authz.userId,
     },
   })
 

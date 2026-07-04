@@ -106,39 +106,43 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { name, duration, notes, description, movements, templateId, blocks, blockRest } = body
 
-    const workout = await prisma.workout.create({
-      data: {
-        name,
-        duration: duration ? Number(duration) : null,
-        notes: notes || null,
-        description: description || null,
-        templateId: templateId || null,
-        userId: currentUserId || null,
-        blockRest: blockRest != null ? Number(blockRest) : null,
-      },
-    })
+    const workout = await prisma.$transaction(async (tx) => {
+      const w = await tx.workout.create({
+        data: {
+          name,
+          duration: duration ? Number(duration) : null,
+          notes: notes || null,
+          description: description || null,
+          templateId: templateId || null,
+          userId: currentUserId || null,
+          blockRest: blockRest != null ? Number(blockRest) : null,
+        },
+      })
 
-    const blockIdMap: Record<number, string> = {}
-    if (blocks && blocks.length > 0) {
-      for (const b of blocks as { order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null }[]) {
-        const block = await prisma.workoutBlock.create({
-          data: { workoutId: workout.id, order: b.order, bioType: b.bioType || null, instructions: b.instructions || null, restAfter: b.restAfter != null ? Number(b.restAfter) : null },
-        })
-        blockIdMap[b.order] = block.id
+      const blockIdMap: Record<number, string> = {}
+      if (blocks && blocks.length > 0) {
+        for (const b of blocks as { order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null }[]) {
+          const block = await tx.workoutBlock.create({
+            data: { workoutId: w.id, order: b.order, bioType: b.bioType || null, instructions: b.instructions || null, restAfter: b.restAfter != null ? Number(b.restAfter) : null },
+          })
+          blockIdMap[b.order] = block.id
+        }
       }
-    }
 
-    await prisma.workoutMovement.createMany({
-      data: (movements as { movementId: string; order: number; sets?: number; reps?: string; rest?: number; duration?: number | null; blockIndex?: number }[]).map((m) => ({
-        workoutId: workout.id,
-        movementId: m.movementId,
-        order: m.order,
-        sets: m.sets || null,
-        reps: m.reps || null,
-        rest: m.rest != null ? Number(m.rest) : null,
-        duration: m.duration != null ? Number(m.duration) : null,
-        blockId: m.blockIndex !== undefined ? (blockIdMap[m.blockIndex] ?? null) : null,
-      })),
+      await tx.workoutMovement.createMany({
+        data: (movements as { movementId: string; order: number; sets?: number; reps?: string; rest?: number; duration?: number | null; blockIndex?: number }[]).map((m) => ({
+          workoutId: w.id,
+          movementId: m.movementId,
+          order: m.order,
+          sets: m.sets || null,
+          reps: m.reps || null,
+          rest: m.rest != null ? Number(m.rest) : null,
+          duration: m.duration != null ? Number(m.duration) : null,
+          blockId: m.blockIndex !== undefined ? (blockIdMap[m.blockIndex] ?? null) : null,
+        })),
+      })
+
+      return w
     })
 
     const full = await prisma.workout.findUnique({

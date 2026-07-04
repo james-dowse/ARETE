@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/session'
+import { isAdmin } from '@/lib/admin'
 
 export async function GET() {
+  const user = await getCurrentUser()
+  if (!isAdmin(user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const tursoUrl = process.env.TURSO_DATABASE_URL
   const tursoToken = process.env.TURSO_AUTH_TOKEN
 

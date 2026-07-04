@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireWorkoutOwner } from '@/lib/authz'
 
-// PATCH: update movement id and/or sets/reps
+// Vérifie propriété du workout + appartenance du mouvement à ce workout
+async function authorize(id: string, wmId: string) {
+  const authz = await requireWorkoutOwner(id)
+  if (!authz.ok) return authz.response
+  const wm = await prisma.workoutMovement.findUnique({ where: { id: wmId }, select: { workoutId: true } })
+  if (!wm || wm.workoutId !== id) {
+    return NextResponse.json({ error: 'Mouvement introuvable' }, { status: 404 })
+  }
+  return null
+}
+
+// PATCH: update movement id and/or sets/reps/duration
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; wmId: string }> }
 ) {
-  const { wmId } = await params
+  const { id, wmId } = await params
+  const denied = await authorize(id, wmId)
+  if (denied) return denied
   const body = await req.json()
   const { newMovementId, sets, reps, duration } = body
 
@@ -28,9 +42,11 @@ export async function PATCH(
 
 export async function DELETE(
   _: NextRequest,
-  { params }: { params: Promise<{ wmId: string }> }
+  { params }: { params: Promise<{ id: string; wmId: string }> }
 ) {
-  const { wmId } = await params
+  const { id, wmId } = await params
+  const denied = await authorize(id, wmId)
+  if (denied) return denied
   await prisma.workoutMovement.delete({ where: { id: wmId } })
   return NextResponse.json({ ok: true })
 }

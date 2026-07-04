@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   const res = NextResponse.redirect(new URL('/?welcome=1', req.url))
   res.cookies.set(SESSION_COOKIE, invite.id, {
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 365, // 1 an
