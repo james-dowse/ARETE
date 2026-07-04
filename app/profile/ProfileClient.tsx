@@ -199,7 +199,7 @@ export default function ProfileClient() {
         {/* ── Sauvegarder ── */}
         <button
           onClick={handleSave} disabled={saving}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 24px', background: saved ? 'var(--green,#22c55e)' : 'var(--accent)', color: saved ? '#fff' : 'var(--on-accent)', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: saving ? 'wait' : 'pointer', transition: 'background 0.2s' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 24px', background: saved ? 'var(--green)' : 'var(--accent)', color: saved ? '#fff' : 'var(--on-accent)', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: saving ? 'wait' : 'pointer', transition: 'background 0.2s' }}
         >
           {saved
             ? <><Check size={15} /> Enregistré</>

@@ -125,7 +125,7 @@ function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => voi
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <Share2 size={16} color="var(--gold,#C9A535)" />
+              <Share2 size={16} color="var(--gold)" />
               <span style={{ fontWeight: 700, fontSize: 16 }}>Recommander ce workout</span>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workout.name}</div>
@@ -135,7 +135,7 @@ function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => voi
 
         {status === 'done' ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '16px 0 8px' }}>
-            <CheckCircle2 size={40} color="#22c55e" />
+            <CheckCircle2 size={40} color="var(--green)" />
             <div style={{ fontWeight: 700, fontSize: 15 }}>Recommandation envoyée !</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
               <strong style={{ color: 'var(--text-primary)' }}>{email}</strong> recevra un email. S'il l'accepte, le workout sera sauvegardé dans ses <em>Sauvegardés</em>.
@@ -155,19 +155,19 @@ function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => voi
                 onChange={e => { setEmail(e.target.value); setStatus('idle'); setErrorMsg('') }}
                 onKeyDown={e => e.key === 'Enter' && handleShare()}
                 placeholder="email@exemple.com"
-                style={{ flex: 1, background: 'var(--bg-elevated)', border: `1px solid ${status === 'error' ? '#ef4444' : 'var(--border)'}`, borderRadius: 8, padding: '9px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
+                style={{ flex: 1, background: 'var(--bg-elevated)', border: `1px solid ${status === 'error' ? 'var(--red)' : 'var(--border)'}`, borderRadius: 8, padding: '9px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
               />
               <button
                 onClick={handleShare}
                 disabled={status === 'sending' || !email.trim()}
-                style={{ padding: '9px 16px', background: 'var(--gold,#C9A535)', color: '#000', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: status === 'sending' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: (!email.trim() || status === 'sending') ? 0.6 : 1 }}
+                style={{ padding: '9px 16px', background: 'var(--gold)', color: '#000', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: status === 'sending' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: (!email.trim() || status === 'sending') ? 0.6 : 1 }}
               >
                 <Send size={13} />
                 {status === 'sending' ? '…' : 'Envoyer'}
               </button>
             </div>
             {status === 'error' && (
-              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#ef4444' }}>
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--red)' }}>
                 <AlertCircle size={13} />{errorMsg}
               </div>
             )}
@@ -264,7 +264,7 @@ function WorkoutCard({
                 </>
               )}
               {context === 'saved' && w._savedSource === 'shared' && (
-                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(201,165,53,0.12)', color: '#C9A535', border: '1px solid rgba(201,165,53,0.25)', fontWeight: 600 }}>recommandé</span>
+                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(201,165,53,0.12)', color: 'var(--gold)', border: '1px solid rgba(201,165,53,0.25)', fontWeight: 600 }}>recommandé</span>
               )}
             </div>
           </div>
@@ -308,7 +308,7 @@ function WorkoutCard({
             )}
             {context === 'community' && (
               <button onClick={e => { e.preventDefault(); handleToggleSave() }} disabled={saving}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, background: isSaved ? 'rgba(201,165,53,0.1)' : 'none', border: `1px solid ${isSaved ? 'rgba(201,165,53,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 10px', color: isSaved ? '#C9A535' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: saving ? 'default' : 'pointer', transition: 'all 0.15s' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: isSaved ? 'rgba(201,165,53,0.1)' : 'none', border: `1px solid ${isSaved ? 'rgba(201,165,53,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 10px', color: isSaved ? 'var(--gold)' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: saving ? 'default' : 'pointer', transition: 'all 0.15s' }}>
                 {isSaved ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
                 {isSaved ? 'Sauvegardé' : 'Sauvegarder'}
               </button>
@@ -322,7 +322,7 @@ function WorkoutCard({
             {context === 'mine' && onShare && (
               <button onClick={e => { e.preventDefault(); onShare() }}
                 style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold,#C9A535)'; e.currentTarget.style.color = 'var(--gold,#C9A535)' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold)' }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}>
                 <Share2 size={12} /> Recommander
               </button>
@@ -332,7 +332,7 @@ function WorkoutCard({
           {/* Droite : Démarrer → Semaine → Dupliquer → Modifier → Supprimer */}
           <div style={{ display: 'flex', gap: 4 }}>
             <button onClick={e => { e.preventDefault(); router.push(`/workouts/${w.id}/active`) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(201,165,53,0.12)', border: '1px solid rgba(201,165,53,0.35)', borderRadius: 6, padding: '5px 11px', color: '#C9A535', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(201,165,53,0.12)', border: '1px solid rgba(201,165,53,0.35)', borderRadius: 6, padding: '5px 11px', color: 'var(--gold)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
               <PlayCircle size={13} /> Démarrer
             </button>
             {(context === 'mine' || context === 'saved') && (
@@ -353,8 +353,8 @@ function WorkoutCard({
                   <Pencil size={12} /> Modifier
                 </button>
                 <button onClick={handleDelete} disabled={deleting}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: deleting ? 'var(--text-dim)' : '#ef4444', fontSize: 12, cursor: deleting ? 'wait' : 'pointer', opacity: deleting ? 0.6 : 1 }}
-                  onMouseEnter={e => { if (!deleting) { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor = '#ef4444' } }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: deleting ? 'var(--text-dim)' : 'var(--red)', fontSize: 12, cursor: deleting ? 'wait' : 'pointer', opacity: deleting ? 0.6 : 1 }}
+                  onMouseEnter={e => { if (!deleting) { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor = 'var(--red)' } }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'var(--border)' }}>
                   <Trash2 size={12} />
                 </button>
@@ -543,7 +543,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
 
       {/* Erreur de chargement */}
       {fetchError && (
-        <div style={{ padding: '12px 16px', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.25)', borderRadius: 10, fontSize: 13, color: '#ef4444', marginBottom: 16 }}>
+        <div style={{ padding: '12px 16px', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.25)', borderRadius: 10, fontSize: 13, color: 'var(--red)', marginBottom: 16 }}>
           ⚠ Erreur : {fetchError}
         </div>
       )}
@@ -709,7 +709,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#22c55e', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, whiteSpace: 'nowrap' }}>
+        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, whiteSpace: 'nowrap' }}>
           {toast}
         </div>
       )}

@@ -100,8 +100,8 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
             onClick={() => setFavoritesOnly(true)}
             style={{
               flex: 1, padding: '9px 12px', background: 'none', border: 'none',
-              borderBottom: `2px solid ${favoritesOnly ? '#ef4444' : 'transparent'}`,
-              color: favoritesOnly ? '#ef4444' : 'var(--text-muted)',
+              borderBottom: `2px solid ${favoritesOnly ? 'var(--red)' : 'transparent'}`,
+              color: favoritesOnly ? 'var(--red)' : 'var(--text-muted)',
               fontWeight: favoritesOnly ? 700 : 400, fontSize: 13, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
               transition: 'color 0.15s',

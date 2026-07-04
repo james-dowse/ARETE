@@ -144,7 +144,7 @@ export default function MovementModal({ movementId, onClose }: Props) {
                   cursor: togglingFav ? 'wait' : 'pointer',
                   padding: '5px 8px',
                   display: 'flex', alignItems: 'center', gap: 5,
-                  color: favorited ? '#ef4444' : 'var(--text-muted)',
+                  color: favorited ? 'var(--red)' : 'var(--text-muted)',
                   fontSize: 12, fontWeight: 600,
                   transition: 'all 0.15s',
                   opacity: togglingFav ? 0.6 : 1,

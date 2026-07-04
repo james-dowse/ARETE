@@ -160,7 +160,7 @@ function DeleteConfirm({ movement, onConfirm, onCancel }: { movement: Movement; 
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 22 }}>Cette action est irréversible.</div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button onClick={onCancel} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
-          <button onClick={onConfirm} style={{ padding: '8px 20px', background: '#ff4444', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Supprimer</button>
+          <button onClick={onConfirm} style={{ padding: '8px 20px', background: 'var(--red)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Supprimer</button>
         </div>
       </div>
     </div>
@@ -439,8 +439,8 @@ function DuplicatesTab() {
           {data.map(({ key, group }) => (
             <div key={key} style={{ background: 'var(--bg-card)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, overflow: 'hidden' }}>
               <div style={{ padding: '8px 14px', background: 'rgba(239,68,68,0.06)', borderBottom: '1px solid rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Copy size={12} color="#ef4444" />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                <Copy size={12} color="var(--red)" />
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', letterSpacing: 0.5, textTransform: 'uppercase' }}>
                   {group.length} entrées · clé : «{key}»
                 </span>
               </div>
@@ -624,14 +624,14 @@ function WorkoutsAdminTab() {
               par {deletingWorkout.user?.email ?? '—'} · {deletingWorkout._count.movements} mouvements
             </div>
             {deletingWorkout._count.savedBy > 0 && (
-              <div style={{ fontSize: 12, color: '#f59e0b', marginBottom: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--orange)', marginBottom: 4 }}>
                 ⚠ Sauvegardé par {deletingWorkout._count.savedBy} utilisateur{deletingWorkout._count.savedBy > 1 ? 's' : ''}
               </div>
             )}
             <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 22 }}>Cette action est irréversible.</div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
               <button onClick={() => setDeletingId(null)} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={() => handleDelete(deletingWorkout.id)} style={{ padding: '8px 20px', background: '#ff4444', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Supprimer</button>
+              <button onClick={() => handleDelete(deletingWorkout.id)} style={{ padding: '8px 20px', background: 'var(--red)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Supprimer</button>
             </div>
           </div>
         </div>
@@ -646,7 +646,7 @@ function WorkoutsAdminTab() {
       <style>{`
         .admin-wod-row:hover .admin-wod-del { opacity: 1 !important; transition: opacity 0.15s; }
         .admin-wod-del { transition: opacity 0.15s; }
-        .admin-wod-del:hover { background: rgba(239,68,68,0.1) !important; border-color: rgba(239,68,68,0.3) !important; color: #ef4444 !important; }
+        .admin-wod-del:hover { background: rgba(239,68,68,0.1) !important; border-color: rgba(239,68,68,0.3) !important; color: var(--red) !important; }
       `}</style>
     </div>
   )
@@ -1046,8 +1046,8 @@ export default function AdminClient({
         {/* ── Bulk action bar ── */}
         {selected.size > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '10px 16px', background: 'rgba(200,169,81,0.08)', border: '1px solid rgba(200,169,81,0.25)', borderRadius: 10, flexWrap: 'wrap' }}>
-            <CheckSquare size={15} color="var(--gold,#C9A535)" />
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold,#C9A535)', marginRight: 4 }}>
+            <CheckSquare size={15} color="var(--gold)" />
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)', marginRight: 4 }}>
               {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
             </span>
             <button onClick={clearSelection} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
@@ -1063,7 +1063,7 @@ export default function AdminClient({
                 value={stagedBioType}
                 onChange={e => setStagedBioType(e.target.value)}
                 disabled={bulkWorking}
-                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedBioType ? 'var(--gold,#C9A535)' : 'var(--border)'}`, borderRadius: 7, color: stagedBioType ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedBioType ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 7, color: stagedBioType ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
               >
                 <option value="">Changer…</option>
                 {BIO_TYPES.map(bt => <option key={bt} value={bt}>{BIO_TYPE_ICONS[bt]} {bt}</option>)}
@@ -1077,7 +1077,7 @@ export default function AdminClient({
                 value={stagedComplexity}
                 onChange={e => setStagedComplexity(e.target.value)}
                 disabled={bulkWorking}
-                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedComplexity ? 'var(--gold,#C9A535)' : 'var(--border)'}`, borderRadius: 7, color: stagedComplexity ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedComplexity ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 7, color: stagedComplexity ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
               >
                 <option value="">Changer…</option>
                 {COMPLEXITIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -1091,7 +1091,7 @@ export default function AdminClient({
                 value={stagedEquipment}
                 onChange={e => setStagedEquipment(e.target.value)}
                 disabled={bulkWorking}
-                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedEquipment ? 'var(--gold,#C9A535)' : 'var(--border)'}`, borderRadius: 7, color: stagedEquipment ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedEquipment ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 7, color: stagedEquipment ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
               >
                 <option value="">Changer…</option>
                 <option value="__clear__">— Effacer —</option>
@@ -1103,7 +1103,7 @@ export default function AdminClient({
             {(stagedBioType || stagedComplexity || stagedEquipment) && (
               <button
                 onClick={() => setPendingBulkUpdate({ bioType: stagedBioType || undefined, complexity: stagedComplexity || undefined, equipment: stagedEquipment === '__clear__' ? '' : (stagedEquipment || undefined) })}
-                style={{ padding: '5px 12px', background: 'var(--gold,#C9A535)', border: 'none', borderRadius: 7, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                style={{ padding: '5px 12px', background: 'var(--gold)', border: 'none', borderRadius: 7, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
               >
                 Appliquer
               </button>
@@ -1114,7 +1114,7 @@ export default function AdminClient({
             <button
               onClick={() => setShowBulkDeleteConfirm(true)}
               disabled={bulkWorking}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 7, color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 7, color: 'var(--red)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
             >
               <Trash2 size={12} /> Supprimer
             </button>
@@ -1136,7 +1136,7 @@ export default function AdminClient({
                       checked={allFilteredSelected}
                       onChange={toggleAll}
                       title={allFilteredSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
-                      style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--gold,#C9A535)' }}
+                      style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--gold)' }}
                     />
                   </th>
                   <SortTh label="ID" field="id" sort={sort} onSort={toggleSort} />
@@ -1163,7 +1163,7 @@ export default function AdminClient({
                           type="checkbox"
                           checked={selected.has(m.id)}
                           onChange={() => toggleOne(m.id)}
-                          style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--gold,#C9A535)' }}
+                          style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--gold)' }}
                         />
                       </td>
                       {/* ID */}
@@ -1225,7 +1225,7 @@ export default function AdminClient({
                           <button
                             onClick={() => openUsagePanel(m)}
                             title="Voir les workouts"
-                            style={{ fontSize: 12, fontWeight: 700, color: usagePanel?.id === m.id ? 'var(--gold,#C9A535)' : 'var(--blue,#60a5fa)', background: usagePanel?.id === m.id ? 'rgba(200,169,81,0.12)' : 'rgba(96,165,250,0.08)', border: `1px solid ${usagePanel?.id === m.id ? 'rgba(200,169,81,0.3)' : 'rgba(96,165,250,0.2)'}`, borderRadius: 6, padding: '2px 9px', cursor: 'pointer', transition: 'all 0.15s' }}
+                            style={{ fontSize: 12, fontWeight: 700, color: usagePanel?.id === m.id ? 'var(--gold)' : 'var(--blue)', background: usagePanel?.id === m.id ? 'rgba(200,169,81,0.12)' : 'rgba(96,165,250,0.08)', border: `1px solid ${usagePanel?.id === m.id ? 'rgba(200,169,81,0.3)' : 'rgba(96,165,250,0.2)'}`, borderRadius: 6, padding: '2px 9px', cursor: 'pointer', transition: 'all 0.15s' }}
                           >
                             {usage}
                           </button>
@@ -1351,7 +1351,7 @@ export default function AdminClient({
               <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 22 }}>Cette action est irréversible.</div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                 <button onClick={() => setShowBulkDeleteConfirm(false)} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
-                <button onClick={handleBulkDelete} disabled={bulkWorking} style={{ padding: '8px 22px', background: '#ef4444', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: bulkWorking ? 'wait' : 'pointer', opacity: bulkWorking ? 0.7 : 1 }}>
+                <button onClick={handleBulkDelete} disabled={bulkWorking} style={{ padding: '8px 22px', background: 'var(--red)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: bulkWorking ? 'wait' : 'pointer', opacity: bulkWorking ? 0.7 : 1 }}>
                   {bulkWorking ? 'Suppression…' : 'Supprimer'}
                 </button>
               </div>

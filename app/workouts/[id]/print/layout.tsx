@@ -26,7 +26,7 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
           .notes-box p { margin: 0 0 6px; }
           .notes-box p:last-child { margin: 0; }
           .page-footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #aaa; display: flex; justify-content: space-between; }
-          .print-btn { position: fixed; top: 16px; right: 16px; padding: 9px 20px; background: #C9A535; color: #000; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+          .print-btn { position: fixed; top: 16px; right: 16px; padding: 9px 20px; background: var(--gold); color: #000; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
           @media print { .print-btn { display: none !important; } body { padding: 20px 24px; } }
         `}</style>
       </head>

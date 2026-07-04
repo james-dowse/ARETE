@@ -259,7 +259,7 @@ function MovementRowView({ wm, index, onMovementClick }: { wm: WorkoutMovement; 
             {hasSetsReps && (
               <>
                 <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>·</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: wm.duration != null ? '#63b3ed' : 'var(--text-primary)', background: 'var(--bg-elevated)', border: `1px solid ${wm.duration != null ? 'rgba(99,179,237,0.3)' : 'var(--border)'}`, borderRadius: 6, padding: '1px 8px' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: wm.duration != null ? 'var(--blue)' : 'var(--text-primary)', background: 'var(--bg-elevated)', border: `1px solid ${wm.duration != null ? 'rgba(99,179,237,0.3)' : 'var(--border)'}`, borderRadius: 6, padding: '1px 8px' }}>
                   {wm.sets ?? '—'} × {wm.duration != null ? `${wm.duration}s` : (wm.reps ?? '—')}
                 </span>
                 {wm.rest != null && (
@@ -341,7 +341,7 @@ function MovementRowEdit({ es, original, index, allMovementIds, onUpdate, onReve
             </button>
             <button onClick={onRemove} title="Supprimer ce mouvement"
               style={{ display: 'flex', alignItems: 'center', padding: '4px 6px', background: 'none', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--red)'; e.currentTarget.style.borderColor = 'var(--red)' }}
               onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-dim)'; e.currentTarget.style.borderColor = 'var(--border)' }}
             >
               <Trash2 size={11} />
@@ -357,7 +357,7 @@ function MovementRowEdit({ es, original, index, allMovementIds, onUpdate, onReve
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
             <button
               onClick={() => onUpdate(index, es.duration != null ? { duration: null } : { duration: 45, reps: '' })}
-              style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: es.duration != null ? 'rgba(99,179,237,0.12)' : 'var(--bg-elevated)', border: `1px solid ${(es.duration != null ? isDirtyDuration : isDirtyReps) ? 'var(--dirty-border)' : (es.duration != null ? 'rgba(99,179,237,0.4)' : 'var(--border)')}`, color: es.duration != null ? '#63b3ed' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
+              style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: es.duration != null ? 'rgba(99,179,237,0.12)' : 'var(--bg-elevated)', border: `1px solid ${(es.duration != null ? isDirtyDuration : isDirtyReps) ? 'var(--dirty-border)' : (es.duration != null ? 'rgba(99,179,237,0.4)' : 'var(--border)')}`, color: es.duration != null ? 'var(--blue)' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
             >
               {es.duration != null ? '⏱ Durée' : '🔢 Reps'}
             </button>
@@ -367,14 +367,14 @@ function MovementRowEdit({ es, original, index, allMovementIds, onUpdate, onReve
                   <input
                     type="number" min={5} max={600} value={es.duration ?? 45}
                     onChange={e => onUpdate(index, { duration: Number(e.target.value) })}
-                    style={{ width: 60, background: isDirtyDuration ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyDuration ? 'var(--dirty-border)' : 'rgba(99,179,237,0.4)'}`, borderRadius: 8, padding: '5px 8px', color: isDirtyDuration ? 'var(--dirty-text)' : '#63b3ed', fontSize: 14, fontWeight: 700, outline: 'none', textAlign: 'center' }}
+                    style={{ width: 60, background: isDirtyDuration ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyDuration ? 'var(--dirty-border)' : 'rgba(99,179,237,0.4)'}`, borderRadius: 8, padding: '5px 8px', color: isDirtyDuration ? 'var(--dirty-text)' : 'var(--blue)', fontSize: 14, fontWeight: 700, outline: 'none', textAlign: 'center' }}
                   />
-                  <span style={{ fontSize: 11, color: '#63b3ed', fontWeight: 600 }}>s</span>
+                  <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 600 }}>s</span>
                 </div>
                 <div style={{ display: 'flex', gap: 3 }}>
                   {[15, 20, 30, 45, 60, 90, 120].map(s => (
                     <button key={s} onClick={() => onUpdate(index, { duration: s })}
-                      style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: es.duration === s ? 'rgba(99,179,237,0.2)' : 'var(--bg-elevated)', border: `1px solid ${es.duration === s ? 'rgba(99,179,237,0.5)' : 'var(--border)'}`, color: es.duration === s ? '#63b3ed' : 'var(--text-dim)', cursor: 'pointer' }}>
+                      style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: es.duration === s ? 'rgba(99,179,237,0.2)' : 'var(--bg-elevated)', border: `1px solid ${es.duration === s ? 'rgba(99,179,237,0.5)' : 'var(--border)'}`, color: es.duration === s ? 'var(--blue)' : 'var(--text-dim)', cursor: 'pointer' }}>
                       {s}s
                     </button>
                   ))}
@@ -464,7 +464,7 @@ function BlockHeaderEdit({ block, index, instructions, onChange, isDirty, onRemo
         <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
         <button onClick={onRemove} title="Supprimer ce bloc"
           style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#ef4444' }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--red)' }}
           onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-dim)' }}
         >
           <Trash2 size={13} />
@@ -860,11 +860,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
             {!editMode ? (
               <>
                 <button onClick={() => router.push(`/workouts/${initial.id}/active`)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'rgba(201,165,53,0.12)', border: '1px solid rgba(201,165,53,0.35)', borderRadius: 9, color: '#C9A535', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'rgba(201,165,53,0.12)', border: '1px solid rgba(201,165,53,0.35)', borderRadius: 9, color: 'var(--gold)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                   <PlayCircle size={14} /> Démarrer
                 </button>
                 <button onClick={handleLogSession} disabled={loggingSession}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 9, color: '#22c55e', fontSize: 13, fontWeight: 600, cursor: loggingSession ? 'wait' : 'pointer' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 9, color: 'var(--green)', fontSize: 13, fontWeight: 600, cursor: loggingSession ? 'wait' : 'pointer' }}>
                   <CheckCircle2 size={14} /> {loggingSession ? '…' : 'J\'ai fait'}
                 </button>
                 <button onClick={() => window.open(`/workouts/${initial.id}/print`, '_blank')}
@@ -885,8 +885,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                   <Pencil size={14} /> Modifier
                 </button>
                 <button onClick={handleDelete} disabled={deleting}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 9, color: deleting ? 'var(--text-dim)' : '#ef4444', fontSize: 13, fontWeight: 600, cursor: deleting ? 'wait' : 'pointer', opacity: deleting ? 0.6 : 1, transition: 'all 0.15s' }}
-                  onMouseEnter={e => { if (!deleting) { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor = '#ef4444' } }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 9, color: deleting ? 'var(--text-dim)' : 'var(--red)', fontSize: 13, fontWeight: 600, cursor: deleting ? 'wait' : 'pointer', opacity: deleting ? 0.6 : 1, transition: 'all 0.15s' }}
+                  onMouseEnter={e => { if (!deleting) { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor = 'var(--red)' } }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'var(--border)' }}
                 >
                   <Trash2 size={14} />
@@ -1114,13 +1114,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
 
       {addedToast && (
         <div onAnimationEnd={() => setTimeout(() => setAddedToast(false), 2500)}
-          style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#22c55e', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000 }}>
+          style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000 }}>
           Ajouté au planner ✓
         </div>
       )}
 
       {sessionToast && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#22c55e', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, display: 'flex', alignItems: 'center', gap: 8 }}>
           <CheckCircle2 size={15} /> Séance enregistrée !
         </div>
       )}
@@ -1148,7 +1148,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
               {sessions.map((s, i) => (
                 <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
-                  <CheckCircle2 size={13} color="#22c55e" />
+                  <CheckCircle2 size={13} color="var(--green)" />
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                     {new Date(s.doneAt).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}
                   </span>

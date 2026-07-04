@@ -332,14 +332,14 @@ export default function ActivePage() {
             {workout.movements.length} mouvement{workout.movements.length > 1 ? 's' : ''} · {doneSets}/{totalSets()} séries
           </div>
         </div>
-        <div style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 700, color: started ? '#C9A535' : 'rgba(255,255,255,0.2)', letterSpacing: '0.04em', flexShrink: 0 }}>
+        <div style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 700, color: started ? 'var(--gold)' : 'rgba(255,255,255,0.2)', letterSpacing: '0.04em', flexShrink: 0 }}>
           {fmt(elapsed)}
         </div>
       </div>
 
       {/* ── Progress bar ── */}
       <div style={{ height: 3, background: 'rgba(255,255,255,0.06)' }}>
-        <div style={{ height: '100%', background: allDone ? '#22c55e' : '#C9A535', width: `${pct}%`, transition: 'width 0.4s ease' }} />
+        <div style={{ height: '100%', background: allDone ? 'var(--green)' : 'var(--gold)', width: `${pct}%`, transition: 'width 0.4s ease' }} />
       </div>
 
       {/* ── Video panel (current movement) ── */}
@@ -382,7 +382,7 @@ export default function ActivePage() {
         <div style={{ display: 'flex', gap: 4, marginLeft: 4 }}>
           {REST_OPTIONS.map(s => (
             <button key={s} onClick={() => setDefaultRest(s)}
-              style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${defaultRest === s ? '#C9A535' : 'rgba(255,255,255,0.1)'}`, background: defaultRest === s ? 'rgba(201,165,53,0.15)' : 'transparent', color: defaultRest === s ? '#C9A535' : 'rgba(255,255,255,0.4)', transition: 'all 0.15s' }}>
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${defaultRest === s ? 'var(--gold)' : 'rgba(255,255,255,0.1)'}`, background: defaultRest === s ? 'rgba(201,165,53,0.15)' : 'transparent', color: defaultRest === s ? 'var(--gold)' : 'rgba(255,255,255,0.4)', transition: 'all 0.15s' }}>
               {s}s
             </button>
           ))}
@@ -406,12 +406,12 @@ export default function ActivePage() {
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10, paddingLeft: 4, gap: 8 }}>
                   <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', flex: 1 }}>
                     Bloc {bi + 1}{block?.bioType ? ` · ${block.bioType}` : ''}{block?.instructions ? ` · ${block.instructions}` : ''}
-                    {isSuperset && !blocAllDone && <span style={{ color: '#C9A535', marginLeft: 6 }}>· Round {completedRounds + 1}/{maxRounds}</span>}
-                    {isSuperset && blocAllDone && <span style={{ color: '#22c55e', marginLeft: 6 }}>· Terminé</span>}
+                    {isSuperset && !blocAllDone && <span style={{ color: 'var(--gold)', marginLeft: 6 }}>· Round {completedRounds + 1}/{maxRounds}</span>}
+                    {isSuperset && blocAllDone && <span style={{ color: 'var(--green)', marginLeft: 6 }}>· Terminé</span>}
                   </div>
                   {movs.length > 1 && block?.id && (
                     <button onClick={() => toggleSuperset(block.id)}
-                      style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: `1px solid ${isSuperset ? '#C9A535' : 'rgba(255,255,255,0.15)'}`, background: isSuperset ? 'rgba(201,165,53,0.15)' : 'transparent', color: isSuperset ? '#C9A535' : 'rgba(255,255,255,0.3)', transition: 'all 0.15s', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: `1px solid ${isSuperset ? 'var(--gold)' : 'rgba(255,255,255,0.15)'}`, background: isSuperset ? 'rgba(201,165,53,0.15)' : 'transparent', color: isSuperset ? 'var(--gold)' : 'rgba(255,255,255,0.3)', transition: 'all 0.15s', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                       ⚡ Superset
                     </button>
                   )}
@@ -430,7 +430,7 @@ export default function ActivePage() {
 
                   const cardBg = isComplete ? 'rgba(34,197,94,0.06)' : isDoneInRound ? 'rgba(34,197,94,0.04)' : isActiveInRound ? 'rgba(201,165,53,0.07)' : isCurrent ? 'rgba(201,165,53,0.05)' : 'rgba(255,255,255,0.04)'
                   const cardBorder = isComplete ? 'rgba(34,197,94,0.25)' : isDoneInRound ? 'rgba(34,197,94,0.15)' : isActiveInRound ? 'rgba(201,165,53,0.4)' : isCurrent ? 'rgba(201,165,53,0.35)' : isResting ? 'rgba(201,165,53,0.2)' : 'rgba(255,255,255,0.08)'
-                  const nameColor = isComplete ? '#22c55e' : isDoneInRound ? '#22c55e' : isActiveInRound ? '#fff' : isCurrent ? '#fff' : 'rgba(255,255,255,0.55)'
+                  const nameColor = isComplete ? 'var(--green)' : isDoneInRound ? 'var(--green)' : isActiveInRound ? '#fff' : isCurrent ? '#fff' : 'rgba(255,255,255,0.55)'
 
                   return (
                     <div key={wm.id} style={{
@@ -445,7 +445,7 @@ export default function ActivePage() {
                           {wm.movement.name}
                         </span>
                         {(isComplete || isDoneInRound) && (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         )}
                       </div>
 
@@ -455,7 +455,7 @@ export default function ActivePage() {
                           {Array.from({ length: target }).map((_, i) => (
                             <span key={i} style={{
                               width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700,
-                              background: i < setsNow ? (isComplete ? '#22c55e' : (wm.duration != null ? '#63b3ed' : '#C9A535')) : 'rgba(255,255,255,0.07)',
+                              background: i < setsNow ? (isComplete ? 'var(--green)' : (wm.duration != null ? 'var(--blue)' : 'var(--gold)')) : 'rgba(255,255,255,0.07)',
                               color: i < setsNow ? '#000' : 'rgba(255,255,255,0.3)',
                               border: `1px solid ${i < setsNow ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
                               transition: 'all 0.2s',
@@ -465,7 +465,7 @@ export default function ActivePage() {
                           ))}
                         </div>
                         {wm.duration != null ? (
-                          <span style={{ fontSize: 13, color: '#63b3ed', marginLeft: 4, fontWeight: 600 }}>{wm.duration}s</span>
+                          <span style={{ fontSize: 13, color: 'var(--blue)', marginLeft: 4, fontWeight: 600 }}>{wm.duration}s</span>
                         ) : wm.reps ? (
                           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginLeft: 4 }}>{wm.reps}</span>
                         ) : null}
@@ -478,9 +478,9 @@ export default function ActivePage() {
                       {wm.duration != null && exerciseTimer?.wmId === wm.id && (
                         <div style={{ marginBottom: 10 }}>
                           <div style={{ height: 4, borderRadius: 2, background: 'rgba(99,179,237,0.15)', overflow: 'hidden', marginBottom: 6 }}>
-                            <div style={{ height: '100%', background: '#63b3ed', width: `${(exerciseTimer.sec / exerciseTimer.total) * 100}%`, transition: 'width 1s linear' }} />
+                            <div style={{ height: '100%', background: 'var(--blue)', width: `${(exerciseTimer.sec / exerciseTimer.total) * 100}%`, transition: 'width 1s linear' }} />
                           </div>
-                          <div style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 22, fontWeight: 700, color: '#63b3ed', letterSpacing: '0.06em' }}>
+                          <div style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 22, fontWeight: 700, color: 'var(--blue)', letterSpacing: '0.06em' }}>
                             {fmt(exerciseTimer.sec)}
                           </div>
                         </div>
@@ -498,14 +498,14 @@ export default function ActivePage() {
                                 cursor: isComplete || exerciseTimer?.wmId === wm.id ? 'default' : 'pointer',
                                 background: isComplete ? 'rgba(34,197,94,0.08)' : exerciseTimer?.wmId === wm.id ? 'rgba(99,179,237,0.08)' : 'rgba(99,179,237,0.12)',
                                 border: `1px solid ${isComplete ? 'rgba(34,197,94,0.2)' : 'rgba(99,179,237,0.3)'}`,
-                                color: isComplete ? '#22c55e' : '#63b3ed',
+                                color: isComplete ? 'var(--green)' : 'var(--blue)',
                                 transition: 'all 0.15s',
                               }}>
                               {isComplete ? '✓ Terminé' : exerciseTimer?.wmId === wm.id ? '⏱ En cours…' : `▶ Démarrer · ${wm.duration}s`}
                             </button>
                             {exerciseTimer?.wmId === wm.id && (
                               <button onClick={() => setExerciseTimer(e => e ? { ...e, sec: 0 } : null)}
-                                style={{ padding: '10px 14px', borderRadius: 9, fontSize: 12, cursor: 'pointer', background: 'rgba(99,179,237,0.08)', border: '1px solid rgba(99,179,237,0.2)', color: '#63b3ed' }}
+                                style={{ padding: '10px 14px', borderRadius: 9, fontSize: 12, cursor: 'pointer', background: 'rgba(99,179,237,0.08)', border: '1px solid rgba(99,179,237,0.2)', color: 'var(--blue)' }}
                                 title="Valider maintenant sans attendre la fin du timer">
                                 ✓ Skip
                               </button>
@@ -518,7 +518,7 @@ export default function ActivePage() {
                                 flex: 1, padding: '10px', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: isComplete ? 'default' : 'pointer',
                                 background: isComplete ? 'rgba(34,197,94,0.08)' : 'rgba(201,165,53,0.12)',
                                 border: `1px solid ${isComplete ? 'rgba(34,197,94,0.2)' : 'rgba(201,165,53,0.3)'}`,
-                                color: isComplete ? '#22c55e' : '#C9A535',
+                                color: isComplete ? 'var(--green)' : 'var(--gold)',
                                 transition: 'all 0.15s',
                               }}>
                               {isComplete ? '✓ Terminé' : `Série ${setsNow + 1} / ${target}`}
@@ -547,12 +547,12 @@ export default function ActivePage() {
           <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
             <svg width="52" height="52" style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' }}>
               <circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3" />
-              <circle cx="26" cy="26" r="22" fill="none" stroke="#C9A535" strokeWidth="3"
+              <circle cx="26" cy="26" r="22" fill="none" stroke="var(--gold)" strokeWidth="3"
                 strokeDasharray={`${2 * Math.PI * 22}`}
                 strokeDashoffset={`${2 * Math.PI * 22 * (1 - rest.sec / rest.total)}`}
                 style={{ transition: 'stroke-dashoffset 1s linear' }} />
             </svg>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: '#C9A535' }}>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: 'var(--gold)' }}>
               {rest.sec}
             </div>
           </div>
@@ -563,7 +563,7 @@ export default function ActivePage() {
             </div>
           </div>
           <button onClick={() => setRest(null)}
-            style={{ padding: '7px 14px', borderRadius: 8, background: 'rgba(201,165,53,0.15)', border: '1px solid rgba(201,165,53,0.3)', color: '#C9A535', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+            style={{ padding: '7px 14px', borderRadius: 8, background: 'rgba(201,165,53,0.15)', border: '1px solid rgba(201,165,53,0.3)', color: 'var(--gold)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
             Passer
           </button>
         </div>
@@ -576,7 +576,7 @@ export default function ActivePage() {
             <input value={note} onChange={e => setNote(e.target.value)} placeholder="Note optionnelle…"
               style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9, padding: '10px 14px', color: '#fff', fontSize: 13, outline: 'none' }} />
             <button onClick={handleFinish} disabled={finishing}
-              style={{ padding: '10px 20px', borderRadius: 9, background: '#22c55e', border: 'none', color: '#000', fontSize: 13, fontWeight: 800, cursor: finishing ? 'wait' : 'pointer', flexShrink: 0 }}>
+              style={{ padding: '10px 20px', borderRadius: 9, background: 'var(--green)', border: 'none', color: '#000', fontSize: 13, fontWeight: 800, cursor: finishing ? 'wait' : 'pointer', flexShrink: 0 }}>
               {finishing ? '…' : 'Enregistrer'}
             </button>
             <button onClick={() => setShowFinish(false)}
@@ -592,9 +592,9 @@ export default function ActivePage() {
             <button onClick={() => setShowFinish(true)}
               style={{
                 padding: '11px 24px', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: 'pointer', flexShrink: 0,
-                background: allDone ? '#22c55e' : 'rgba(201,165,53,0.15)',
+                background: allDone ? 'var(--green)' : 'rgba(201,165,53,0.15)',
                 border: `1px solid ${allDone ? 'transparent' : 'rgba(201,165,53,0.3)'}`,
-                color: allDone ? '#000' : '#C9A535',
+                color: allDone ? '#000' : 'var(--gold)',
                 boxShadow: allDone ? '0 0 20px rgba(34,197,94,0.4)' : 'none',
                 transition: 'all 0.3s',
               }}>

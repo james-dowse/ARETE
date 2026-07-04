@@ -21,7 +21,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
           <Image src="/logo.svg" alt="ARETE" width={52} height={52} />
         </div>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 4, color: '#C9A535', marginBottom: 32 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 4, color: 'var(--gold)', marginBottom: 32 }}>
           ARETE
         </div>
 
@@ -48,7 +48,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
             <Link
               href={`/api/invite/accept?token=${token}`}
               style={{
-                display: 'inline-block', background: '#C9A535', color: '#000',
+                display: 'inline-block', background: 'var(--gold)', color: '#000',
                 fontWeight: 700, fontSize: 15, padding: '14px 36px',
                 borderRadius: 10, textDecoration: 'none', letterSpacing: 0.3,
               }}

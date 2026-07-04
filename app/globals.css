@@ -43,13 +43,40 @@
   --dirty-border: rgba(200,169,81,0.30);
   --dirty-text:   #C8A951;
 
-  /* ── Status ──────────────────────────────────────────────────── */
-  --red:    #c0392b;
-  --green:  #27ae60;
-  --blue:   #2980b9;
-  --orange: #e67e22;
-  --purple: #8e44ad;
-  --teal:   #16a085;
+  /* ── Status — adoucis pour fond sombre ───────────────────────── */
+  --red:    #E5654F;
+  --red-ghost:    rgba(229,101,79,0.12);
+  --green:  #4FBF7E;
+  --green-ghost:  rgba(79,191,126,0.12);
+  --blue:   #63B3ED;
+  --blue-ghost:   rgba(99,179,237,0.12);
+  --orange: #E8934A;
+  --orange-ghost: rgba(232,147,74,0.12);
+  --purple: #A678C8;
+  --teal:   #3FBFAD;
+
+  /* ── Radius — échelle unique ─────────────────────────────────── */
+  --r-xs:   6px;    /* badges, chips, micro-boutons */
+  --r-sm:   8px;    /* boutons, inputs */
+  --r-md:   12px;   /* cartes, rows */
+  --r-lg:   16px;   /* modales, hero */
+  --r-full: 999px;  /* pills */
+
+  /* ── Espacement — grille 4px ─────────────────────────────────── */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px; --sp-5: 20px;
+  --sp-6: 24px; --sp-7: 32px; --sp-8: 40px; --sp-9: 48px; --sp-10: 64px;
+
+  /* ── Élévation — ombres chaudes (teinte brune, pas noir pur) ─── */
+  --elev-1: inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(8,6,2,0.40), 0 4px 16px rgba(8,6,2,0.35);
+  --elev-2: inset 0 1px 0 rgba(255,255,255,0.07), 0 4px 12px rgba(8,6,2,0.45), 0 12px 32px rgba(8,6,2,0.40);
+  --elev-3: 0 8px 24px rgba(8,6,2,0.50), 0 24px 64px rgba(8,6,2,0.60);
+  --elev-gold: 0 0 24px rgba(200,169,81,0.12);
+
+  /* ── Motion ──────────────────────────────────────────────────── */
+  --ease:   cubic-bezier(0.32, 0.72, 0.24, 1);
+  --t-fast: 120ms;  /* couleurs, opacité */
+  --t-med:  200ms;  /* transform, ombres */
+  --t-slow: 320ms;  /* modales, sidebar */
 }
 
 /* ── Light mode ──────────────────────────────────────────────── */
@@ -77,12 +104,23 @@ html[data-theme="light"] {
   --dirty-border: rgba(200,169,81,0.35);
   --dirty-text:   #9A7C30;
 
-  --red:    #c0392b;
-  --green:  #27ae60;
-  --blue:   #2980b9;
-  --orange: #e67e22;
-  --purple: #8e44ad;
-  --teal:   #16a085;
+  /* Status — assombris pour fond clair */
+  --red:    #C24B38;
+  --red-ghost:    rgba(194,75,56,0.12);
+  --green:  #2E8B57;
+  --green-ghost:  rgba(46,139,87,0.12);
+  --blue:   #2F6FA7;
+  --blue-ghost:   rgba(47,111,167,0.12);
+  --orange: #C46A1F;
+  --orange-ghost: rgba(196,106,31,0.12);
+  --purple: #7C4DA0;
+  --teal:   #1F8A7D;
+
+  /* Élévation adoucie sur fond clair */
+  --elev-1: inset 0 1px 0 rgba(255,255,255,0.8), 0 1px 2px rgba(60,50,30,0.08), 0 4px 16px rgba(60,50,30,0.07);
+  --elev-2: inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 12px rgba(60,50,30,0.10), 0 12px 32px rgba(60,50,30,0.09);
+  --elev-3: 0 8px 24px rgba(60,50,30,0.14), 0 24px 64px rgba(60,50,30,0.16);
+  --elev-gold: 0 0 24px rgba(200,169,81,0.15);
 }
 
 html[data-theme="light"] input,
@@ -93,6 +131,7 @@ html[data-theme="light"] textarea {
 
 html[data-theme="light"] .main-grid {
   background-color: #F0EDE6;
+  background-image: radial-gradient(ellipse 90% 55% at 50% -15%, rgba(200,169,81,0.10), transparent 70%);
 }
 
 /* ── Reset ─────────────────────────────────────────────────────── */
@@ -114,9 +153,12 @@ input, select, textarea {
   color-scheme: dark;
 }
 
-/* ── Dot grid — fond zone principale ────────────────────────────── */
+/* ── Fond zone principale — vignette or + grain léger ───────────── */
 .main-grid {
   background-color: #0F0E0C;
+  /* Vignette or en haut : signature chaude, éclairage « par le haut » */
+  background-image: radial-gradient(ellipse 90% 55% at 50% -15%, rgba(200,169,81,0.07), transparent 70%);
+  background-repeat: no-repeat;
   position: relative;
 }
 
@@ -125,8 +167,9 @@ input, select, textarea {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 9999;
-  opacity: 0.09;
+  /* z-index 0 : reste sous les modales/overlays (l'ancien 9999 passait devant tout) */
+  z-index: 0;
+  opacity: 0.04;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 200px 200px;
@@ -149,12 +192,99 @@ aside::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
 
 /* ── Card / panel — plaque surélevée sur fond texturé ───────────── */
 .card {
-  background: var(--bg-card);
+  background: linear-gradient(180deg, #1D1A15 0%, var(--bg-card) 100%);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.07),
-    0 2px 16px rgba(0,0,0,0.5);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+}
+
+html[data-theme="light"] .card {
+  background: var(--bg-card);
+}
+
+/* Carte héroïque — chrono, CTA, séance du jour */
+.card-hero {
+  background:
+    radial-gradient(ellipse 100% 80% at 50% -20%, rgba(200,169,81,0.05), transparent 70%),
+    linear-gradient(180deg, #1D1A15 0%, var(--bg-card) 100%);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--elev-1), var(--elev-gold);
+}
+
+html[data-theme="light"] .card-hero {
+  background: var(--bg-card);
+}
+
+/* Carte cliquable — feedback hover discret */
+.card-interactive {
+  transition: transform var(--t-med) var(--ease), box-shadow var(--t-med) var(--ease), border-color var(--t-med) var(--ease);
+}
+.card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-plus);
+  box-shadow: var(--elev-2);
+}
+
+/* ── Focus clavier visible (accessibilité) ──────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 3px var(--gold-ghost);
+}
+
+/* ── Utilitaires typographiques ─────────────────────────────────── */
+/* Chiffres à chasse fixe : chronos, stats, compteurs — évite le « saut » du texte */
+.tnum { font-variant-numeric: tabular-nums; }
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ── Skeleton loading ───────────────────────────────────────────── */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border-radius: var(--r-sm);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(200,169,81,0.07), transparent);
+  animation: shimmer 1.6s infinite;
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+
+/* ── Apparition des modales ─────────────────────────────────────── */
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.modal-in   { animation: modalIn var(--t-slow) var(--ease); }
+.overlay-in { animation: overlayIn var(--t-med) var(--ease); }
+
+/* ── Accessibilité : réduire les animations si demandé ──────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* ── Rich text editor & display ─────────────────────────────────── */
@@ -196,12 +326,15 @@ aside::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
 .panel {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.07),
-    0 2px 16px rgba(0,0,0,0.5);
+  box-shadow: var(--elev-1);
 }
 
 /* ── Responsive ─────────────────────────────────────────────────── */
+/* Tablette : grilles 3 colonnes → 2 colonnes */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .r-grid-3 { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
 @media (max-width: 768px) {
   /* Layout principal */
   .main-grid {
