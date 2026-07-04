@@ -178,7 +178,7 @@ export default async function DashboardPage() {
               borderTop: i === 1 ? `2px solid var(--gold)` : '2px solid transparent',
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)',
             }}>
-              <div className="r-stat-num" style={{ fontSize: 56, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1, color: i === 1 ? 'var(--gold)' : 'var(--text-primary)' }}>
+              <div className="r-stat-num tnum" style={{ fontSize: 56, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1, color: i === 1 ? 'var(--gold)' : 'var(--text-primary)' }}>
                 {value}
               </div>
               <div style={{ ...SECTION_LABEL, marginTop: 10, color: 'var(--text-muted)' }}>

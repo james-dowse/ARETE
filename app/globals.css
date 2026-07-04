@@ -265,6 +265,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   animation: shimmer 1.6s infinite;
 }
 @keyframes shimmer { 100% { transform: translateX(100%); } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* ── Apparition des modales ─────────────────────────────────────── */
 @keyframes modalIn {
@@ -277,6 +278,83 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 .modal-in   { animation: modalIn var(--t-slow) var(--ease); }
 .overlay-in { animation: overlayIn var(--t-med) var(--ease); }
+
+/* ── Boutons — système unifié ───────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--r-sm);
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease),
+              color var(--t-fast) var(--ease), transform var(--t-med) var(--ease),
+              box-shadow var(--t-med) var(--ease), opacity var(--t-fast) var(--ease);
+  user-select: none;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled)  { transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.btn:disabled              { opacity: 0.5; cursor: default; }
+
+.btn-sm { height: 32px; padding: 0 12px; font-size: 12px; }
+.btn-md { height: 40px; padding: 0 18px; font-size: 14px; }
+.btn-lg { height: 48px; padding: 0 24px; font-size: 15px; }
+
+.btn-primary {
+  background: var(--gold);
+  color: var(--on-accent);
+}
+.btn-primary:hover:not(:disabled) { background: var(--gold-bright); box-shadow: var(--elev-gold); }
+
+.btn-secondary {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+.btn-secondary:hover:not(:disabled) { border-color: var(--border-plus); background: var(--bg-card); }
+
+.btn-ghost {
+  background: none;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.btn-ghost:hover:not(:disabled) { border-color: var(--border-plus); color: var(--text-primary); }
+
+.btn-danger {
+  background: var(--red-ghost);
+  border-color: transparent;
+  color: var(--red);
+}
+.btn-danger:hover:not(:disabled) { border-color: var(--red); }
+
+/* ── Badge / chip ───────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: var(--r-full);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+/* ── Input unifié ───────────────────────────────────────────────── */
+.input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.input::placeholder { color: var(--text-dim); }
 
 /* ── Accessibilité : réduire les animations si demandé ──────────── */
 @media (prefers-reduced-motion: reduce) {

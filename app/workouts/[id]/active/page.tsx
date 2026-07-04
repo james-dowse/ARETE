@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { BIO_TYPE_COLORS } from '@/lib/types'
+import { ProgressRing } from '@/components/ui'
 
 interface Movement { id: string; name: string; bioType: string; videoUrl?: string | null }
 interface WM { id: string; order: number; sets?: number | null; reps?: string | null; rest?: number | null; duration?: number | null; blockId?: string | null; movement: Movement }
@@ -332,7 +333,7 @@ export default function ActivePage() {
             {workout.movements.length} mouvement{workout.movements.length > 1 ? 's' : ''} · {doneSets}/{totalSets()} séries
           </div>
         </div>
-        <div style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 700, color: started ? 'var(--gold)' : 'rgba(255,255,255,0.2)', letterSpacing: '0.04em', flexShrink: 0 }}>
+        <div className="tnum" style={{ fontSize: 24, fontWeight: 800, color: started ? 'var(--gold)' : 'rgba(255,255,255,0.2)', letterSpacing: '0.02em', flexShrink: 0, textShadow: started ? '0 0 18px rgba(200,169,81,0.35)' : 'none', transition: 'color 0.3s' }}>
           {fmt(elapsed)}
         </div>
       </div>
@@ -454,7 +455,7 @@ export default function ActivePage() {
                         <div style={{ display: 'flex', gap: 5 }}>
                           {Array.from({ length: target }).map((_, i) => (
                             <span key={i} style={{
-                              width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700,
+                              width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700,
                               background: i < setsNow ? (isComplete ? 'var(--green)' : (wm.duration != null ? 'var(--blue)' : 'var(--gold)')) : 'rgba(255,255,255,0.07)',
                               color: i < setsNow ? '#000' : 'rgba(255,255,255,0.3)',
                               border: `1px solid ${i < setsNow ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
@@ -476,13 +477,10 @@ export default function ActivePage() {
 
                       {/* Exercise timer in-card (timed mode, currently running) */}
                       {wm.duration != null && exerciseTimer?.wmId === wm.id && (
-                        <div style={{ marginBottom: 10 }}>
-                          <div style={{ height: 4, borderRadius: 2, background: 'rgba(99,179,237,0.15)', overflow: 'hidden', marginBottom: 6 }}>
-                            <div style={{ height: '100%', background: 'var(--blue)', width: `${(exerciseTimer.sec / exerciseTimer.total) * 100}%`, transition: 'width 1s linear' }} />
-                          </div>
-                          <div style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 22, fontWeight: 700, color: 'var(--blue)', letterSpacing: '0.06em' }}>
-                            {fmt(exerciseTimer.sec)}
-                          </div>
+                        <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
+                          <ProgressRing progress={exerciseTimer.sec / exerciseTimer.total} size={96} stroke={5} color="var(--blue)" track="rgba(99,179,237,0.15)">
+                            <span className="tnum" style={{ fontSize: 26, fontWeight: 800, color: 'var(--blue)' }}>{exerciseTimer.sec}</span>
+                          </ProgressRing>
                         </div>
                       )}
 
@@ -494,7 +492,7 @@ export default function ActivePage() {
                               onClick={() => handleSet(wm)}
                               disabled={isComplete || (isSuperset && wm.id !== activeMovId) || exerciseTimer?.wmId === wm.id}
                               style={{
-                                flex: 1, padding: '10px', borderRadius: 9, fontSize: 13, fontWeight: 700,
+                                flex: 1, padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700,
                                 cursor: isComplete || exerciseTimer?.wmId === wm.id ? 'default' : 'pointer',
                                 background: isComplete ? 'rgba(34,197,94,0.08)' : exerciseTimer?.wmId === wm.id ? 'rgba(99,179,237,0.08)' : 'rgba(99,179,237,0.12)',
                                 border: `1px solid ${isComplete ? 'rgba(34,197,94,0.2)' : 'rgba(99,179,237,0.3)'}`,
@@ -515,7 +513,7 @@ export default function ActivePage() {
                           <>
                             <button onClick={() => handleSet(wm)} disabled={isComplete || (isSuperset && wm.id !== activeMovId)}
                               style={{
-                                flex: 1, padding: '10px', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: isComplete ? 'default' : 'pointer',
+                                flex: 1, padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: isComplete ? 'default' : 'pointer',
                                 background: isComplete ? 'rgba(34,197,94,0.08)' : 'rgba(201,165,53,0.12)',
                                 border: `1px solid ${isComplete ? 'rgba(34,197,94,0.2)' : 'rgba(201,165,53,0.3)'}`,
                                 color: isComplete ? 'var(--green)' : 'var(--gold)',
@@ -543,19 +541,10 @@ export default function ActivePage() {
 
       {/* ── Rest timer overlay ── */}
       {rest && (
-        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 20, background: 'rgba(20,20,20,0.97)', border: '1px solid rgba(201,165,53,0.4)', borderRadius: 16, padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 20, boxShadow: '0 8px 40px rgba(0,0,0,0.6)', minWidth: 280 }}>
-          <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
-            <svg width="52" height="52" style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' }}>
-              <circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3" />
-              <circle cx="26" cy="26" r="22" fill="none" stroke="var(--gold)" strokeWidth="3"
-                strokeDasharray={`${2 * Math.PI * 22}`}
-                strokeDashoffset={`${2 * Math.PI * 22 * (1 - rest.sec / rest.total)}`}
-                style={{ transition: 'stroke-dashoffset 1s linear' }} />
-            </svg>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: 'var(--gold)' }}>
-              {rest.sec}
-            </div>
-          </div>
+        <div className="modal-in" style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 20, background: 'rgba(18,16,12,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(201,165,53,0.4)', borderRadius: 'var(--r-lg)', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 20, boxShadow: 'var(--elev-3), var(--elev-gold)', minWidth: 280 }}>
+          <ProgressRing progress={rest.sec / rest.total} size={60} stroke={4} color="var(--gold)" track="rgba(255,255,255,0.07)">
+            <span className="tnum" style={{ fontSize: 17, fontWeight: 800, color: 'var(--gold)' }}>{rest.sec}</span>
+          </ProgressRing>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Repos</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
