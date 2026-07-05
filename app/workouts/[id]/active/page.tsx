@@ -322,7 +322,7 @@ export default function ActivePage() {
     <div style={{ position: 'fixed', inset: 0, background: '#0a0a0a', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Header ── */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(10,10,10,0.68)', backdropFilter: 'blur(24px) saturate(160%)', WebkitBackdropFilter: 'blur(24px) saturate(160%)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
         <button onClick={() => router.push(`/workouts/${id}`)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0, display: 'flex', lineHeight: 1 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -541,7 +541,7 @@ export default function ActivePage() {
 
       {/* ── Rest timer overlay ── */}
       {rest && (
-        <div className="modal-in" style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 20, background: 'rgba(18,16,12,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(201,165,53,0.4)', borderRadius: 'var(--r-lg)', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 20, boxShadow: 'var(--elev-3), var(--elev-gold)', minWidth: 280 }}>
+        <div className="modal-in" style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 20, background: 'rgba(18,16,12,0.62)', backdropFilter: 'blur(28px) saturate(160%)', WebkitBackdropFilter: 'blur(28px) saturate(160%)', border: '1px solid rgba(201,165,53,0.4)', borderRadius: 'var(--r-lg)', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 20, boxShadow: 'var(--elev-3), var(--elev-gold)', minWidth: 280 }}>
           <ProgressRing progress={rest.sec / rest.total} size={60} stroke={4} color="var(--gold)" track="rgba(255,255,255,0.07)">
             <span className="tnum" style={{ fontSize: 17, fontWeight: 800, color: 'var(--gold)' }}>{rest.sec}</span>
           </ProgressRing>
@@ -559,7 +559,7 @@ export default function ActivePage() {
       )}
 
       {/* ── Bottom bar ── */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(10,10,10,0.97)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'center' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(10,10,10,0.7)', backdropFilter: 'blur(24px) saturate(160%)', WebkitBackdropFilter: 'blur(24px) saturate(160%)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'center' }}>
         {showFinish ? (
           <>
             <input value={note} onChange={e => setNote(e.target.value)} placeholder="Note optionnelle…"

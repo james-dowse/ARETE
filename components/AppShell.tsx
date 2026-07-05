@@ -6,7 +6,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <main className="main-grid" style={{
         flex: 1,
-        marginLeft: 'var(--sidebar-w, 224px)',
+        marginLeft: 'calc(var(--sidebar-w, 224px) + var(--sidebar-gap, 12px) * 2)',
         overflowY: 'auto',
         padding: '36px 40px',
         minHeight: '100vh',

@@ -193,14 +193,11 @@ export default async function DashboardPage() {
           <div style={{ marginTop: 24 }}>
             <p style={{ ...SECTION_LABEL_GOLD, marginBottom: 12 }}>Séance du jour</p>
             {todayEntries.map(entry => (
-              <div key={entry.id} style={{
+              <div key={entry.id} className="card" style={{
                 display: 'flex', alignItems: 'center', gap: 16,
-                background: 'var(--bg-card)',
-                border: '1px solid var(--gold-border)',
                 borderLeft: '3px solid var(--gold)',
                 padding: '18px 24px',
                 marginBottom: 8,
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)',
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Link href={`/workouts/${entry.workout.id}`} style={{ textDecoration: 'none' }}>
@@ -214,7 +211,7 @@ export default async function DashboardPage() {
                   </div>
                 </div>
                 <Link href={`/workouts/${entry.workout.id}/active`} style={{ textDecoration: 'none', flexShrink: 0 }}>
-                  <span style={{ display: 'inline-block', background: 'var(--gold)', color: '#080808', fontSize: 13, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 20px', cursor: 'pointer' }} className="cta-generate">
+                  <span style={{ display: 'inline-block', background: 'var(--gold)', color: '#080808', fontSize: 13, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 20px', borderRadius: 'var(--r-sm)', cursor: 'pointer' }} className="cta-generate">
                     Démarrer →
                   </span>
                 </Link>
@@ -232,7 +229,9 @@ export default async function DashboardPage() {
             alignItems: 'center',
             justifyContent: 'space-between',
             cursor: 'pointer',
-            transition: 'filter 0.15s',
+            borderRadius: 'var(--r-lg)',
+            boxShadow: 'var(--elev-gold)',
+            transition: 'filter 0.15s, transform var(--t-med) var(--ease-spring), box-shadow var(--t-med) var(--ease)',
           }}
             onMouseEnter={undefined}
             className="cta-generate"
@@ -450,7 +449,7 @@ export default async function DashboardPage() {
       </div>
 
       <style>{`
-        .cta-generate:hover { filter: brightness(1.12); }
+        .cta-generate:hover { filter: brightness(1.12); transform: translateY(-2px) scale(1.005); box-shadow: var(--elev-gold-lg); }
         .workout-row:hover { background: var(--bg-elevated) !important; }
         .avatar-btn:hover { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(200,169,81,0.18) !important; }
       `}</style>

@@ -116,17 +116,21 @@ export default function Sidebar() {
     <>
     <aside style={{
       position: 'fixed',
-      top: 0,
-      left: 0,
-      height: '100vh',
+      top: 'var(--sidebar-gap)',
+      left: 'var(--sidebar-gap)',
+      height: 'calc(100vh - var(--sidebar-gap) * 2)',
       background: 'var(--sidebar-bg)',
-      borderRight: '1px solid var(--sidebar-border)',
+      backdropFilter: 'blur(28px) saturate(160%)',
+      WebkitBackdropFilter: 'blur(28px) saturate(160%)',
+      border: '1px solid var(--sidebar-border)',
+      borderRadius: 'var(--r-lg)',
       width: w,
       display: 'flex',
       flexDirection: 'column',
       flexShrink: 0,
       transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
       overflow: 'hidden',
+      boxShadow: 'var(--elev-2)',
       zIndex: 50,
     }}>
 
@@ -165,16 +169,16 @@ export default function Sidebar() {
                 justifyContent: collapsed ? 'center' : 'flex-start',
                 gap: collapsed ? 0 : 10,
                 padding: collapsed ? '10px 0' : sub ? '6px 10px 6px 26px' : '8px 10px',
-                borderRadius: collapsed ? 8 : 0,
+                borderRadius: 'var(--r-sm)',
+                marginBottom: 2,
                 textDecoration: 'none',
                 background: active ? 'var(--sidebar-active-bg)' : 'transparent',
+                boxShadow: active ? 'inset 0 0 0 1px var(--gold-border)' : 'none',
                 color: active ? 'var(--sidebar-text-active)' : sub ? 'rgba(255,255,255,0.38)' : 'var(--sidebar-text)',
                 fontWeight: active ? 600 : 400,
                 fontSize: sub ? 14 : 15,
                 letterSpacing: active ? '0.01em' : 0,
-                borderLeft: collapsed ? 'none' : active ? '2px solid var(--gold)' : '2px solid transparent',
-                marginLeft: collapsed ? 0 : -1,
-                transition: 'color 0.12s, background 0.12s, padding 0.22s',
+                transition: 'color 0.12s, background 0.12s, padding 0.22s, box-shadow 0.15s',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
               }}
@@ -196,7 +200,7 @@ export default function Sidebar() {
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
             gap: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 8, padding: collapsed ? '8px' : '7px 10px', cursor: 'pointer',
+            borderRadius: 'var(--r-sm)', padding: collapsed ? '8px' : '7px 10px', cursor: 'pointer',
             color: 'rgba(255,255,255,0.35)', transition: 'color 0.15s, background 0.15s, border-color 0.15s',
           }}
           onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(200,169,81,0.4)' }}
@@ -223,7 +227,7 @@ export default function Sidebar() {
             gap: 8,
             background: 'rgba(200,169,81,0.08)',
             border: '1px solid rgba(200,169,81,0.22)',
-            borderRadius: 8,
+            borderRadius: 'var(--r-sm)',
             padding: '9px',
             cursor: 'pointer',
             color: 'rgba(200,169,81,0.7)',
@@ -259,7 +263,7 @@ export default function Sidebar() {
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
             gap: 8, background: 'rgba(200,169,81,0.06)', border: '1px solid rgba(200,169,81,0.15)',
-            borderRadius: 8, padding: collapsed ? '8px' : '8px 12px', cursor: 'pointer',
+            borderRadius: 'var(--r-sm)', padding: collapsed ? '8px' : '8px 12px', cursor: 'pointer',
             color: 'rgba(255,255,255,0.45)', transition: 'color 0.15s, background 0.15s',
           }}
           onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.background = 'rgba(200,169,81,0.12)' }}
@@ -284,9 +288,10 @@ export default function Sidebar() {
     {showSearch && (
       <div
         onClick={() => { setShowSearch(false); setSearchQ('') }}
+        className="overlay-in"
         style={{
           position: 'fixed', inset: 0, zIndex: 200,
-          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+          background: 'rgba(8,6,2,0.4)',
           display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
           paddingTop: '12vh',
         }}

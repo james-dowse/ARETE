@@ -80,8 +80,8 @@ function NewMovementModal({
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.78)' }} />
-      <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 500, maxWidth: 'calc(100vw - 32px)', padding: '24px', boxShadow: 'var(--elev-3)' }}>
+      <div onClick={onClose} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.5)' }} />
+      <form onSubmit={handleSubmit} className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 500, maxWidth: 'calc(100vw - 32px)', padding: '24px', boxShadow: 'var(--elev-3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Nouveau mouvement</h2>
           <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
@@ -152,8 +152,8 @@ function NewMovementModal({
 function DeleteConfirm({ movement, onConfirm, onCancel }: { movement: Movement; onConfirm: () => void; onCancel: () => void }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div onClick={onCancel} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
-      <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 380, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
+      <div onClick={onCancel} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.45)' }} />
+      <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 380, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
         <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
         <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Supprimer ce mouvement ?</div>
         <div style={{ fontSize: 14, color: 'var(--accent)', marginBottom: 4 }}>{movement.name}</div>
@@ -615,8 +615,8 @@ function WorkoutsAdminTab() {
       {/* Delete confirm */}
       {deletingWorkout && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div onClick={() => setDeletingId(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
-          <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 400, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
+          <div onClick={() => setDeletingId(null)} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.45)' }} />
+          <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 400, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Supprimer ce workout ?</div>
             <div style={{ fontSize: 14, color: 'var(--accent)', marginBottom: 4, fontWeight: 600 }}>{deletingWorkout.name}</div>
@@ -1302,8 +1302,8 @@ export default function AdminClient({
         )}
         {pendingBulkUpdate && (
           <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div onClick={() => { setPendingBulkUpdate(null); setStagedBioType(''); setStagedComplexity('') }} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
-            <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 400, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
+            <div onClick={() => { setPendingBulkUpdate(null); setStagedBioType(''); setStagedComplexity('') }} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.45)' }} />
+            <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 400, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>✏️</div>
               <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>
                 Modifier {selected.size} mouvement{selected.size > 1 ? 's' : ''} ?
@@ -1343,8 +1343,8 @@ export default function AdminClient({
 
         {showBulkDeleteConfirm && (
           <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div onClick={() => setShowBulkDeleteConfirm(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
-            <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 400, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
+            <div onClick={() => setShowBulkDeleteConfirm(false)} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.45)' }} />
+            <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 400, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
               <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Supprimer {selected.size} mouvements ?</div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6 }}>Les mouvements utilisés dans des workouts seront ignorés.</div>
