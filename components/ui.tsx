@@ -122,20 +122,34 @@ export function Skeleton({ width = '100%', height = 16, style }: {
   return <div className="skeleton" style={{ width, height, ...style }} />
 }
 
-// ─── Anneau de progression SVG (chronos) ──────────────────────────────────────
+// ─── Anneau de progression SVG — gradué façon instrument de mesure ────────────
 export function ProgressRing({ progress, size = 120, stroke = 6, color = 'var(--gold)', track = 'var(--border)', children }: {
   progress: number // 0 → 1
   size?: number; stroke?: number; color?: string; track?: string; children?: ReactNode
 }) {
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
+  const cx = size / 2
+  // Graduations : 12 traits fins à l'extérieur de l'anneau, comme un cadran
+  const tickOuter = r + stroke / 2
+  const tickInner = tickOuter - Math.max(3, size * 0.045)
+  const ticks = Array.from({ length: 12 }, (_, i) => {
+    const a = (i * 30 * Math.PI) / 180
+    return {
+      x1: cx + tickInner * Math.cos(a), y1: cx + tickInner * Math.sin(a),
+      x2: cx + tickOuter * Math.cos(a), y2: cx + tickOuter * Math.sin(a),
+    }
+  })
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
+        {ticks.map((t, i) => (
+          <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke={track} strokeWidth={1} />
+        ))}
+        <circle cx={cx} cy={cx} r={r - stroke} fill="none" stroke={track} strokeWidth={1} opacity={0.6} />
         <circle
-          cx={size / 2} cy={size / 2} r={r} fill="none"
-          stroke={color} strokeWidth={stroke} strokeLinecap="round"
+          cx={cx} cy={cx} r={r} fill="none"
+          stroke={color} strokeWidth={stroke} strokeLinecap="butt"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - Math.min(1, Math.max(0, progress)))}
           style={{ transition: 'stroke-dashoffset 1s linear' }}

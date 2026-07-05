@@ -120,8 +120,6 @@ export default function Sidebar() {
       left: 'var(--sidebar-gap)',
       height: 'calc(100vh - var(--sidebar-gap) * 2)',
       background: 'var(--sidebar-bg)',
-      backdropFilter: 'blur(28px) saturate(160%)',
-      WebkitBackdropFilter: 'blur(28px) saturate(160%)',
       border: '1px solid var(--sidebar-border)',
       borderRadius: 'var(--r-lg)',
       width: w,

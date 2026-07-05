@@ -44,24 +44,21 @@ export default function ResumeSessionBanner({ workoutId }: { workoutId?: string 
 
   return (
     <Link href={`/workouts/${session.id}/active`} style={{ textDecoration: 'none', display: 'block', marginBottom: 20 }}>
-      <div style={{
+      <div className="panel-ivory" style={{
         display: 'flex', alignItems: 'center', gap: 14,
-        background: 'rgba(200,169,81,0.10)',
-        border: '1px solid rgba(200,169,81,0.45)',
-        borderRadius: 12,
         padding: '14px 18px',
         cursor: 'pointer',
       }}>
         <span style={{ fontSize: 22, flexShrink: 0 }} className="resume-pulse">⏱</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--gold)' }}>
+          <div className="display" style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>
             Séance en cours{session.name ? ` — ${session.name}` : ''}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 2 }}>
             Démarrée il y a {min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60 ? `${min % 60} min` : ''}`} · {session.doneSets} série{session.doneSets > 1 ? 's' : ''} faite{session.doneSets > 1 ? 's' : ''}
           </div>
         </div>
-        <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: '#080808', background: 'var(--gold)', borderRadius: 8, padding: '8px 16px', letterSpacing: 0.3 }}>
+        <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: '#0E0C08', background: 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)', borderRadius: 'var(--r-sm)', padding: '9px 16px', letterSpacing: 0.3, boxShadow: '0 2px 0 rgba(14,12,8,0.25)' }}>
           Reprendre →
         </span>
       </div>

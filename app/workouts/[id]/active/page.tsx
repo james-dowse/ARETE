@@ -312,28 +312,36 @@ export default function ActivePage() {
 
   if (!workout) {
     return (
-      <div style={{ position: 'fixed', inset: 0, background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>
+      <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: 14 }}>
         Chargement…
       </div>
     )
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#0a0a0a', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Header ── */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(10,10,10,0.68)', backdropFilter: 'blur(24px) saturate(160%)', WebkitBackdropFilter: 'blur(24px) saturate(160%)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#12100C', borderBottom: '1px solid var(--border)', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
         <button onClick={() => router.push(`/workouts/${id}`)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0, display: 'flex', lineHeight: 1 }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 0, display: 'flex', lineHeight: 1 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workout.name}</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 1 }}>
             {workout.movements.length} mouvement{workout.movements.length > 1 ? 's' : ''} · {doneSets}/{totalSets()} séries
           </div>
         </div>
-        <div className="tnum" style={{ fontSize: 24, fontWeight: 800, color: started ? 'var(--gold)' : 'rgba(255,255,255,0.2)', letterSpacing: '0.02em', flexShrink: 0, textShadow: started ? '0 0 18px rgba(200,169,81,0.35)' : 'none', transition: 'color 0.3s' }}>
+        {/* Cadran du chrono — aplat or massif, texte encre */}
+        <div className="tnum display" style={{
+          fontSize: 22, fontWeight: 700, flexShrink: 0, lineHeight: 1,
+          padding: '9px 16px', borderRadius: 'var(--r-sm)',
+          background: started ? 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)' : 'var(--bg-elevated)',
+          color: started ? 'var(--ink)' : 'var(--text-dim)',
+          boxShadow: started ? 'var(--elev-gold)' : 'none',
+          transition: 'background 0.3s, color 0.3s',
+        }}>
           {fmt(elapsed)}
         </div>
       </div>
@@ -429,20 +437,26 @@ export default function ActivePage() {
                   const isResting = rest?.wmId === wm.id
                   const color = BIO_TYPE_COLORS[wm.movement.bioType] || '#888'
 
-                  const cardBg = isComplete ? 'rgba(34,197,94,0.06)' : isDoneInRound ? 'rgba(34,197,94,0.04)' : isActiveInRound ? 'rgba(201,165,53,0.07)' : isCurrent ? 'rgba(201,165,53,0.05)' : 'rgba(255,255,255,0.04)'
-                  const cardBorder = isComplete ? 'rgba(34,197,94,0.25)' : isDoneInRound ? 'rgba(34,197,94,0.15)' : isActiveInRound ? 'rgba(201,165,53,0.4)' : isCurrent ? 'rgba(201,165,53,0.35)' : isResting ? 'rgba(201,165,53,0.2)' : 'rgba(255,255,255,0.08)'
-                  const nameColor = isComplete ? 'var(--green)' : isDoneInRound ? 'var(--green)' : isActiveInRound ? '#fff' : isCurrent ? '#fff' : 'rgba(255,255,255,0.55)'
+                  // Trois registres : sombre = contexte · ivoire = maintenant · or = agir
+                  const onIvory = (isCurrent || isActiveInRound) && !isComplete
+                  const cardBg = isComplete ? 'var(--cypress-ghost)' : isDoneInRound ? 'rgba(58,94,72,0.15)' : onIvory ? 'var(--ivory-card)' : 'var(--bg-card)'
+                  const cardBorder = isComplete ? 'rgba(127,184,148,0.30)' : isDoneInRound ? 'rgba(127,184,148,0.18)' : onIvory ? 'var(--gold)' : isResting ? 'var(--gold-border)' : 'var(--border)'
+                  const nameColor = isComplete || isDoneInRound ? 'var(--green)' : onIvory ? 'var(--ink)' : 'var(--text-muted)'
+                  const subColor = onIvory ? 'var(--ink-muted)' : 'rgba(255,255,255,0.45)'
+                  const dimColor = onIvory ? 'var(--ink-dim)' : 'rgba(255,255,255,0.25)'
+                  const timedColor = onIvory ? '#2F6FA7' : 'var(--blue)'
 
                   return (
                     <div key={wm.id} style={{
                       background: cardBg,
                       border: `1px solid ${cardBorder}`,
-                      borderRadius: 12, padding: '14px 16px',
-                      transition: 'border-color 0.2s, background 0.2s',
+                      borderRadius: 'var(--r-md)', padding: '14px 16px',
+                      boxShadow: onIvory ? 'var(--elev-2)' : 'none',
+                      transition: 'border-color 0.2s, background 0.2s, box-shadow 0.2s',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                        <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: nameColor }}>
+                        <span style={{ flex: 1, fontSize: 15, fontWeight: onIvory ? 700 : 600, color: nameColor }}>
                           {wm.movement.name}
                         </span>
                         {(isComplete || isDoneInRound) && (
@@ -454,11 +468,11 @@ export default function ActivePage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                         <div style={{ display: 'flex', gap: 5 }}>
                           {Array.from({ length: target }).map((_, i) => (
-                            <span key={i} style={{
+                            <span key={i} className="tnum" style={{
                               width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700,
-                              background: i < setsNow ? (isComplete ? 'var(--green)' : (wm.duration != null ? 'var(--blue)' : 'var(--gold)')) : 'rgba(255,255,255,0.07)',
-                              color: i < setsNow ? '#000' : 'rgba(255,255,255,0.3)',
-                              border: `1px solid ${i < setsNow ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
+                              background: i < setsNow ? (isComplete ? 'var(--green)' : (wm.duration != null ? timedColor : 'var(--gold)')) : (onIvory ? 'rgba(14,12,8,0.06)' : 'rgba(255,255,255,0.07)'),
+                              color: i < setsNow ? (isComplete ? '#0E0C08' : 'var(--ink)') : (onIvory ? 'var(--ink-dim)' : 'rgba(255,255,255,0.3)'),
+                              border: `1px solid ${i < setsNow ? 'transparent' : (onIvory ? 'rgba(14,12,8,0.18)' : 'rgba(255,255,255,0.1)')}`,
                               transition: 'all 0.2s',
                             }}>
                               {i + 1}
@@ -466,20 +480,20 @@ export default function ActivePage() {
                           ))}
                         </div>
                         {wm.duration != null ? (
-                          <span style={{ fontSize: 13, color: 'var(--blue)', marginLeft: 4, fontWeight: 600 }}>{wm.duration}s</span>
+                          <span style={{ fontSize: 13, color: timedColor, marginLeft: 4, fontWeight: 600 }}>{wm.duration}s</span>
                         ) : wm.reps ? (
-                          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginLeft: 4 }}>{wm.reps}</span>
+                          <span style={{ fontSize: 13, color: subColor, marginLeft: 4 }}>{wm.reps}</span>
                         ) : null}
                         {wm.rest && wm.rest >= 10 && wm.rest !== defaultRest && (
-                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginLeft: 'auto' }}>repos {wm.rest}s</span>
+                          <span style={{ fontSize: 11, color: dimColor, marginLeft: 'auto' }}>repos {wm.rest}s</span>
                         )}
                       </div>
 
                       {/* Exercise timer in-card (timed mode, currently running) */}
                       {wm.duration != null && exerciseTimer?.wmId === wm.id && (
                         <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
-                          <ProgressRing progress={exerciseTimer.sec / exerciseTimer.total} size={96} stroke={5} color="var(--blue)" track="rgba(99,179,237,0.15)">
-                            <span className="tnum" style={{ fontSize: 26, fontWeight: 800, color: 'var(--blue)' }}>{exerciseTimer.sec}</span>
+                          <ProgressRing progress={exerciseTimer.sec / exerciseTimer.total} size={96} stroke={5} color={timedColor} track={onIvory ? 'rgba(14,12,8,0.10)' : 'rgba(99,179,237,0.15)'}>
+                            <span className="tnum display" style={{ fontSize: 27, fontWeight: 700, color: timedColor }}>{exerciseTimer.sec}</span>
                           </ProgressRing>
                         </div>
                       )}
@@ -492,18 +506,18 @@ export default function ActivePage() {
                               onClick={() => handleSet(wm)}
                               disabled={isComplete || (isSuperset && wm.id !== activeMovId) || exerciseTimer?.wmId === wm.id}
                               style={{
-                                flex: 1, padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700,
+                                flex: 1, padding: '13px', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: onIvory ? 800 : 700,
                                 cursor: isComplete || exerciseTimer?.wmId === wm.id ? 'default' : 'pointer',
-                                background: isComplete ? 'rgba(34,197,94,0.08)' : exerciseTimer?.wmId === wm.id ? 'rgba(99,179,237,0.08)' : 'rgba(99,179,237,0.12)',
-                                border: `1px solid ${isComplete ? 'rgba(34,197,94,0.2)' : 'rgba(99,179,237,0.3)'}`,
-                                color: isComplete ? 'var(--green)' : 'var(--blue)',
+                                background: isComplete ? 'var(--cypress-ghost)' : exerciseTimer?.wmId === wm.id ? 'transparent' : onIvory ? timedColor : 'rgba(99,179,237,0.12)',
+                                border: `1px solid ${isComplete ? 'rgba(127,184,148,0.25)' : onIvory ? 'transparent' : 'rgba(99,179,237,0.3)'}`,
+                                color: isComplete ? 'var(--green)' : exerciseTimer?.wmId === wm.id ? timedColor : onIvory ? '#F1EAD8' : 'var(--blue)',
                                 transition: 'all 0.15s',
                               }}>
                               {isComplete ? '✓ Terminé' : exerciseTimer?.wmId === wm.id ? '⏱ En cours…' : `▶ Démarrer · ${wm.duration}s`}
                             </button>
                             {exerciseTimer?.wmId === wm.id && (
                               <button onClick={() => setExerciseTimer(e => e ? { ...e, sec: 0 } : null)}
-                                style={{ padding: '10px 14px', borderRadius: 9, fontSize: 12, cursor: 'pointer', background: 'rgba(99,179,237,0.08)', border: '1px solid rgba(99,179,237,0.2)', color: 'var(--blue)' }}
+                                style={{ padding: '10px 14px', borderRadius: 'var(--r-sm)', fontSize: 12, cursor: 'pointer', background: 'transparent', border: `1px solid ${onIvory ? 'rgba(14,12,8,0.2)' : 'rgba(99,179,237,0.2)'}`, color: timedColor }}
                                 title="Valider maintenant sans attendre la fin du timer">
                                 ✓ Skip
                               </button>
@@ -513,17 +527,22 @@ export default function ActivePage() {
                           <>
                             <button onClick={() => handleSet(wm)} disabled={isComplete || (isSuperset && wm.id !== activeMovId)}
                               style={{
-                                flex: 1, padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: isComplete ? 'default' : 'pointer',
-                                background: isComplete ? 'rgba(34,197,94,0.08)' : 'rgba(201,165,53,0.12)',
-                                border: `1px solid ${isComplete ? 'rgba(34,197,94,0.2)' : 'rgba(201,165,53,0.3)'}`,
-                                color: isComplete ? 'var(--green)' : 'var(--gold)',
+                                flex: 1, padding: '13px', borderRadius: 'var(--r-sm)', fontSize: 14, cursor: isComplete ? 'default' : 'pointer',
+                                fontWeight: onIvory ? 800 : 700,
+                                letterSpacing: onIvory ? '0.03em' : 0,
+                                textTransform: onIvory ? 'uppercase' : 'none',
+                                // Or massif pour le mouvement actif : le geste principal de la séance
+                                background: isComplete ? 'var(--cypress-ghost)' : onIvory ? 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)' : 'rgba(201,165,53,0.10)',
+                                border: `1px solid ${isComplete ? 'rgba(127,184,148,0.25)' : onIvory ? 'transparent' : 'rgba(201,165,53,0.3)'}`,
+                                color: isComplete ? 'var(--green)' : onIvory ? '#0E0C08' : 'var(--gold)',
+                                boxShadow: onIvory ? '0 2px 0 rgba(14,12,8,0.25)' : 'none',
                                 transition: 'all 0.15s',
                               }}>
                               {isComplete ? '✓ Terminé' : `Série ${setsNow + 1} / ${target}`}
                             </button>
                             {setsNow > 0 && !isComplete && (
                               <button onClick={() => handleUndo(wm)}
-                                style={{ padding: '10px 14px', borderRadius: 9, fontSize: 12, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.35)' }}>
+                                style={{ padding: '10px 14px', borderRadius: 'var(--r-sm)', fontSize: 12, cursor: 'pointer', background: 'transparent', border: `1px solid ${onIvory ? 'rgba(14,12,8,0.2)' : 'rgba(255,255,255,0.1)'}`, color: onIvory ? 'var(--ink-muted)' : 'rgba(255,255,255,0.35)' }}>
                                 ↩
                               </button>
                             )}
@@ -539,27 +558,27 @@ export default function ActivePage() {
         })}
       </div>
 
-      {/* ── Rest timer overlay ── */}
+      {/* ── Rest timer overlay — panneau ivoire, le « maintenant » ── */}
       {rest && (
-        <div className="modal-in" style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 20, background: 'rgba(18,16,12,0.62)', backdropFilter: 'blur(28px) saturate(160%)', WebkitBackdropFilter: 'blur(28px) saturate(160%)', border: '1px solid rgba(201,165,53,0.4)', borderRadius: 'var(--r-lg)', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 20, boxShadow: 'var(--elev-3), var(--elev-gold)', minWidth: 280 }}>
-          <ProgressRing progress={rest.sec / rest.total} size={60} stroke={4} color="var(--gold)" track="rgba(255,255,255,0.07)">
-            <span className="tnum" style={{ fontSize: 17, fontWeight: 800, color: 'var(--gold)' }}>{rest.sec}</span>
+        <div className="modal-in panel-ivory" style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 20, borderRadius: 'var(--r-lg)', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 20, minWidth: 280 }}>
+          <ProgressRing progress={rest.sec / rest.total} size={60} stroke={4} color="var(--gold-dim)" track="rgba(14,12,8,0.10)">
+            <span className="tnum display" style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>{rest.sec}</span>
           </ProgressRing>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Repos</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+            <div className="display" style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 2 }}>Repos</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-muted)' }}>
               {workout.movements.find(wm => wm.id === rest.wmId)?.movement.name}
             </div>
           </div>
           <button onClick={() => setRest(null)}
-            style={{ padding: '7px 14px', borderRadius: 8, background: 'rgba(201,165,53,0.15)', border: '1px solid rgba(201,165,53,0.3)', color: 'var(--gold)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+            style={{ padding: '8px 15px', borderRadius: 'var(--r-sm)', background: 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)', border: 'none', color: '#0E0C08', fontSize: 12, fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 0 rgba(14,12,8,0.25)' }}>
             Passer
           </button>
         </div>
       )}
 
       {/* ── Bottom bar ── */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(10,10,10,0.7)', backdropFilter: 'blur(24px) saturate(160%)', WebkitBackdropFilter: 'blur(24px) saturate(160%)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'center' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#12100C', borderTop: '1px solid var(--border)', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'center' }}>
         {showFinish ? (
           <>
             <input value={note} onChange={e => setNote(e.target.value)} placeholder="Note optionnelle…"

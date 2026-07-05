@@ -1,58 +1,74 @@
 @import "tailwindcss";
 
 :root {
+  /* ══ OR MASSIF — l'or devient matière, trois registres de surfaces ══
+     sombre = contexte · ivoire = maintenant · or = agir                */
+
   /* ── Canvas (dark elite) ─────────────────────────────────────── */
   --bg-primary:   #0D0C0A;   /* fond global — anthracite chaud */
-  --bg-card:      rgba(28,25,20,0.68);   /* cartes — verre teinté chaud, laisse deviner la texture derrière */
-  --bg-card-solid: #1A1814;  /* variante opaque — usages qui ne supportent pas le flou (images, contenus superposés) */
-  --bg-elevated:  rgba(34,31,26,0.75);   /* modales, inputs, dropdowns */
-  --border:       #302C24;   /* bordure visible — ton chaud */
-  --border-plus:  #3E3A30;   /* hover, emphasis */
-  --glass-border: rgba(255,255,255,0.09);  /* liseré verre — highlight du bord supérieur */
-  --glass-blur-sm: 16px;
-  --glass-blur-lg: 32px;
+  --bg-card:      #191611;   /* cartes — plaque opaque, posée à plat */
+  --bg-card-solid: #191611;
+  --bg-elevated:  #221E17;   /* modales, inputs, dropdowns */
+  --border:       #322C21;   /* bordure visible — ton chaud */
+  --border-plus:  #443C2D;   /* hover, emphasis */
+  --glass-border: rgba(255,255,255,0.07);  /* rétro-compat (verre supprimé) */
+  --glass-blur-sm: 0px;
+  --glass-blur-lg: 0px;
   --shadow-sm:    0 0 0 1px rgba(0,0,0,0.5);
   --shadow-md:    0 8px 32px rgba(0,0,0,0.6);
 
-  /* ── Gold — vieilli, pas chrome ──────────────────────────────── */
+  /* ── Gold — vieilli, pas chrome — désormais utilisé en aplat ──── */
   --gold:         #C8A951;
-  --gold-bright:  #D4B45A;
-  --gold-dim:     #C0A040;   /* or secondaire, bien lisible */
+  --gold-bright:  #D8B75E;
+  --gold-dim:     #C0A040;
   --gold-ghost:   rgba(200,169,81,0.10);
-  --gold-border:  rgba(200,169,81,0.25);
+  --gold-border:  rgba(200,169,81,0.28);
+
+  /* ── Ivoire — le registre « maintenant » (surfaces inversées) ─── */
+  --ivory:        #F1EAD8;
+  --ivory-card:   #F7F2E4;
+  --ink:          #0E0C08;   /* encre — texte sur or et sur ivoire */
+  --ink-muted:    rgba(14,12,8,0.62);
+  --ink-dim:      rgba(14,12,8,0.38);
+
+  /* ── Cyprès — le second sombre, accord or/vert de maison ──────── */
+  --cypress:       #22382C;
+  --cypress-deep:  #141F19;
+  --cypress-light: #7FB894;  /* version lisible sur fond sombre */
+  --cypress-ghost: rgba(58,94,72,0.25);
 
   /* ── Rétro-compat ────────────────────────────────────────────── */
   --accent:       var(--gold);
   --accent-dim:   var(--gold-ghost);
-  --on-accent:    #080808;
+  --on-accent:    var(--ink);
 
   /* ── Sidebar width (mis à jour par JS au toggle) ─────────────── */
   --sidebar-w: 224px;
-  --sidebar-gap: 12px;  /* marge flottante autour de la sidebar (île de verre) */
+  --sidebar-gap: 12px;
 
-  /* ── Sidebar — île de verre flottante, plus sombre que le canvas ─ */
-  --sidebar-bg:           rgba(8,8,8,0.6);
-  --sidebar-border:       rgba(200,169,81,0.14);
-  --sidebar-text:         rgba(255,255,255,0.68);
-  --sidebar-text-hover:   rgba(255,255,255,0.95);
-  --sidebar-text-active:  #C8A951;
-  --sidebar-active-bg:    rgba(200,169,81,0.09);
+  /* ── Sidebar — cyprès profond, opaque ─────────────────────────── */
+  --sidebar-bg:           #141F19;
+  --sidebar-border:       rgba(200,169,81,0.16);
+  --sidebar-text:         rgba(241,234,216,0.62);
+  --sidebar-text-hover:   rgba(241,234,216,0.95);
+  --sidebar-text-active:  var(--ink);
+  --sidebar-active-bg:    var(--gold);
 
   /* ── Texte ───────────────────────────────────────────────────── */
-  --text-primary: #F4F4EE;   /* blanc chaud, presque pur */
-  --text-muted:   #C2C2B8;   /* secondaire bien lisible */
-  --text-dim:     #888880;   /* tertiaire — séparateurs, métadonnées */
+  --text-primary: #F4F1E6;   /* blanc ivoire chaud */
+  --text-muted:   #C4BEAC;   /* secondaire bien lisible */
+  --text-dim:     #8A8474;   /* tertiaire — séparateurs, métadonnées */
 
   /* ── Dirty / warning ─────────────────────────────────────────── */
   --dirty:        rgba(200,169,81,0.10);
   --dirty-border: rgba(200,169,81,0.30);
   --dirty-text:   #C8A951;
 
-  /* ── Status — adoucis pour fond sombre ───────────────────────── */
+  /* ── Status — le vert devient cyprès, accord riche avec l'or ──── */
   --red:    #E5654F;
   --red-ghost:    rgba(229,101,79,0.12);
-  --green:  #4FBF7E;
-  --green-ghost:  rgba(79,191,126,0.12);
+  --green:  var(--cypress-light);
+  --green-ghost:  var(--cypress-ghost);
   --blue:   #63B3ED;
   --blue-ghost:   rgba(99,179,237,0.12);
   --orange: #E8934A;
@@ -60,64 +76,72 @@
   --purple: #A678C8;
   --teal:   #3FBFAD;
 
-  /* ── Radius — échelle unique, généreuse (Arc/Raycast) ─────────── */
-  --r-xs:   8px;    /* badges, chips, micro-boutons */
-  --r-sm:   10px;   /* boutons, inputs */
-  --r-md:   16px;   /* cartes, rows */
-  --r-lg:   22px;   /* modales, hero */
+  /* ── Radius — resserrés, esprit gravure ─────────────────────── */
+  --r-xs:   5px;    /* badges, chips, micro-boutons */
+  --r-sm:   8px;    /* boutons, inputs */
+  --r-md:   12px;   /* cartes, rows */
+  --r-lg:   16px;   /* modales, hero */
   --r-full: 999px;  /* pills */
 
   /* ── Espacement — grille 4px ─────────────────────────────────── */
   --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px; --sp-5: 20px;
   --sp-6: 24px; --sp-7: 32px; --sp-8: 40px; --sp-9: 48px; --sp-10: 64px;
 
-  /* ── Élévation — ombres chaudes, diffuses et amples (verre flottant) ─── */
-  --elev-1: inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 8px rgba(8,6,2,0.28), 0 10px 30px rgba(8,6,2,0.24);
-  --elev-2: inset 0 1px 0 rgba(255,255,255,0.09), 0 6px 20px rgba(8,6,2,0.32), 0 20px 48px rgba(8,6,2,0.30);
-  --elev-3: 0 16px 40px rgba(8,6,2,0.40), 0 40px 96px rgba(8,6,2,0.48);
-  --elev-gold: 0 0 40px rgba(200,169,81,0.18);
-  --elev-gold-lg: 0 0 72px rgba(200,169,81,0.24);
+  /* ── Élévation — courtes et nettes, objets posés à plat ───────── */
+  --elev-1: 0 1px 0 rgba(0,0,0,0.45), 0 3px 10px rgba(8,6,2,0.30);
+  --elev-2: 0 2px 0 rgba(0,0,0,0.40), 0 8px 20px rgba(8,6,2,0.38);
+  --elev-3: 0 4px 0 rgba(0,0,0,0.35), 0 20px 48px rgba(8,6,2,0.55);
+  --elev-gold: 0 0 0 1px rgba(200,169,81,0.22), 0 4px 20px rgba(200,169,81,0.14);
+  --elev-gold-lg: 0 0 0 1px rgba(200,169,81,0.35), 0 8px 32px rgba(200,169,81,0.20);
 
   /* ── Motion ──────────────────────────────────────────────────── */
   --ease:        cubic-bezier(0.32, 0.72, 0.24, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);  /* rebond léger — hover/press des surfaces interactives */
+  --ease-spring: cubic-bezier(0.34, 1.40, 0.64, 1);  /* rebond discret */
   --t-fast: 120ms;  /* couleurs, opacité */
-  --t-med:  220ms;  /* transform, ombres */
-  --t-slow: 380ms;  /* modales, sidebar */
+  --t-med:  180ms;  /* transform, ombres */
+  --t-slow: 300ms;  /* modales, sidebar */
 }
 
-/* ── Light mode ──────────────────────────────────────────────── */
+/* ── Light mode — inversion : fond ivoire, sidebar cyprès, or inchangé ── */
 html[data-theme="light"] {
-  --bg-primary:   #F5F3EE;
-  --bg-card:      rgba(255,255,255,0.68);
-  --bg-card-solid: #FFFFFF;
-  --bg-elevated:  rgba(237,233,224,0.78);
-  --border:       #D8D2C6;
-  --border-plus:  #C4BDB0;
+  --bg-primary:   #F1EAD8;
+  --bg-card:      #F7F2E4;
+  --bg-card-solid: #F7F2E4;
+  --bg-elevated:  #EBE3CE;
+  --border:       #D9CFB6;
+  --border-plus:  #C6BA9D;
   --glass-border: rgba(255,255,255,0.6);
-  --shadow-sm:    0 0 0 1px rgba(0,0,0,0.08);
-  --shadow-md:    0 8px 32px rgba(0,0,0,0.12);
+  --shadow-sm:    0 0 0 1px rgba(14,12,8,0.08);
+  --shadow-md:    0 8px 32px rgba(14,12,8,0.12);
 
-  --sidebar-bg:           rgba(26,24,20,0.72);
-  --sidebar-border:       rgba(200,169,81,0.18);
-  --sidebar-text:         rgba(255,255,255,0.65);
-  --sidebar-text-hover:   rgba(255,255,255,0.92);
-  --sidebar-text-active:  #C8A951;
-  --sidebar-active-bg:    rgba(200,169,81,0.09);
+  /* Ivoire ↔ sombre inversés : les panneaux « maintenant » deviennent sombres */
+  --ivory:        #191611;
+  --ivory-card:   #1E1A13;
+  --ink:          #F1EAD8;
+  --ink-muted:    rgba(241,234,216,0.65);
+  --ink-dim:      rgba(241,234,216,0.40);
 
-  --text-primary: #1A1714;
-  --text-muted:   #5C5650;
-  --text-dim:     #9E9890;
+  --cypress-light: #2E5A42;
+  --cypress-ghost: rgba(34,56,44,0.12);
 
-  --dirty:        rgba(200,169,81,0.12);
-  --dirty-border: rgba(200,169,81,0.35);
-  --dirty-text:   #9A7C30;
+  --sidebar-bg:           #141F19;
+  --sidebar-border:       rgba(200,169,81,0.20);
+  --sidebar-text:         rgba(241,234,216,0.62);
+  --sidebar-text-hover:   rgba(241,234,216,0.95);
+  --sidebar-text-active:  #0E0C08;
+  --sidebar-active-bg:    var(--gold);
+
+  --text-primary: #1A1610;
+  --text-muted:   #5E5744;
+  --text-dim:     #9A9178;
+
+  --dirty:        rgba(200,169,81,0.14);
+  --dirty-border: rgba(200,169,81,0.40);
+  --dirty-text:   #8A6F2A;
 
   /* Status — assombris pour fond clair */
   --red:    #C24B38;
   --red-ghost:    rgba(194,75,56,0.12);
-  --green:  #2E8B57;
-  --green-ghost:  rgba(46,139,87,0.12);
   --blue:   #2F6FA7;
   --blue-ghost:   rgba(47,111,167,0.12);
   --orange: #C46A1F;
@@ -125,12 +149,12 @@ html[data-theme="light"] {
   --purple: #7C4DA0;
   --teal:   #1F8A7D;
 
-  /* Élévation adoucie sur fond clair — diffuse et ample */
-  --elev-1: inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 8px rgba(60,50,30,0.05), 0 10px 30px rgba(60,50,30,0.06);
-  --elev-2: inset 0 1px 0 rgba(255,255,255,0.9), 0 6px 20px rgba(60,50,30,0.08), 0 20px 48px rgba(60,50,30,0.08);
-  --elev-3: 0 16px 40px rgba(60,50,30,0.10), 0 40px 96px rgba(60,50,30,0.13);
-  --elev-gold: 0 0 40px rgba(200,169,81,0.20);
-  --elev-gold-lg: 0 0 72px rgba(200,169,81,0.24);
+  /* Élévation courte et nette sur fond ivoire */
+  --elev-1: 0 1px 0 rgba(14,12,8,0.10), 0 3px 10px rgba(60,50,30,0.08);
+  --elev-2: 0 2px 0 rgba(14,12,8,0.08), 0 8px 20px rgba(60,50,30,0.10);
+  --elev-3: 0 4px 0 rgba(14,12,8,0.08), 0 20px 48px rgba(60,50,30,0.18);
+  --elev-gold: 0 0 0 1px rgba(200,169,81,0.30), 0 4px 20px rgba(200,169,81,0.18);
+  --elev-gold-lg: 0 0 0 1px rgba(200,169,81,0.45), 0 8px 32px rgba(200,169,81,0.24);
 }
 
 html[data-theme="light"] input,
@@ -140,8 +164,7 @@ html[data-theme="light"] textarea {
 }
 
 html[data-theme="light"] .main-grid {
-  background-color: #F0EDE6;
-  background-image: radial-gradient(ellipse 90% 55% at 50% -15%, rgba(200,169,81,0.10), transparent 70%);
+  background-color: #EEE6D2;
 }
 
 /* ── Reset ─────────────────────────────────────────────────────── */
@@ -163,12 +186,9 @@ input, select, textarea {
   color-scheme: dark;
 }
 
-/* ── Fond zone principale — vignette or + grain léger ───────────── */
+/* ── Fond zone principale — à plat, éditorial, grain discret ────── */
 .main-grid {
   background-color: #0F0E0C;
-  /* Vignette or en haut : signature chaude, éclairage « par le haut » */
-  background-image: radial-gradient(ellipse 90% 55% at 50% -15%, rgba(200,169,81,0.07), transparent 70%);
-  background-repeat: no-repeat;
   position: relative;
 }
 
@@ -179,7 +199,7 @@ input, select, textarea {
   pointer-events: none;
   /* z-index 0 : reste sous les modales/overlays (l'ancien 9999 passait devant tout) */
   z-index: 0;
-  opacity: 0.04;
+  opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 200px 200px;
@@ -200,50 +220,63 @@ aside::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
   --color-foreground: var(--text-primary);
 }
 
-/* ── Card / panel — verre flottant sur fond texturé ──────────────── */
+/* ── Card / panel — plaque opaque, posée à plat ──────────────────── */
 .card {
-  background: linear-gradient(180deg, rgba(34,30,24,0.66) 0%, var(--bg-card) 100%);
-  backdrop-filter: blur(var(--glass-blur-sm)) saturate(150%);
-  -webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(150%);
-  border: 1px solid var(--glass-border);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--r-md);
   box-shadow: var(--elev-1);
 }
 
-html[data-theme="light"] .card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.78) 0%, var(--bg-card) 100%);
-  border-color: rgba(0,0,0,0.06);
-}
-
-/* Carte héroïque — chrono, CTA, séance du jour */
+/* Carte héroïque — liseré or, matière sombre */
 .card-hero {
-  background:
-    radial-gradient(ellipse 100% 80% at 50% -20%, rgba(200,169,81,0.08), transparent 70%),
-    linear-gradient(180deg, rgba(34,30,24,0.7) 0%, var(--bg-card) 100%);
-  backdrop-filter: blur(var(--glass-blur-lg)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(160%);
+  background: var(--bg-card);
   border: 1px solid var(--gold-border);
   border-radius: var(--r-lg);
-  box-shadow: var(--elev-1), var(--elev-gold);
+  box-shadow: var(--elev-gold);
 }
 
-html[data-theme="light"] .card-hero {
-  background:
-    radial-gradient(ellipse 100% 80% at 50% -20%, rgba(200,169,81,0.10), transparent 70%),
-    linear-gradient(180deg, rgba(255,255,255,0.8) 0%, var(--bg-card) 100%);
+/* ── Panneau ivoire — le registre « maintenant » ─────────────────── */
+/* Surface inversée à texte encre : séance du jour, reprise, mouvement actif */
+.panel-ivory {
+  background: var(--ivory-card);
+  color: var(--ink);
+  border: 1px solid rgba(200,169,81,0.35);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-2);
 }
 
-/* Carte cliquable — rebond feutré au survol, esprit Arc/Raycast */
+/* ── Aplat or massif — le registre « agir » ──────────────────────── */
+.slab-gold {
+  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%);
+  color: var(--ink);
+  border: none;
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+}
+
+/* ── Filet gradué — séparateur façon instrument ──────────────────── */
+.tick-rule {
+  height: 7px;
+  background-image:
+    linear-gradient(var(--border), var(--border)),
+    repeating-linear-gradient(90deg, var(--border) 0 1px, transparent 1px 14px);
+  background-size: 100% 1px, 100% 6px;
+  background-position: left bottom, left top;
+  background-repeat: no-repeat, repeat-x;
+}
+
+/* Carte cliquable — feedback sobre */
 .card-interactive {
   transition: transform var(--t-med) var(--ease-spring), box-shadow var(--t-med) var(--ease), border-color var(--t-med) var(--ease);
 }
 .card-interactive:hover {
-  transform: translateY(-3px) scale(1.008);
-  border-color: var(--border-plus);
+  transform: translateY(-2px);
+  border-color: var(--gold-border);
   box-shadow: var(--elev-2);
 }
 .card-interactive:active {
-  transform: translateY(-1px) scale(0.995);
+  transform: translateY(0);
 }
 
 /* ── Focus clavier visible (accessibilité) ──────────────────────── */
@@ -268,6 +301,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-dim);
+}
+
+/* ── Display serif — Fraunces : titres et grands chiffres ─────────── */
+.display,
+h1,
+.r-stat-num {
+  font-family: var(--font-display), Georgia, 'Times New Roman', serif;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 /* ── Skeleton loading ───────────────────────────────────────────── */
@@ -299,14 +341,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 .modal-in {
   animation: modalIn var(--t-slow) var(--ease-spring);
-  /* Panneau en verre : le fond de la page reste visible et flouté derrière */
-  backdrop-filter: blur(var(--glass-blur-lg)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(160%);
 }
 .overlay-in {
   animation: overlayIn var(--t-med) var(--ease);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
 }
 
 /* ── Boutons — système unifié ───────────────────────────────────── */

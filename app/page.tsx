@@ -162,7 +162,7 @@ export default async function DashboardPage() {
             )}
           </div>
           {/* Ligne séparatrice or */}
-          <div style={{ marginTop: 20, height: 1, background: 'linear-gradient(90deg, var(--gold-border) 0%, transparent 70%)' }} />
+          <div className="tick-rule" style={{ marginTop: 20 }} />
         </div>
 
         {/* ── Stats ────────────────────────────────────────────── */}
@@ -193,19 +193,18 @@ export default async function DashboardPage() {
           <div style={{ marginTop: 24 }}>
             <p style={{ ...SECTION_LABEL_GOLD, marginBottom: 12 }}>Séance du jour</p>
             {todayEntries.map(entry => (
-              <div key={entry.id} className="card" style={{
+              <div key={entry.id} className="panel-ivory" style={{
                 display: 'flex', alignItems: 'center', gap: 16,
-                borderLeft: '3px solid var(--gold)',
                 padding: '18px 24px',
                 marginBottom: 8,
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Link href={`/workouts/${entry.workout.id}`} style={{ textDecoration: 'none' }}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div className="display" style={{ fontSize: 18, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {entry.workout.name}
                     </div>
                   </Link>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+                  <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginTop: 4 }}>
                     {entry.workout.movements.length} mouvements
                     {entry.workout.duration ? ` · ${entry.workout.duration} min` : ''}
                   </div>
