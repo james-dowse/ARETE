@@ -71,6 +71,9 @@ export default function GeneratorPage() {
 
   // Random workout
   const [randomDifficulty, setRandomDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
+  // Les trois voies de la forge : hasard, temps disponible, ou composition bloc par bloc
+  const [genMode, setGenMode] = useState<'random' | 'time' | 'structure'>('random')
+  const [timeTarget, setTimeTarget] = useState(30)
   // Movement detail modal
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
 
@@ -431,7 +434,8 @@ export default function GeneratorPage() {
     setBlocks(prev => prev.map((b, i) => ({ ...b, count: base + (i < extra ? 1 : 0) })))
   }
 
-  const generateRandom = async (difficulty: 'easy' | 'medium' | 'hard') => {
+  // fixedDur : mode « Temps » — la durée cible devient l'input de base au lieu d'être tirée au sort
+  const generateRandom = async (difficulty: 'easy' | 'medium' | 'hard', fixedDur?: number) => {
     setLoading(true)
     setSavedId(null)
 
@@ -442,9 +446,11 @@ export default function GeneratorPage() {
     }
     const { complexities, sets, label } = difficultyMap[difficulty]
 
-    // Random nb of blocks (2-4), random duration (20-60 min)
-    const nbBlocks = Math.floor(Math.random() * 3) + 2
-    const targetDur = Math.floor(Math.random() * 41) + 20 // 20-60
+    // Nb de blocs aléatoire (2-4) ; durée fournie (mode Temps) ou tirée au sort (20-60 min)
+    const targetDur = fixedDur ?? Math.floor(Math.random() * 41) + 20
+    const nbBlocks = fixedDur != null
+      ? Math.max(2, Math.min(4, Math.round(targetDur / 15)))  // ~1 bloc par quart d'heure
+      : Math.floor(Math.random() * 3) + 2
 
     // Available time after inter-block rests
     const availableForMovements = Math.max(nbBlocks, targetDur - Math.max(0, nbBlocks - 1) * globalBlockRest)
@@ -490,7 +496,7 @@ export default function GeneratorPage() {
         return { sets: b?.sets ?? sets, reps: b?.reps ?? DEFAULT_REPS, rest: b?.rest ?? DEFAULT_REST, duration: null }
       }))
       const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
-      setWorkoutName(`Workout ${label} ${date}`)
+      setWorkoutName(fixedDur != null ? `WOD ${targetDur} min ${date}` : `WOD ${label} ${date}`)
     } finally {
       setLoading(false)
     }
@@ -499,9 +505,10 @@ export default function GeneratorPage() {
   return (
     <AppShell>
       <div style={{ maxWidth: 1060 }}>
-        <div style={{ marginBottom: 32 }}>
-          <h1 className="r-h1" style={{ fontSize: 40, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>Générateur</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: 8, fontSize: 16 }}>Définis ta structure, génère ton entraînement</p>
+        <div style={{ marginBottom: 24 }}>
+          <h1 className="r-h1" style={{ fontSize: 44, fontWeight: 600, margin: 0, letterSpacing: '-0.015em' }}>La Forge</h1>
+          <p style={{ color: 'var(--text-muted)', marginTop: 8, fontSize: 16 }}>Choisis ta voie — le WOD s&apos;adapte, pas l&apos;inverse.</p>
+          <div className="tick-rule" style={{ marginTop: 16 }} />
         </div>
 
         <div className="r-gen-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 420px) 1fr', gap: 32 }}>
@@ -509,62 +516,126 @@ export default function GeneratorPage() {
           {/* ── Left: Builder ── */}
           <div>
 
-            {/* ── 1. Section aléatoire ── */}
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--gold-border)', borderLeft: '3px solid var(--gold)', marginBottom: 24, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
-              <div onClick={() => setCollapsedRandom(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', cursor: 'pointer', userSelect: 'none' }}>
-                <div style={{ width: 34, height: 34, background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Dices size={16} color="var(--gold)" strokeWidth={2} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', letterSpacing: '0.01em' }}>Workout aléatoire</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Structure et exercices générés automatiquement · ≤ 60 min</div>
-                </div>
-                <span style={{ color: 'var(--gold)', opacity: 0.7, flexShrink: 0 }}>
-                  {collapsedRandom ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                </span>
-              </div>
+            {/* ── Les trois voies de la forge ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
+              {([
+                { key: 'random',    icon: '⚔️', title: 'Au hasard',  sub: 'Laisse la forge décider' },
+                { key: 'time',      icon: '⏱', title: 'Au temps',   sub: 'J’ai X minutes devant moi' },
+                { key: 'structure', icon: '🏛', title: 'Sur mesure', sub: 'Je compose bloc par bloc' },
+              ] as const).map(({ key, icon, title, sub }) => {
+                const active = genMode === key
+                return (
+                  <button key={key} onClick={() => setGenMode(key)} style={{
+                    padding: '14px 10px', textAlign: 'center', cursor: 'pointer',
+                    borderRadius: 'var(--r-md)',
+                    border: `1px solid ${active ? 'var(--crimson-border)' : 'var(--border)'}`,
+                    background: active ? 'var(--crimson)' : 'var(--bg-card)',
+                    boxShadow: active ? 'var(--elev-2)' : 'none',
+                    transition: 'all 0.15s',
+                  }}>
+                    <div style={{ fontSize: 20, marginBottom: 6, filter: active ? 'none' : 'grayscale(0.6)' }}>{icon}</div>
+                    <div className="display" style={{ fontWeight: 700, fontSize: 14, color: active ? '#F1EAD8' : 'var(--text-primary)' }}>{title}</div>
+                    <div style={{ fontSize: 10.5, color: active ? 'rgba(241,234,216,0.75)' : 'var(--text-dim)', marginTop: 3, lineHeight: 1.3 }}>{sub}</div>
+                  </button>
+                )
+              })}
+            </div>
 
-              {!collapsedRandom && (<div style={{ padding: '0 20px 18px' }}>
-              {/* Difficulty selector */}
+            {/* ── Voie 1 : au hasard ── */}
+            {genMode === 'random' && (
+            <div className="card" style={{ padding: '18px 20px', marginBottom: 24 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+                Structure, mouvements et durée (20-60 min) tirés au sort. Choisis juste l&apos;intensité.
+              </div>
               <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
                 {([
-                  { key: 'easy',   label: 'Facile',   sub: 'Easy / Common',   color: '#6BAE7C' },
-                  { key: 'medium', label: 'Moyen',    sub: 'Common / Hard',   color: '#D4884A' },
-                  { key: 'hard',   label: 'Difficile',sub: 'Hard / Advanced', color: '#C47878' },
-                ] as const).map(({ key, label, sub, color }) => {
+                  { key: 'easy',   label: 'Recrue',   sub: 'Easy / Common' },
+                  { key: 'medium', label: 'Hoplite',  sub: 'Common / Hard' },
+                  { key: 'hard',   label: 'Spartiate',sub: 'Hard / Advanced' },
+                ] as const).map(({ key, label, sub }) => {
                   const active = randomDifficulty === key
                   return (
                     <button key={key} onClick={() => setRandomDifficulty(key)} style={{
-                      flex: 1, padding: '9px 6px',
-                      border: `1px solid ${active ? color : 'var(--border-plus)'}`,
-                      background: active ? `${color}18` : 'var(--bg-elevated)',
+                      flex: 1, padding: '10px 6px', borderRadius: 'var(--r-sm)',
+                      border: `1px solid ${active ? 'var(--gold)' : 'var(--border-plus)'}`,
+                      background: active ? 'var(--gold-ghost)' : 'var(--bg-elevated)',
                       cursor: 'pointer', textAlign: 'center',
                       transition: 'border-color 0.12s, background 0.12s',
                     }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: active ? color : 'var(--text-muted)' }}>{label}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{sub}</div>
+                      <div className="display" style={{ fontWeight: 700, fontSize: 13, color: active ? 'var(--gold)' : 'var(--text-muted)' }}>{label}</div>
+                      <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{sub}</div>
                     </button>
                   )
                 })}
               </div>
-
               <button
                 onClick={() => generateRandom(randomDifficulty)}
                 disabled={loading}
-                style={{ width: '100%', padding: '12px', background: 'var(--gold)', color: '#080808', border: 'none', fontWeight: 800, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1, transition: 'filter 0.15s' }}
+                style={{ width: '100%', padding: '13px', background: 'linear-gradient(180deg, var(--crimson-bright) 0%, var(--crimson) 100%)', color: '#F1EAD8', border: 'none', borderRadius: 'var(--r-sm)', fontWeight: 800, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1, boxShadow: '0 2px 0 rgba(0,0,0,0.4)' }}
               >
-                {loading ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Génération…</> : <><Dices size={14} /> Générer</>}
+                {loading ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> La forge travaille…</> : <><Dices size={14} /> Forger</>}
               </button>
-              </div>)}
             </div>
+            )}
 
-            {/* ── Séparateur ── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.10em' }}>OU</span>
-              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            {/* ── Voie 2 : au temps — la durée est l'input de base ── */}
+            {genMode === 'time' && (
+            <div className="card" style={{ padding: '18px 20px', marginBottom: 24 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
+                Dis combien de temps tu as : la forge dimensionne blocs et mouvements pour tenir exactement dedans.
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
+                <span className="display tnum" style={{ fontSize: 56, fontWeight: 600, color: 'var(--gold)', lineHeight: 1 }}>{timeTarget}</span>
+                <span style={{ fontSize: 15, color: 'var(--text-muted)' }}>minutes</span>
+              </div>
+              <input
+                type="range" min={15} max={90} step={5} value={timeTarget}
+                onChange={e => setTimeTarget(Number(e.target.value))}
+                style={{ width: '100%', accentColor: 'var(--crimson)', marginBottom: 10 }}
+              />
+              <div style={{ display: 'flex', gap: 6, marginBottom: 14, justifyContent: 'center' }}>
+                {[20, 30, 45, 60].map(m => (
+                  <button key={m} onClick={() => setTimeTarget(m)} style={{
+                    padding: '5px 14px', borderRadius: 'var(--r-full)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    border: `1px solid ${timeTarget === m ? 'var(--gold)' : 'var(--border)'}`,
+                    background: timeTarget === m ? 'var(--gold-ghost)' : 'transparent',
+                    color: timeTarget === m ? 'var(--gold)' : 'var(--text-dim)',
+                  }} className="tnum">
+                    {m}&apos;
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+                {([
+                  { key: 'easy',   label: 'Recrue' },
+                  { key: 'medium', label: 'Hoplite' },
+                  { key: 'hard',   label: 'Spartiate' },
+                ] as const).map(({ key, label }) => {
+                  const active = randomDifficulty === key
+                  return (
+                    <button key={key} onClick={() => setRandomDifficulty(key)} style={{
+                      flex: 1, padding: '8px 6px', borderRadius: 'var(--r-sm)',
+                      border: `1px solid ${active ? 'var(--gold)' : 'var(--border-plus)'}`,
+                      background: active ? 'var(--gold-ghost)' : 'var(--bg-elevated)',
+                      cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.12s, background 0.12s',
+                    }}>
+                      <div className="display" style={{ fontWeight: 700, fontSize: 13, color: active ? 'var(--gold)' : 'var(--text-muted)' }}>{label}</div>
+                    </button>
+                  )
+                })}
+              </div>
+              <button
+                onClick={() => generateRandom(randomDifficulty, timeTarget)}
+                disabled={loading}
+                style={{ width: '100%', padding: '13px', background: 'linear-gradient(180deg, var(--crimson-bright) 0%, var(--crimson) 100%)', color: '#F1EAD8', border: 'none', borderRadius: 'var(--r-sm)', fontWeight: 800, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1, boxShadow: '0 2px 0 rgba(0,0,0,0.4)' }}
+              >
+                {loading ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> La forge travaille…</> : <><Clock size={14} /> Forger {timeTarget} min</>}
+              </button>
             </div>
+            )}
 
+            {/* ── Voie 3 : sur mesure (structure par blocs) ── */}
+            {genMode === 'structure' && (<>
             {/* ── 2. Section structurée ── */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, cursor: 'pointer', userSelect: 'none' }} onClick={() => setCollapsedStructure(v => !v)}>
               <div>
@@ -857,6 +928,7 @@ export default function GeneratorPage() {
                 </button>
               </div>
             )}
+            </>)}
             </>)}
           </div>
 
