@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon, Calendar, Search, X } from 'lucide-react'
+import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon, Calendar, Search, X, LayoutGrid } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useRef, useCallback } from 'react'
 
@@ -11,6 +11,7 @@ const allNav = [
   { href: '/generator',   label: 'La Forge',      icon: Zap,             admin: false },
   { href: '/workouts',    label: 'Mes WODs',      icon: BookOpen,        admin: false },
   { href: '/planner',     label: 'Semaine',       icon: Calendar,        admin: false },
+  { href: '/vision-board', label: 'Vision Board', icon: LayoutGrid,      admin: false },
   { href: '/library',     label: 'Arsenal',       icon: Library,         admin: false },
   { href: '/dashboard',   label: 'Tableau de bord', icon: LayoutDashboard, admin: false },
   { href: '/profile',     label: 'Mon profil',    icon: UserCircle,      admin: false },

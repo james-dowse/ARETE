@@ -111,6 +111,37 @@ model InvitedUser {
   favoriteWorkouts FavoriteWorkout[]
   weekPlans        WeekPlan[]
   workoutSessions  WorkoutSession[]
+  visionBoards     VisionBoard[]
+}
+
+model VisionBoard {
+  id          String       @id @default(cuid())
+  userId      String?
+  name        String
+  pageSize    String       @default("A4")        // A4 | A3 | screen169 | square
+  orientation String       @default("landscape")  // landscape | portrait
+  bgColor     String       @default("#F1EAD8")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  slots       VisionSlot[]
+  user        InvitedUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VisionSlot {
+  id         String      @id @default(cuid())
+  boardId    String
+  x          Float       // % du canevas, 0-100
+  y          Float
+  w          Float
+  h          Float
+  z          Int         @default(0)
+  type       String      @default("empty") // empty | image | text | color
+  content    String?     // image: data URL ; text: contenu texte
+  color      String?     // couleur de fond (color/empty) ou couleur du texte (text)
+  fontSize   Int?
+  fontWeight String?
+  align      String?
+  board      VisionBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
 }
 
 model WeekPlan {
