@@ -160,10 +160,10 @@ export default function PlannerPage() {
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
             <Calendar size={40} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
             <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Semaine vide</div>
-            <div style={{ fontSize: 13, marginBottom: 20 }}>Ouvre un workout et clique "Ajouter à ma semaine"</div>
+            <div style={{ fontSize: 13, marginBottom: 20 }}>Ouvre une séance et clique "Ajouter à ma semaine"</div>
             <Link href="/workouts">
               <button style={{ padding: '10px 24px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Zap size={13} /> Voir mes workouts
+                <Zap size={13} /> Voir mes séances
               </button>
             </Link>
           </div>

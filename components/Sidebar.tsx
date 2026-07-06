@@ -312,7 +312,7 @@ export default function Sidebar() {
               ref={searchRef}
               value={searchQ}
               onChange={e => setSearchQ(e.target.value)}
-              placeholder="Rechercher un workout, un mouvement…"
+              placeholder="Rechercher une séance, un mouvement…"
               style={{
                 flex: 1, background: 'transparent', border: 'none', outline: 'none',
                 color: 'var(--text, #fff)', fontSize: 15, fontFamily: 'inherit',
@@ -335,7 +335,7 @@ export default function Sidebar() {
             )}
             {!searchLoading && searchResults && searchResults.workouts.length > 0 && (
               <>
-                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(200,169,81,0.6)' }}>Workouts</div>
+                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(200,169,81,0.6)' }}>Séances</div>
                 {searchResults.workouts.map(w => (
                   <button
                     key={w.id}

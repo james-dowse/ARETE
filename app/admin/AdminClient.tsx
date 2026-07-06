@@ -496,7 +496,7 @@ function WorkoutsAdminTab() {
     const res = await fetch(`/api/workouts/${id}`, { method: 'DELETE' })
     if (res.ok) {
       setWorkouts(prev => prev.filter(w => w.id !== id))
-      showToast('Workout supprimé ✓')
+      showToast('Séance supprimée ✓')
     }
     setDeletingId(null)
   }
@@ -514,9 +514,9 @@ function WorkoutsAdminTab() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, gap: 16 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Workouts communauté</h2>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Séances communauté</h2>
           <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--text-muted)' }}>
-            {loading ? '…' : `${filtered.length} / ${workouts.length} workouts`} — tous utilisateurs confondus.
+            {loading ? '…' : `${filtered.length} / ${workouts.length} séances`} — tous utilisateurs confondus.
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, padding: '7px 12px', width: 280, flexShrink: 0 }}>
@@ -541,7 +541,7 @@ function WorkoutsAdminTab() {
       )}
 
       {!loading && !fetchError && filtered.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)', fontSize: 14 }}>Aucun workout trouvé</div>
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)', fontSize: 14 }}>Aucune séance trouvée</div>
       )}
 
       {!loading && !fetchError && filtered.length > 0 && (
@@ -594,7 +594,7 @@ function WorkoutsAdminTab() {
                     <td style={{ padding: '11px 10px', textAlign: 'right' }}>
                       <button
                         onClick={() => setDeletingId(w.id)}
-                        title="Supprimer ce workout"
+                        title="Supprimer cette séance"
                         style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }}
                         className="admin-wod-del"
                       >
@@ -607,7 +607,7 @@ function WorkoutsAdminTab() {
             </tbody>
           </table>
           <div style={{ padding: '9px 14px', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-dim)' }}>
-            {filtered.length} workout{filtered.length > 1 ? 's' : ''} — cliquer le nom pour ouvrir dans un nouvel onglet
+            {filtered.length} séance{filtered.length > 1 ? 's' : ''} — cliquer le nom pour ouvrir dans un nouvel onglet
           </div>
         </div>
       )}
@@ -618,7 +618,7 @@ function WorkoutsAdminTab() {
           <div onClick={() => setDeletingId(null)} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.45)' }} />
           <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 400, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Supprimer ce workout ?</div>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Supprimer cette séance ?</div>
             <div style={{ fontSize: 14, color: 'var(--accent)', marginBottom: 4, fontWeight: 600 }}>{deletingWorkout.name}</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
               par {deletingWorkout.user?.email ?? '—'} · {deletingWorkout._count.movements} mouvements
@@ -694,7 +694,7 @@ function StatsTab() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 28 }}>
         {[
           { label: 'Utilisateurs', value: totals.users },
-          { label: 'Workouts', value: totals.workouts },
+          { label: 'Séances', value: totals.workouts },
           { label: 'Mouvements', value: totals.movements },
           { label: 'Sauvegardés', value: totals.saved },
           { label: 'Favoris', value: totals.favorites },
@@ -732,7 +732,7 @@ function StatsTab() {
         {/* Workouts par user */}
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
-            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.07em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Workouts par utilisateur</span>
+            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.07em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Séances par utilisateur</span>
           </div>
           <div>
             {workoutsByUser.map((u, i) => (
@@ -875,7 +875,7 @@ export default function AdminClient({
       const deletedSet = new Set(ids.filter((id: string) => !data.skippedIds?.includes(id)))
       setMovements(prev => prev.filter(m => !deletedSet.has(m.id)))
       const msg = data.skipped > 0
-        ? `${data.deleted} supprimé${data.deleted > 1 ? 's' : ''} · ${data.skipped} ignoré${data.skipped > 1 ? 's' : ''} (utilisés dans des workouts)`
+        ? `${data.deleted} supprimé${data.deleted > 1 ? 's' : ''} · ${data.skipped} ignoré${data.skipped > 1 ? 's' : ''} (utilisés dans des séances)`
         : `${data.deleted} mouvement${data.deleted > 1 ? 's' : ''} supprimé${data.deleted > 1 ? 's' : ''} ✓`
       showToast(msg)
       clearSelection()
@@ -963,7 +963,7 @@ export default function AdminClient({
           { key: 'referentiels' as const, label: 'Référentiels', icon: null },
           { key: 'doublons' as const, label: 'Doublons', icon: <Copy size={13} /> },
           { key: 'stats' as const, label: 'Stats', icon: <BarChart2 size={13} /> },
-          { key: 'workouts' as const, label: 'Workouts', icon: null },
+          { key: 'workouts' as const, label: 'Séances', icon: null },
         ]).map(({ key, label, icon }) => (
           <button key={key} onClick={() => setActiveTab(key)}
             style={{
@@ -1224,7 +1224,7 @@ export default function AdminClient({
                         {usage > 0 ? (
                           <button
                             onClick={() => openUsagePanel(m)}
-                            title="Voir les workouts"
+                            title="Voir les séances"
                             style={{ fontSize: 12, fontWeight: 700, color: usagePanel?.id === m.id ? 'var(--gold)' : 'var(--blue)', background: usagePanel?.id === m.id ? 'rgba(200,169,81,0.12)' : 'rgba(96,165,250,0.08)', border: `1px solid ${usagePanel?.id === m.id ? 'rgba(200,169,81,0.3)' : 'rgba(96,165,250,0.2)'}`, borderRadius: 6, padding: '2px 9px', cursor: 'pointer', transition: 'all 0.15s' }}
                           >
                             {usage}
@@ -1347,7 +1347,7 @@ export default function AdminClient({
             <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 400, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
               <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Supprimer {selected.size} mouvements ?</div>
-              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6 }}>Les mouvements utilisés dans des workouts seront ignorés.</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6 }}>Les mouvements utilisés dans des séances seront ignorés.</div>
               <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 22 }}>Cette action est irréversible.</div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                 <button onClick={() => setShowBulkDeleteConfirm(false)} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Annuler</button>
@@ -1410,7 +1410,7 @@ export default function AdminClient({
                   {[1,2,3].map(i => <div key={i} style={{ height: 52, background: 'var(--bg-elevated)', borderRadius: 8, opacity: 0.5 }} />)}
                 </div>
               ) : usagePanel.workouts.length === 0 ? (
-                <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Aucun workout trouvé</div>
+                <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Aucune séance trouvée</div>
               ) : (
                 <div>
                   {usagePanel.workouts.map((w, i) => {
@@ -1441,7 +1441,7 @@ export default function AdminClient({
             {/* Footer count */}
             {!usagePanelLoading && usagePanel.workouts.length > 0 && (
               <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-dim)' }}>
-                {usagePanel.workouts.length} workout{usagePanel.workouts.length > 1 ? 's' : ''}
+                {usagePanel.workouts.length} séance{usagePanel.workouts.length > 1 ? 's' : ''}
               </div>
             )}
           </div>

@@ -42,7 +42,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
               Bienvenue <strong style={{ color: '#fff' }}>{invite.email}</strong>
             </p>
             <p style={{ margin: '0 0 32px', fontSize: 14, color: 'rgba(255,255,255,0.35)', lineHeight: 1.6 }}>
-              Clique ci-dessous pour accéder au protocole ARETE et commencer à générer tes workouts.
+              Clique ci-dessous pour accéder au protocole ARETE et commencer à générer tes séances.
             </p>
             {/* Lien vers l'API qui pose le cookie puis redirige */}
             <Link

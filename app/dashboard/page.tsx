@@ -168,7 +168,7 @@ export default async function DashboardPage() {
         {/* ── Stats ────────────────────────────────────────────── */}
         <div className="r-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, marginBottom: 2, background: 'var(--border)' }}>
           {[
-            { value: workoutCount,   label: 'Workouts' },
+            { value: workoutCount,   label: 'Séances' },
             { value: movementCount,  label: 'Mouvements' },
             { value: user ? weekSessionCount : templateCount, label: user ? 'Séances cette semaine' : 'Templates' },
           ].map(({ value, label }, i) => (
@@ -240,7 +240,7 @@ export default async function DashboardPage() {
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
               </svg>
               <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#080808' }}>
-                Générer un workout
+                Générer une séance
               </span>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -310,7 +310,7 @@ export default async function DashboardPage() {
         {recentWorkouts.length > 0 && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={SECTION_LABEL_GOLD}>Derniers workouts</p>
+              <p style={SECTION_LABEL_GOLD}>Dernières séances</p>
               <Link href="/workouts" style={{ fontSize: 13, color: 'var(--gold-dim)', textDecoration: 'none', letterSpacing: '0.06em', fontWeight: 600, textTransform: 'uppercase' }}>
                 Voir tout →
               </Link>
@@ -381,7 +381,7 @@ export default async function DashboardPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={SECTION_LABEL_GOLD}>Dernières séances</p>
               <Link href="/workouts" style={{ fontSize: 13, color: 'var(--gold-dim)', textDecoration: 'none', letterSpacing: '0.06em', fontWeight: 600, textTransform: 'uppercase' }}>
-                Mes workouts →
+                Mes séances →
               </Link>
             </div>
             <div style={{ border: '1px solid var(--border)', background: 'var(--bg-card)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
@@ -435,7 +435,7 @@ export default async function DashboardPage() {
         {workoutCount === 0 && (
           <div style={{ padding: '80px 0', textAlign: 'center' }}>
             <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 24 }}>
-              — Aucun workout encore —
+              — Aucune séance encore —
             </div>
             <Link href="/generator" style={{ textDecoration: 'none' }}>
               <button style={{ padding: '12px 32px', background: 'var(--gold)', color: '#080808', border: 'none', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>

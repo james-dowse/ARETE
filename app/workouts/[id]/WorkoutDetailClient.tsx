@@ -817,7 +817,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   }
 
   const handleDelete = async () => {
-    if (!confirm('Supprimer définitivement ce workout ?')) return
+    if (!confirm('Supprimer définitivement cette séance ?')) return
     setDeleting(true)
     await fetch(`/api/workouts/${initial.id}`, { method: 'DELETE' })
     router.push(backTo ?? '/workouts')
@@ -856,7 +856,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     <AppShell>
       <div style={{ maxWidth: 700, paddingBottom: isDirty ? 100 : 32 }}>
         <Link href={backTo ?? '/workouts'} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', textDecoration: 'none', fontSize: 13, marginBottom: 24 }}>
-          <ArrowLeft size={14} /> {backTo === '/admin' ? 'Retour à l\'administration' : 'Retour aux workouts'}
+          <ArrowLeft size={14} /> {backTo === '/admin' ? 'Retour à l\'administration' : 'Retour aux séances'}
         </Link>
 
         <ResumeSessionBanner workoutId={initial.id} />
@@ -969,7 +969,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
               key="description"
               value={editDescription}
               onChange={setEditDescription}
-              placeholder="Décris ce workout…"
+              placeholder="Décris cette séance…"
               minHeight={90}
               highlight={isDirtyDescription}
             />

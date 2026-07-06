@@ -126,7 +126,7 @@ function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => voi
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <Share2 size={16} color="var(--gold)" />
-              <span style={{ fontWeight: 700, fontSize: 16 }}>Recommander ce workout</span>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Recommander cette séance</span>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workout.name}</div>
           </div>
@@ -138,14 +138,14 @@ function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => voi
             <CheckCircle2 size={40} color="var(--green)" />
             <div style={{ fontWeight: 700, fontSize: 15 }}>Recommandation envoyée !</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
-              <strong style={{ color: 'var(--text-primary)' }}>{email}</strong> recevra un email. S'il l'accepte, le workout sera sauvegardé dans ses <em>Sauvegardés</em>.
+              <strong style={{ color: 'var(--text-primary)' }}>{email}</strong> recevra un email. S'il l'accepte, la séance sera sauvegardée dans ses <em>Sauvegardés</em>.
             </div>
             <button onClick={onClose} style={{ marginTop: 8, padding: '9px 24px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Fermer</button>
           </div>
         ) : (
           <>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>
-              Recommande ce workout à un autre utilisateur ARETE. S'il accepte, il sera automatiquement ajouté à ses <strong style={{ color: 'var(--text-primary)' }}>Sauvegardés</strong>.
+              Recommande cette séance à un autre utilisateur ARETE. S'il accepte, elle sera automatiquement ajoutée à ses <strong style={{ color: 'var(--text-primary)' }}>Sauvegardés</strong>.
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
@@ -213,7 +213,7 @@ function WorkoutCard({
 
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation()
-    if (!confirm('Supprimer ce workout ?')) return
+    if (!confirm('Supprimer cette séance ?')) return
     setDeleting(true)
     await fetch(`/api/workouts/${w.id}`, { method: 'DELETE' })
     setDeleting(false)
@@ -403,7 +403,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
     if (p.get('imported') === '1') {
-      setToast('Workout sauvegardé ✓ ✓')
+      setToast('Séance sauvegardée ✓ ✓')
       window.history.replaceState({}, '', '/workouts')
     }
   }, [])
@@ -466,10 +466,10 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
       const res = await fetch('/api/workouts/claim', { method: 'POST' })
       const { claimed } = await res.json()
       if (claimed > 0) {
-        setToast(`${claimed} workout${claimed > 1 ? 's' : ''} récupéré${claimed > 1 ? 's' : ''} ✓`)
+        setToast(`${claimed} séance${claimed > 1 ? 's' : ''} récupérée${claimed > 1 ? 's' : ''} ✓`)
         await loadMine()
       } else {
-        setToast('Aucun workout orphelin trouvé')
+        setToast('Aucune séance orpheline trouvée')
       }
     } finally {
       setClaiming(false)
@@ -503,7 +503,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
       {/* Tabs + compteur dynamique */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
         <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, boxShadow: 'var(--shadow-sm)' }}>
-          <button style={tabStyle('mine')} onClick={() => setTab('mine')}><User size={14} /> Mes workouts</button>
+          <button style={tabStyle('mine')} onClick={() => setTab('mine')}><User size={14} /> Mes séances</button>
           <button style={tabStyle('community')} onClick={() => setTab('community')}><Users size={14} /> Communauté</button>
         </div>
         {!loading && (
@@ -561,8 +561,8 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
           {!hasAnything && (
             <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)' }}>
               <div style={{ fontSize: 44, marginBottom: 14 }}>📭</div>
-              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucun workout</div>
-              <div style={{ fontSize: 13, marginBottom: 24 }}>Génère et sauvegarde ton premier workout</div>
+              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucune séance</div>
+              <div style={{ fontSize: 13, marginBottom: 24 }}>Génère et sauvegarde ta première séance</div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Link href="/generator">
                   <button style={{ padding: '11px 26px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
@@ -574,7 +574,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                   disabled={claiming}
                   style={{ padding: '11px 20px', background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: claiming ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, opacity: claiming ? 0.6 : 1 }}
                 >
-                  {claiming ? '…' : '↩ Récupérer mes anciens workouts'}
+                  {claiming ? '…' : '↩ Récupérer mes anciennes séances'}
                 </button>
               </div>
             </div>
@@ -681,8 +681,8 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
           {communityWorkouts.length === 0 && (
             <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)' }}>
               <div style={{ fontSize: 44, marginBottom: 14 }}>👥</div>
-              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucun workout</div>
-              <div style={{ fontSize: 13 }}>Les workouts de tes coéquipiers apparaîtront ici</div>
+              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucune séance</div>
+              <div style={{ fontSize: 13 }}>Les séances de tes coéquipiers apparaîtront ici</div>
             </div>
           )}
           {communityWorkouts.length > 0 && (
@@ -694,7 +694,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                   context="community"
                   onToggleSave={saved => {
                     setCommunityWorkouts(prev => prev.map(x => x.id === w.id ? { ...x, isSaved: saved } : x))
-                    if (saved) setToast('Workout sauvegardé ✓ ✓')
+                    if (saved) setToast('Séance sauvegardée ✓ ✓')
                   }}
                   onShare={() => setSharingWorkout(w)}
                 />

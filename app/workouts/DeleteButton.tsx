@@ -11,7 +11,7 @@ export default function WorkoutActions({ workoutId, onDelete }: { workoutId: str
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!confirm('Supprimer ce workout ?')) return
+    if (!confirm('Supprimer cette séance ?')) return
     setDeleting(true)
     await fetch(`/api/workouts/${workoutId}`, { method: 'DELETE' })
     if (onDelete) {

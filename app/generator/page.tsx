@@ -282,7 +282,7 @@ export default function GeneratorPage() {
       }
       setSavedId(data.id)
       if (!data.userId) {
-        setSaveError('⚠ Workout sauvegardé mais non lié à ton compte — tu n\'es pas connecté. Il n\'apparaîtra pas dans "Mes workouts".')
+        setSaveError('⚠ Séance sauvegardée mais non liée à ton compte — tu n\'es pas connecté. Elle n\'apparaîtra pas dans "Mes séances".')
       }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Erreur réseau')
@@ -980,7 +980,7 @@ export default function GeneratorPage() {
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', gap: 12 }}>
                 <Zap size={48} strokeWidth={1} />
                 <div style={{ fontSize: 15, fontWeight: 600 }}>Configure et génère</div>
-                <div style={{ fontSize: 13 }}>Ton workout apparaîtra ici</div>
+                <div style={{ fontSize: 13 }}>Ta séance apparaîtra ici</div>
               </div>
             )}
 
@@ -1234,11 +1234,11 @@ export default function GeneratorPage() {
 
                 {!savedId ? (
                   <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 16 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Sauvegarder ce workout</div>
-                    <input value={workoutName} onChange={e => setWorkoutName(e.target.value)} placeholder="Nom du workout" style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', marginBottom: 10 }} />
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Sauvegarder cette séance</div>
+                    <input value={workoutName} onChange={e => setWorkoutName(e.target.value)} placeholder="Nom de la séance" style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', marginBottom: 10 }} />
                     <div style={{ marginBottom: 10 }}>
                       <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 5, fontWeight: 600, letterSpacing: 0.4 }}>DESCRIPTION (optionnel)</label>
-                      <RichEditor value={workoutDescription} onChange={setWorkoutDescription} placeholder="Décris ce workout…" minHeight={60} />
+                      <RichEditor value={workoutDescription} onChange={setWorkoutDescription} placeholder="Décris cette séance…" minHeight={60} />
                     </div>
                     {saveError && (
                       <div style={{ padding: '8px 12px', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.25)', borderRadius: 7, fontSize: 12, color: 'var(--red)', marginBottom: 8 }}>
@@ -1261,8 +1261,8 @@ export default function GeneratorPage() {
                   </div>
                 ) : (
                   <div style={{ background: 'var(--bg-card)', border: '1px solid var(--green)', borderRadius: 10, padding: 16, textAlign: 'center' }}>
-                    <div style={{ color: 'var(--green)', fontWeight: 700, fontSize: 14 }}>✓ Workout sauvegardé !</div>
-                    <a href={`/workouts/${savedId}`} style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginTop: 4 }}>Voir le workout →</a>
+                    <div style={{ color: 'var(--green)', fontWeight: 700, fontSize: 14 }}>✓ Séance sauvegardée !</div>
+                    <a href={`/workouts/${savedId}`} style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginTop: 4 }}>Voir la séance →</a>
                   </div>
                 )}
               </div>
