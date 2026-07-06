@@ -397,7 +397,10 @@ export default function GeneratorPage() {
     const h = Math.floor(r / 60); const m = r % 60
     return m > 0 ? `~${h}h${m}min` : `~${h}h`
   }
-  const minPerMov = (sets: number, rest: number) => sets * (1 + rest)
+  // Règle d'estimation : 30 s de travail par série (de ~10 reps) ; repos entre les séries seulement.
+  // Si le mouvement est en mode durée, la durée exacte remplace les 30 s.
+  const minPerMov = (sets: number, rest: number, durationSec?: number | null) =>
+    sets * (durationSec != null ? durationSec / 60 : 0.5) + Math.max(0, sets - 1) * rest
   const blockEstMin = (count: number, sets: number, rest: number) => count * minPerMov(sets, rest)
   const interBlockRest = (nbBlocks: number) => Math.max(0, nbBlocks - 1) * globalBlockRest
   // When generated: sum actual per-gap rests (only between non-empty adjacent blocks)
@@ -407,7 +410,7 @@ export default function GeneratorPage() {
     return s + (hasLeft && hasRight ? r : 0)
   }, 0)
   const totalEstMin = generated
-    ? generated.reduce((sum, _, i) => sum + minPerMov(params[i]?.sets ?? DEFAULT_SETS, params[i]?.rest ?? DEFAULT_REST), 0)
+    ? generated.reduce((sum, _, i) => sum + minPerMov(params[i]?.sets ?? DEFAULT_SETS, params[i]?.rest ?? DEFAULT_REST, params[i]?.duration), 0)
       + totalInterBlockRestGenerated
     : blocks.reduce((sum, b) => sum + b.count * minPerMov(b.sets, b.rest), 0)
       + interBlockRest(blocks.length)
@@ -448,17 +451,26 @@ export default function GeneratorPage() {
 
     // Nb de blocs aléatoire (2-4) ; durée fournie (mode Temps) ou tirée au sort (20-60 min)
     const targetDur = fixedDur ?? Math.floor(Math.random() * 41) + 20
-    const nbBlocks = fixedDur != null
+    let nbBlocks = fixedDur != null
       ? Math.max(2, Math.min(4, Math.round(targetDur / 15)))  // ~1 bloc par quart d'heure
       : Math.floor(Math.random() * 3) + 2
 
-    // Available time after inter-block rests
-    const availableForMovements = Math.max(nbBlocks, targetDur - Math.max(0, nbBlocks - 1) * globalBlockRest)
-    const timePerMov = sets * (1 + DEFAULT_REST)
-    const totalMovTarget = Math.max(nbBlocks * 2, Math.round(availableForMovements / timePerMov))
+    // Règle : 30 s de travail par série (~10 reps), repos entre les séries seulement
+    const timePerMov = sets * 0.5 + Math.max(0, sets - 1) * DEFAULT_REST
+    let availableForMovements = Math.max(timePerMov, targetDur - Math.max(0, nbBlocks - 1) * globalBlockRest)
+    let totalMovTarget = Math.max(2, Math.round(availableForMovements / timePerMov))
 
-    // Distribute across blocks (min 2 per block)
-    const base = Math.max(2, Math.floor(totalMovTarget / nbBlocks))
+    if (fixedDur != null) {
+      // Durée exacte : on ne gonfle jamais au-delà de la cible — on réduit les blocs si besoin
+      nbBlocks = Math.max(2, Math.min(nbBlocks, Math.floor(totalMovTarget / 2)))
+      availableForMovements = Math.max(timePerMov, targetDur - Math.max(0, nbBlocks - 1) * globalBlockRest)
+      totalMovTarget = Math.max(2, Math.round(availableForMovements / timePerMov))
+    } else {
+      totalMovTarget = Math.max(nbBlocks * 2, totalMovTarget)
+    }
+
+    // Distribute across blocks
+    const base = Math.max(fixedDur != null ? 1 : 2, Math.floor(totalMovTarget / nbBlocks))
     const extra = Math.max(0, Math.min(nbBlocks, totalMovTarget - base * nbBlocks))
 
     // Pick nbBlocks distinct bio types (shuffle)
@@ -983,7 +995,7 @@ export default function GeneratorPage() {
                               <span key={eq} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontWeight: 600 }}>{EQUIPMENT_ICONS[eq]} {eq}</span>
                             ))}
                             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-                              {fmtMin(movs.reduce((s, _, j) => s + minPerMov(params[offset + j]?.sets ?? DEFAULT_SETS, params[offset + j]?.rest ?? DEFAULT_REST), 0))}
+                              {fmtMin(movs.reduce((s, _, j) => s + minPerMov(params[offset + j]?.sets ?? DEFAULT_SETS, params[offset + j]?.rest ?? DEFAULT_REST, params[offset + j]?.duration), 0))}
                             </span>
                             <span style={{ color: 'var(--text-dim)', flexShrink: 0 }}>
                               {resultCollapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
