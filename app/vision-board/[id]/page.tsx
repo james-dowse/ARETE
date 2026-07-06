@@ -2,6 +2,7 @@
 import AppShell from '@/components/AppShell'
 import BoardCanvas from '@/components/BoardCanvas'
 import VisionSlotModal from '@/components/VisionSlotModal'
+import ExportMenu from '@/components/ExportMenu'
 import { Button } from '@/components/ui'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -98,6 +99,7 @@ export default function VisionBoardEditorPage() {
             <Button size="sm" variant="secondary" onClick={addSlot}><Plus size={14} /> Emplacement</Button>
             <Button size="sm" variant="secondary" onClick={() => window.open(`/vision-board/${id}/print`, '_blank')}><Printer size={14} /> Imprimer</Button>
             <Button size="sm" variant="secondary" onClick={() => window.open(`/vision-board/${id}/present`, '_blank')}><Presentation size={14} /> Afficher</Button>
+            <ExportMenu board={board} />
           </div>
         </div>
 

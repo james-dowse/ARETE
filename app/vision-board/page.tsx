@@ -1,6 +1,7 @@
 'use client'
 import AppShell from '@/components/AppShell'
 import BoardCanvas from '@/components/BoardCanvas'
+import ExportMenu from '@/components/ExportMenu'
 import { Card, Button, Modal, Input, Skeleton } from '@/components/ui'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -57,9 +58,12 @@ export default function VisionBoardListPage() {
                 <div style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{b.name}</div>
-                    <button onClick={() => removeBoard(b.id)} title="Supprimer" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 4 }}>
-                      <Trash2 size={14} />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }} onClick={e => e.stopPropagation()}>
+                      <ExportMenu board={b} compact />
+                      <button onClick={() => removeBoard(b.id)} title="Supprimer" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 4 }}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 12 }}>
                     {PAGE_SIZE_LABELS[b.pageSize]} · {b.orientation === 'portrait' ? 'Portrait' : 'Paysage'}
