@@ -9,7 +9,7 @@ import { useRef, useCallback } from 'react'
 
 const allNav = [
   { href: '/generator',   label: 'La Forge',      icon: Zap,             admin: false },
-  { href: '/workouts',    label: 'Mes WODs',      icon: BookOpen,        admin: false },
+  { href: '/workouts',    label: 'Mes Séances',   icon: BookOpen,        admin: false },
   { href: '/planner',     label: 'Semaine',       icon: Calendar,        admin: false },
   { href: '/library',     label: 'Arsenal',       icon: Library,         admin: false },
   { href: '/dashboard',   label: 'Tableau de bord', icon: LayoutDashboard, admin: false },
