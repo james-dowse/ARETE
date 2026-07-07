@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const inter = Inter({
@@ -20,12 +21,19 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "ARETE",
   description: "Training system powered by movement intelligence",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "ARETE" },
+  icons: { apple: "/apple-touch-icon.png" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0A0908",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={`h-full ${inter.variable} ${fraunces.variable}`}>
-      <body className="min-h-full flex">{children}</body>
+      <body className="min-h-full flex"><ServiceWorkerRegister />{children}</body>
     </html>
   );
 }
