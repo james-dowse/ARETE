@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Zap, Save, RefreshCw, Clock, Minus, ChevronDown, ChevronUp, Dices, Search } from 'lucide-react'
 import MovementModal from '@/components/MovementModal'
 import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
+import { minPerMov as _minPerMov, sizeWorkout } from '@/lib/generator-math'
 
 interface Block {
   id: string
@@ -399,9 +400,8 @@ export default function GeneratorPage() {
     return m > 0 ? `~${h}h${m}min` : `~${h}h`
   }
   // Règle d'estimation : 30 s de travail par série (de ~10 reps) ; repos entre les séries seulement.
-  // Si le mouvement est en mode durée, la durée exacte remplace les 30 s.
-  const minPerMov = (sets: number, rest: number, durationSec?: number | null) =>
-    sets * (durationSec != null ? durationSec / 60 : 0.5) + Math.max(0, sets - 1) * rest
+  // Si le mouvement est en mode durée, la durée exacte remplace les 30 s. (logique dans lib/generator-math)
+  const minPerMov = _minPerMov
   const blockEstMin = (count: number, sets: number, rest: number, dur?: number | null) => count * minPerMov(sets, rest, dur)
   const interBlockRest = (nbBlocks: number) => Math.max(0, nbBlocks - 1) * globalBlockRest
   // When generated: sum actual per-gap rests (only between non-empty adjacent blocks)
@@ -450,29 +450,13 @@ export default function GeneratorPage() {
     }
     const { complexities, sets, label } = difficultyMap[difficulty]
 
-    // Nb de blocs aléatoire (2-4) ; durée fournie (mode Temps) ou tirée au sort (20-60 min)
+    // Durée fournie (mode Temps) ou tirée au sort (20-60 min) ; dimensionnement dans lib/generator-math
     const targetDur = fixedDur ?? Math.floor(Math.random() * 41) + 20
-    let nbBlocks = fixedDur != null
-      ? Math.max(2, Math.min(4, Math.round(targetDur / 15)))  // ~1 bloc par quart d'heure
-      : Math.floor(Math.random() * 3) + 2
-
-    // Règle : 30 s de travail par série (~10 reps), repos entre les séries seulement
-    const timePerMov = sets * 0.5 + Math.max(0, sets - 1) * DEFAULT_REST
-    let availableForMovements = Math.max(timePerMov, targetDur - Math.max(0, nbBlocks - 1) * globalBlockRest)
-    let totalMovTarget = Math.max(2, Math.round(availableForMovements / timePerMov))
-
-    if (fixedDur != null) {
-      // Durée exacte : on ne gonfle jamais au-delà de la cible — on réduit les blocs si besoin
-      nbBlocks = Math.max(2, Math.min(nbBlocks, Math.floor(totalMovTarget / 2)))
-      availableForMovements = Math.max(timePerMov, targetDur - Math.max(0, nbBlocks - 1) * globalBlockRest)
-      totalMovTarget = Math.max(2, Math.round(availableForMovements / timePerMov))
-    } else {
-      totalMovTarget = Math.max(nbBlocks * 2, totalMovTarget)
-    }
-
-    // Distribute across blocks
-    const base = Math.max(fixedDur != null ? 1 : 2, Math.floor(totalMovTarget / nbBlocks))
-    const extra = Math.max(0, Math.min(nbBlocks, totalMovTarget - base * nbBlocks))
+    const { nbBlocks, distribution } = sizeWorkout({
+      targetDur, sets, globalBlockRest, defaultRest: DEFAULT_REST,
+      fixed: fixedDur != null,
+      nbBlocksSeed: Math.floor(Math.random() * 3) + 2,
+    })
 
     // Pick nbBlocks distinct bio types (shuffle)
     const shuffledBioTypes = [...BIO_TYPES].sort(() => Math.random() - 0.5)
@@ -482,7 +466,7 @@ export default function GeneratorPage() {
       bioTypes: [shuffledBioTypes[i % shuffledBioTypes.length]],
       complexities: [complexities[Math.floor(Math.random() * complexities.length)]],
       equipments: [],
-      count: base + (i < extra ? 1 : 0),
+      count: distribution[i],
       order: i,
       instructions: '',
       sets,
