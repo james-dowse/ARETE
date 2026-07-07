@@ -148,7 +148,7 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
             <button
               onClick={invite}
               disabled={inviting || !email.trim()}
-              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: 'var(--gold)', color: '#000', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: inviting || !email.trim() ? 'not-allowed' : 'pointer', opacity: inviting || !email.trim() ? 0.6 : 1 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: 'var(--gold)', color: 'var(--ink)', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: inviting || !email.trim() ? 'not-allowed' : 'pointer', opacity: inviting || !email.trim() ? 0.6 : 1 }}
             >
               {inviting
                 ? <><RefreshCw size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Envoi…</>
@@ -163,7 +163,7 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
             </div>
           )}
           {feedback?.type === 'success' && (
-            <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 8, fontSize: 13, color: 'var(--green)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(187,176,147,0.08)', border: '1px solid rgba(187,176,147,0.2)', borderRadius: 8, fontSize: 13, color: 'var(--green)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <CheckCircle size={14} /> {feedback.msg}
             </div>
           )}
@@ -265,7 +265,7 @@ function InviteLinkBox({ url }: { url: string }) {
       <span style={{ flex: 1, fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{url}</span>
       <button
         onClick={copy}
-        style={{ display: 'flex', alignItems: 'center', gap: 5, background: copied ? 'rgba(34,197,94,0.15)' : 'var(--bg-card)', border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 10px', color: copied ? 'var(--green)' : 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 5, background: copied ? 'rgba(187,176,147,0.15)' : 'var(--bg-card)', border: `1px solid ${copied ? 'rgba(187,176,147,0.3)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 10px', color: copied ? 'var(--green)' : 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}
       >
         {copied ? <Check size={12} /> : <Copy size={12} />}
         {copied ? 'Copié !' : 'Copier'}
@@ -375,7 +375,7 @@ function AdminProfileModal({ profile, onClose, onSaved }: { profile: UserProfile
                   <Trash2 size={10} /> Supprimer
                 </button>
               )}
-              <span style={{ padding: '2px 8px', borderRadius: 20, background: profile.status === 'accepted' ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)', color: profile.status === 'accepted' ? 'var(--green)' : 'var(--orange)', fontWeight: 600, fontSize: 11 }}>
+              <span style={{ padding: '2px 8px', borderRadius: 20, background: profile.status === 'accepted' ? 'rgba(187,176,147,0.1)' : 'rgba(245,158,11,0.1)', color: profile.status === 'accepted' ? 'var(--green)' : 'var(--orange)', fontWeight: 600, fontSize: 11 }}>
                 {profile.status === 'accepted' ? 'Actif' : 'En attente'}
               </span>
             </div>
@@ -439,7 +439,7 @@ function UserRow({ user, onRevoke, isProtected, onEditProfile }: { user: Invited
     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', boxShadow: 'var(--shadow-sm)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         {/* Avatar */}
-        <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: accepted ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: accepted ? 'var(--green)' : 'var(--orange)' }}>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: accepted ? 'rgba(187,176,147,0.1)' : 'rgba(245,158,11,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: accepted ? 'var(--green)' : 'var(--orange)' }}>
           {user.email[0].toUpperCase()}
         </div>
 
@@ -450,7 +450,7 @@ function UserRow({ user, onRevoke, isProtected, onEditProfile }: { user: Invited
           </div>
         </div>
 
-        <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600, flexShrink: 0, background: accepted ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)', color: accepted ? 'var(--green)' : 'var(--orange)', border: `1px solid ${accepted ? 'rgba(34,197,94,0.25)' : 'rgba(245,158,11,0.25)'}` }}>
+        <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600, flexShrink: 0, background: accepted ? 'rgba(187,176,147,0.1)' : 'rgba(245,158,11,0.1)', color: accepted ? 'var(--green)' : 'var(--orange)', border: `1px solid ${accepted ? 'rgba(187,176,147,0.25)' : 'rgba(245,158,11,0.25)'}` }}>
           {accepted ? 'Actif' : 'En attente'}
         </span>
 

@@ -171,7 +171,7 @@ export default function PlannerPage() {
       </div>
 
       {toast && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000 }}>
+        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000 }}>
           {toast}
         </div>
       )}

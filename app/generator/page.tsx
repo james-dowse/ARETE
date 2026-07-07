@@ -676,7 +676,7 @@ export default function GeneratorPage() {
                 <button
                   onClick={claimTemplates}
                   disabled={claimingTemplates}
-                  style={{ fontSize: 12, color: 'var(--gold)', background: 'none', border: '1px solid rgba(201,165,53,0.35)', borderRadius: 6, padding: '5px 11px', cursor: claimingTemplates ? 'wait' : 'pointer', whiteSpace: 'nowrap', opacity: claimingTemplates ? 0.6 : 1 }}
+                  style={{ fontSize: 12, color: 'var(--gold)', background: 'none', border: '1px solid rgba(200,165,95,0.35)', borderRadius: 6, padding: '5px 11px', cursor: claimingTemplates ? 'wait' : 'pointer', whiteSpace: 'nowrap', opacity: claimingTemplates ? 0.6 : 1 }}
                 >
                   {claimingTemplates ? '…' : '↩ Récupérer mes anciens templates'}
                 </button>
@@ -841,7 +841,7 @@ export default function GeneratorPage() {
                               const active = mode === 'durée' ? block.duration != null : block.duration == null
                               return (
                                 <button key={mode} onClick={() => updateBlock(block.id, 'duration', mode === 'durée' ? (block.duration ?? 45) : null)}
-                                  style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${active ? (mode === 'durée' ? 'rgba(99,179,237,0.5)' : 'rgba(201,165,53,0.5)') : 'var(--border)'}`, background: active ? (mode === 'durée' ? 'rgba(99,179,237,0.12)' : 'rgba(201,165,53,0.1)') : 'transparent', color: active ? (mode === 'durée' ? 'var(--blue)' : 'var(--gold)') : 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                  style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${active ? (mode === 'durée' ? 'rgba(99,179,237,0.5)' : 'rgba(200,165,95,0.5)') : 'var(--border)'}`, background: active ? (mode === 'durée' ? 'rgba(99,179,237,0.12)' : 'rgba(200,165,95,0.1)') : 'transparent', color: active ? (mode === 'durée' ? 'var(--blue)' : 'var(--gold)') : 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                   {mode === 'durée' ? '⏱ Durée' : 'Reps'}
                                 </button>
                               )
@@ -906,8 +906,8 @@ export default function GeneratorPage() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 7,
                   padding: '7px 13px',
-                  background: videoOnly ? 'rgba(201,165,53,0.10)' : 'var(--bg-card)',
-                  border: `1px solid ${videoOnly ? 'rgba(201,165,53,0.55)' : 'var(--border)'}`,
+                  background: videoOnly ? 'rgba(200,165,95,0.10)' : 'var(--bg-card)',
+                  border: `1px solid ${videoOnly ? 'rgba(200,165,95,0.55)' : 'var(--border)'}`,
                   borderRadius: 8, cursor: 'pointer',
                   fontSize: 12, fontWeight: videoOnly ? 700 : 500,
                   color: videoOnly ? 'var(--gold)' : 'var(--text-muted)',
@@ -930,7 +930,7 @@ export default function GeneratorPage() {
 
             {/* Duration guidance banner */}
             {targetMovements && (
-              <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 9, background: durationOk ? 'rgba(21,128,61,0.07)' : 'rgba(194,65,12,0.07)', border: `1px solid ${durationOk ? 'rgba(21,128,61,0.25)' : 'rgba(194,65,12,0.3)'}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 9, background: durationOk ? 'var(--green-ghost)' : 'var(--orange-ghost)', border: `1px solid ${durationOk ? 'rgba(187,176,147,0.35)' : 'rgba(200,165,95,0.35)'}`, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: durationOk ? 'var(--green)' : 'var(--orange)' }}>
                     {durationOk
@@ -945,7 +945,7 @@ export default function GeneratorPage() {
                 </div>
                 {!durationOk && (
                   <button onClick={adaptToDuration}
-                    style={{ flexShrink: 0, padding: '5px 12px', background: 'var(--orange)', border: 'none', borderRadius: 7, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    style={{ flexShrink: 0, padding: '5px 12px', background: 'var(--orange)', border: 'none', borderRadius: 7, color: 'var(--ink)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                     Adapter
                   </button>
                 )}
@@ -1048,7 +1048,7 @@ export default function GeneratorPage() {
                             <button
                               onClick={() => toggleResultSuperset(bi)}
                               title={block.superset ? 'Désactiver superset' : 'Activer superset pour ce bloc'}
-                              style={{ flexShrink: 0, background: block.superset ? 'rgba(201,165,53,0.15)' : 'none', border: block.superset ? '1px solid rgba(201,165,53,0.4)' : '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: '2px 8px', color: block.superset ? 'var(--gold)' : 'var(--text-dim)', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}
+                              style={{ flexShrink: 0, background: block.superset ? 'rgba(200,165,95,0.15)' : 'none', border: block.superset ? '1px solid rgba(200,165,95,0.4)' : '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: '2px 8px', color: block.superset ? 'var(--gold)' : 'var(--text-dim)', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}
                             >
                               <Zap size={11} /> Superset
                             </button>
@@ -1131,7 +1131,7 @@ export default function GeneratorPage() {
                                       const active = mode === 'durée' ? params[i]?.duration != null : params[i]?.duration == null
                                       return (
                                         <button key={mode} onClick={() => setParam(i, 'duration', mode === 'durée' ? (params[i]?.duration ?? 45) : null)}
-                                          style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${active ? (mode === 'durée' ? 'rgba(99,179,237,0.5)' : 'rgba(201,165,53,0.5)') : 'var(--border)'}`, background: active ? (mode === 'durée' ? 'rgba(99,179,237,0.12)' : 'rgba(201,165,53,0.1)') : 'transparent', color: active ? (mode === 'durée' ? 'var(--blue)' : 'var(--gold)') : 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                          style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${active ? (mode === 'durée' ? 'rgba(99,179,237,0.5)' : 'rgba(200,165,95,0.5)') : 'var(--border)'}`, background: active ? (mode === 'durée' ? 'rgba(99,179,237,0.12)' : 'rgba(200,165,95,0.1)') : 'transparent', color: active ? (mode === 'durée' ? 'var(--blue)' : 'var(--gold)') : 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                           {mode === 'durée' ? '⏱ Durée' : 'Reps'}
                                         </button>
                                       )
@@ -1255,7 +1255,7 @@ export default function GeneratorPage() {
                       </div>
                     )}
                     <button onClick={launchNow} disabled={launching}
-                      style={{ width: '100%', marginTop: 8, padding: '9px', background: 'rgba(201,165,53,0.1)', border: '1px solid rgba(201,165,53,0.3)', borderRadius: 8, color: 'var(--gold)', fontWeight: 700, fontSize: 13, cursor: launching ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: launching ? 0.7 : 1 }}>
+                      style={{ width: '100%', marginTop: 8, padding: '9px', background: 'rgba(200,165,95,0.1)', border: '1px solid rgba(200,165,95,0.3)', borderRadius: 8, color: 'var(--gold)', fontWeight: 700, fontSize: 13, cursor: launching ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: launching ? 0.7 : 1 }}>
                       <Zap size={13} /> {launching ? 'Lancement…' : 'Démarrage rapide'}
                     </button>
                   </div>

@@ -876,11 +876,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
             {!editMode ? (
               <>
                 <button onClick={() => router.push(`/workouts/${initial.id}/active`)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'rgba(201,165,53,0.12)', border: '1px solid rgba(201,165,53,0.35)', borderRadius: 9, color: 'var(--gold)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'rgba(200,165,95,0.12)', border: '1px solid rgba(200,165,95,0.35)', borderRadius: 9, color: 'var(--gold)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                   <PlayCircle size={14} /> Démarrer
                 </button>
                 <button onClick={handleLogSession} disabled={loggingSession}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 9, color: 'var(--green)', fontSize: 13, fontWeight: 600, cursor: loggingSession ? 'wait' : 'pointer' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(187,176,147,0.1)', border: '1px solid rgba(187,176,147,0.3)', borderRadius: 9, color: 'var(--green)', fontSize: 13, fontWeight: 600, cursor: loggingSession ? 'wait' : 'pointer' }}>
                   <CheckCircle2 size={14} /> {loggingSession ? '…' : 'J\'ai fait'}
                 </button>
                 <button onClick={() => window.open(`/workouts/${initial.id}/print`, '_blank')}
@@ -1130,13 +1130,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
 
       {addedToast && (
         <div onAnimationEnd={() => setTimeout(() => setAddedToast(false), 2500)}
-          style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000 }}>
+          style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000 }}>
           Ajouté au planner ✓
         </div>
       )}
 
       {sessionToast && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, display: 'flex', alignItems: 'center', gap: 8 }}>
           <CheckCircle2 size={15} /> Séance enregistrée !
         </div>
       )}

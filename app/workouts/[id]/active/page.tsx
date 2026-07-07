@@ -375,7 +375,7 @@ export default function ActivePage() {
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'brightness(0.75)' }}
                 />
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(201,165,53,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(200,165,95,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="#000"><path d="M8 5v14l11-7z"/></svg>
                   </div>
                 </div>
@@ -391,7 +391,7 @@ export default function ActivePage() {
         <div style={{ display: 'flex', gap: 4, marginLeft: 4 }}>
           {REST_OPTIONS.map(s => (
             <button key={s} onClick={() => setDefaultRest(s)}
-              style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${defaultRest === s ? 'var(--gold)' : 'rgba(255,255,255,0.1)'}`, background: defaultRest === s ? 'rgba(201,165,53,0.15)' : 'transparent', color: defaultRest === s ? 'var(--gold)' : 'rgba(255,255,255,0.4)', transition: 'all 0.15s' }}>
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${defaultRest === s ? 'var(--gold)' : 'rgba(255,255,255,0.1)'}`, background: defaultRest === s ? 'rgba(200,165,95,0.15)' : 'transparent', color: defaultRest === s ? 'var(--gold)' : 'rgba(255,255,255,0.4)', transition: 'all 0.15s' }}>
               {s}s
             </button>
           ))}
@@ -420,7 +420,7 @@ export default function ActivePage() {
                   </div>
                   {movs.length > 1 && block?.id && (
                     <button onClick={() => toggleSuperset(block.id)}
-                      style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: `1px solid ${isSuperset ? 'var(--gold)' : 'rgba(255,255,255,0.15)'}`, background: isSuperset ? 'rgba(201,165,53,0.15)' : 'transparent', color: isSuperset ? 'var(--gold)' : 'rgba(255,255,255,0.3)', transition: 'all 0.15s', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: `1px solid ${isSuperset ? 'var(--gold)' : 'rgba(255,255,255,0.15)'}`, background: isSuperset ? 'rgba(200,165,95,0.15)' : 'transparent', color: isSuperset ? 'var(--gold)' : 'rgba(255,255,255,0.3)', transition: 'all 0.15s', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                       ⚡ Superset
                     </button>
                   )}
@@ -532,8 +532,8 @@ export default function ActivePage() {
                                 letterSpacing: onIvory ? '0.03em' : 0,
                                 textTransform: onIvory ? 'uppercase' : 'none',
                                 // Or massif pour le mouvement actif : le geste principal de la séance
-                                background: isComplete ? 'var(--cypress-ghost)' : onIvory ? 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)' : 'rgba(201,165,53,0.10)',
-                                border: `1px solid ${isComplete ? 'rgba(127,184,148,0.25)' : onIvory ? 'transparent' : 'rgba(201,165,53,0.3)'}`,
+                                background: isComplete ? 'var(--cypress-ghost)' : onIvory ? 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)' : 'rgba(200,165,95,0.10)',
+                                border: `1px solid ${isComplete ? 'rgba(127,184,148,0.25)' : onIvory ? 'transparent' : 'rgba(200,165,95,0.3)'}`,
                                 color: isComplete ? 'var(--green)' : onIvory ? '#0E0C08' : 'var(--gold)',
                                 boxShadow: onIvory ? '0 2px 0 rgba(14,12,8,0.25)' : 'none',
                                 transition: 'all 0.15s',
@@ -584,7 +584,7 @@ export default function ActivePage() {
             <input value={note} onChange={e => setNote(e.target.value)} placeholder="Note optionnelle…"
               style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9, padding: '10px 14px', color: '#fff', fontSize: 13, outline: 'none' }} />
             <button onClick={handleFinish} disabled={finishing}
-              style={{ padding: '10px 20px', borderRadius: 9, background: 'var(--green)', border: 'none', color: '#000', fontSize: 13, fontWeight: 800, cursor: finishing ? 'wait' : 'pointer', flexShrink: 0 }}>
+              style={{ padding: '10px 20px', borderRadius: 9, background: 'var(--green)', border: 'none', color: 'var(--ink)', fontSize: 13, fontWeight: 800, cursor: finishing ? 'wait' : 'pointer', flexShrink: 0 }}>
               {finishing ? '…' : 'Enregistrer'}
             </button>
             <button onClick={() => setShowFinish(false)}
@@ -600,10 +600,10 @@ export default function ActivePage() {
             <button onClick={() => setShowFinish(true)}
               style={{
                 padding: '11px 24px', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: 'pointer', flexShrink: 0,
-                background: allDone ? 'var(--green)' : 'rgba(201,165,53,0.15)',
-                border: `1px solid ${allDone ? 'transparent' : 'rgba(201,165,53,0.3)'}`,
+                background: allDone ? 'var(--green)' : 'rgba(200,165,95,0.15)',
+                border: `1px solid ${allDone ? 'transparent' : 'rgba(200,165,95,0.3)'}`,
                 color: allDone ? '#000' : 'var(--gold)',
-                boxShadow: allDone ? '0 0 20px rgba(34,197,94,0.4)' : 'none',
+                boxShadow: allDone ? '0 0 20px rgba(187,176,147,0.4)' : 'none',
                 transition: 'all 0.3s',
               }}>
               {allDone ? '🏁 Terminer la séance' : 'Terminer'}

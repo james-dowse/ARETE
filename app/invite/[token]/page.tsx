@@ -8,13 +8,13 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#0f0f0f',
+      minHeight: '100vh', background: 'var(--bg-primary)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       padding: 24,
     }}>
       <div style={{
-        background: '#1a1a1a', border: '1px solid rgba(201,165,53,0.2)',
+        background: 'var(--bg-card)', border: '1px solid rgba(200,165,95,0.2)',
         borderRadius: 20, padding: '48px 40px', maxWidth: 440, width: '100%',
         textAlign: 'center',
       }}>
@@ -48,7 +48,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
             <Link
               href={`/api/invite/accept?token=${token}`}
               style={{
-                display: 'inline-block', background: 'var(--gold)', color: '#000',
+                display: 'inline-block', background: 'var(--gold)', color: 'var(--ink)',
                 fontWeight: 700, fontSize: 15, padding: '14px 36px',
                 borderRadius: 10, textDecoration: 'none', letterSpacing: 0.3,
               }}

@@ -210,7 +210,7 @@ export default async function DashboardPage() {
                   </div>
                 </div>
                 <Link href={`/workouts/${entry.workout.id}/active`} style={{ textDecoration: 'none', flexShrink: 0 }}>
-                  <span style={{ display: 'inline-block', background: 'var(--gold)', color: '#080808', fontSize: 13, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 20px', borderRadius: 'var(--r-sm)', cursor: 'pointer' }} className="cta-generate">
+                  <span style={{ display: 'inline-block', background: 'var(--gold)', color: 'var(--ink)', fontSize: 13, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 20px', borderRadius: 'var(--r-sm)', cursor: 'pointer' }} className="cta-generate">
                     Démarrer →
                   </span>
                 </Link>
@@ -236,14 +236,14 @@ export default async function DashboardPage() {
             className="cta-generate"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
               </svg>
-              <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#080808' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink)' }}>
                 Générer une séance
               </span>
             </div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
             </svg>
           </div>
@@ -397,7 +397,7 @@ export default async function DashboardPage() {
                       borderTop: i > 0 ? '1px solid var(--border)' : 'none',
                       transition: 'background 0.15s', cursor: 'pointer',
                     }} className="workout-row">
-                      <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(200,169,81,0.1)', border: '1px solid rgba(200,169,81,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(200,165,95,0.1)', border: '1px solid rgba(200,165,95,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
                         </svg>
@@ -438,7 +438,7 @@ export default async function DashboardPage() {
               — Aucune séance encore —
             </div>
             <Link href="/generator" style={{ textDecoration: 'none' }}>
-              <button style={{ padding: '12px 32px', background: 'var(--gold)', color: '#080808', border: 'none', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
+              <button style={{ padding: '12px 32px', background: 'var(--gold)', color: 'var(--ink)', border: 'none', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
                 Commencer
               </button>
             </Link>
@@ -450,7 +450,7 @@ export default async function DashboardPage() {
       <style>{`
         .cta-generate:hover { filter: brightness(1.12); transform: translateY(-2px) scale(1.005); box-shadow: var(--elev-gold-lg); }
         .workout-row:hover { background: var(--bg-elevated) !important; }
-        .avatar-btn:hover { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(200,169,81,0.18) !important; }
+        .avatar-btn:hover { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(200,165,95,0.18) !important; }
       `}</style>
     </AppShell>
   )

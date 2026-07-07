@@ -283,7 +283,7 @@ function AttributeSection({
                   </div>
                 )}
                 <button onClick={() => commitEdit(opt.id)} disabled={saving} title="Sauvegarder"
-                  style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 6, background: 'var(--dirty,rgba(200,169,81,0.15))', border: '1px solid var(--accent)', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 6, background: 'var(--dirty,rgba(200,165,95,0.15))', border: '1px solid var(--accent)', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Check size={12} />
                 </button>
                 <button onClick={cancelEdit} title="Annuler"
@@ -587,7 +587,7 @@ function WorkoutsAdminTab() {
                     <td style={{ padding: '11px 12px', maxWidth: 180 }}>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         {tags.map(tag => (
-                          <span key={tag} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: 'rgba(200,169,81,0.1)', color: 'var(--gold)', border: '1px solid rgba(200,169,81,0.2)' }}>#{tag}</span>
+                          <span key={tag} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: 'rgba(200,165,95,0.1)', color: 'var(--gold)', border: '1px solid rgba(200,165,95,0.2)' }}>#{tag}</span>
                         ))}
                       </div>
                     </td>
@@ -1045,7 +1045,7 @@ export default function AdminClient({
 
         {/* ── Bulk action bar ── */}
         {selected.size > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '10px 16px', background: 'rgba(200,169,81,0.08)', border: '1px solid rgba(200,169,81,0.25)', borderRadius: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '10px 16px', background: 'rgba(200,165,95,0.08)', border: '1px solid rgba(200,165,95,0.25)', borderRadius: 10, flexWrap: 'wrap' }}>
             <CheckSquare size={15} color="var(--gold)" />
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)', marginRight: 4 }}>
               {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
@@ -1103,7 +1103,7 @@ export default function AdminClient({
             {(stagedBioType || stagedComplexity || stagedEquipment) && (
               <button
                 onClick={() => setPendingBulkUpdate({ bioType: stagedBioType || undefined, complexity: stagedComplexity || undefined, equipment: stagedEquipment === '__clear__' ? '' : (stagedEquipment || undefined) })}
-                style={{ padding: '5px 12px', background: 'var(--gold)', border: 'none', borderRadius: 7, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                style={{ padding: '5px 12px', background: 'var(--gold)', border: 'none', borderRadius: 7, color: 'var(--ink)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
               >
                 Appliquer
               </button>
@@ -1156,7 +1156,7 @@ export default function AdminClient({
                   const usage = usageMap[m.id] || 0
                   const rowBg = isEditing ? 'var(--dirty)' : idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.025)'
                   return (
-                    <tr key={m.id} onDoubleClick={() => { if (!isEditing) startEdit(m) }} style={{ borderBottom: '1px solid var(--border)', background: selected.has(m.id) ? 'rgba(200,169,81,0.06)' : rowBg, transition: 'background 0.1s', cursor: isEditing ? 'default' : 'pointer' }}>
+                    <tr key={m.id} onDoubleClick={() => { if (!isEditing) startEdit(m) }} style={{ borderBottom: '1px solid var(--border)', background: selected.has(m.id) ? 'rgba(200,165,95,0.06)' : rowBg, transition: 'background 0.1s', cursor: isEditing ? 'default' : 'pointer' }}>
                       {/* Checkbox */}
                       <td style={{ padding: '8px 8px 8px 14px' }} onClick={e => e.stopPropagation()}>
                         <input
@@ -1225,7 +1225,7 @@ export default function AdminClient({
                           <button
                             onClick={() => openUsagePanel(m)}
                             title="Voir les séances"
-                            style={{ fontSize: 12, fontWeight: 700, color: usagePanel?.id === m.id ? 'var(--gold)' : 'var(--blue)', background: usagePanel?.id === m.id ? 'rgba(200,169,81,0.12)' : 'rgba(96,165,250,0.08)', border: `1px solid ${usagePanel?.id === m.id ? 'rgba(200,169,81,0.3)' : 'rgba(96,165,250,0.2)'}`, borderRadius: 6, padding: '2px 9px', cursor: 'pointer', transition: 'all 0.15s' }}
+                            style={{ fontSize: 12, fontWeight: 700, color: usagePanel?.id === m.id ? 'var(--gold)' : 'var(--blue)', background: usagePanel?.id === m.id ? 'rgba(200,165,95,0.12)' : 'rgba(96,165,250,0.08)', border: `1px solid ${usagePanel?.id === m.id ? 'rgba(200,165,95,0.3)' : 'rgba(96,165,250,0.2)'}`, borderRadius: 6, padding: '2px 9px', cursor: 'pointer', transition: 'all 0.15s' }}
                           >
                             {usage}
                           </button>

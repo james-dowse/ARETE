@@ -73,9 +73,9 @@ function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: string; on
               key={i}
               onClick={() => setSelected(i)}
               style={{
-                padding: '10px 4px', borderRadius: 10, border: `2px solid ${selected === i ? 'var(--gold)' : i === todayIdx ? 'rgba(200,169,81,0.3)' : 'var(--border)'}`,
-                background: selected === i ? 'rgba(200,169,81,0.15)' : 'var(--bg-elevated)',
-                color: selected === i ? 'var(--gold)' : i === todayIdx ? 'rgba(200,169,81,0.8)' : 'var(--text-muted)',
+                padding: '10px 4px', borderRadius: 10, border: `2px solid ${selected === i ? 'var(--gold)' : i === todayIdx ? 'rgba(200,165,95,0.3)' : 'var(--border)'}`,
+                background: selected === i ? 'rgba(200,165,95,0.15)' : 'var(--bg-elevated)',
+                color: selected === i ? 'var(--gold)' : i === todayIdx ? 'rgba(200,165,95,0.8)' : 'var(--text-muted)',
                 fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
               }}
             >{day}</button>
@@ -84,7 +84,7 @@ function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: string; on
         <button
           onClick={handleAdd}
           disabled={selected === null || saving}
-          style={{ width: '100%', padding: '11px', background: 'var(--gold)', color: '#000', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: selected === null || saving ? 'default' : 'pointer', opacity: selected === null ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+          style={{ width: '100%', padding: '11px', background: 'var(--gold)', color: 'var(--ink)', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: selected === null || saving ? 'default' : 'pointer', opacity: selected === null ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
         >
           <CalendarPlus size={14} />
           {saving ? 'Ajout…' : selected !== null ? `Ajouter — ${DAYS_FR[selected]}` : 'Choisir un jour'}
@@ -160,7 +160,7 @@ function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => voi
               <button
                 onClick={handleShare}
                 disabled={status === 'sending' || !email.trim()}
-                style={{ padding: '9px 16px', background: 'var(--gold)', color: '#000', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: status === 'sending' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: (!email.trim() || status === 'sending') ? 0.6 : 1 }}
+                style={{ padding: '9px 16px', background: 'var(--gold)', color: 'var(--ink)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: status === 'sending' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: (!email.trim() || status === 'sending') ? 0.6 : 1 }}
               >
                 <Send size={13} />
                 {status === 'sending' ? '…' : 'Envoyer'}
@@ -264,7 +264,7 @@ function WorkoutCard({
                 </>
               )}
               {context === 'saved' && w._savedSource === 'shared' && (
-                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(201,165,53,0.12)', color: 'var(--gold)', border: '1px solid rgba(201,165,53,0.25)', fontWeight: 600 }}>recommandé</span>
+                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(200,165,95,0.12)', color: 'var(--gold)', border: '1px solid rgba(200,165,95,0.25)', fontWeight: 600 }}>recommandé</span>
               )}
             </div>
           </div>
@@ -302,13 +302,13 @@ function WorkoutCard({
             {(context === 'mine' || context === 'saved') && (
               <button onClick={handleToggleFavorite} disabled={toggling}
                 title={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, background: isFavorite ? 'rgba(200,169,81,0.12)' : 'none', border: `1px solid ${isFavorite ? 'rgba(200,169,81,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 9px', color: isFavorite ? 'var(--gold)' : 'var(--text-muted)', fontSize: 12, cursor: toggling ? 'default' : 'pointer', transition: 'all 0.15s' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 4, background: isFavorite ? 'rgba(200,165,95,0.12)' : 'none', border: `1px solid ${isFavorite ? 'rgba(200,165,95,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 9px', color: isFavorite ? 'var(--gold)' : 'var(--text-muted)', fontSize: 12, cursor: toggling ? 'default' : 'pointer', transition: 'all 0.15s' }}>
                 <Star size={12} fill={isFavorite ? 'var(--gold)' : 'none'} />
               </button>
             )}
             {context === 'community' && (
               <button onClick={e => { e.preventDefault(); handleToggleSave() }} disabled={saving}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, background: isSaved ? 'rgba(201,165,53,0.1)' : 'none', border: `1px solid ${isSaved ? 'rgba(201,165,53,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 10px', color: isSaved ? 'var(--gold)' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: saving ? 'default' : 'pointer', transition: 'all 0.15s' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: isSaved ? 'rgba(200,165,95,0.1)' : 'none', border: `1px solid ${isSaved ? 'rgba(200,165,95,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 10px', color: isSaved ? 'var(--gold)' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: saving ? 'default' : 'pointer', transition: 'all 0.15s' }}>
                 {isSaved ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
                 {isSaved ? 'Sauvegardé' : 'Sauvegarder'}
               </button>
@@ -332,7 +332,7 @@ function WorkoutCard({
           {/* Droite : Démarrer → Semaine → Dupliquer → Modifier → Supprimer */}
           <div style={{ display: 'flex', gap: 4 }}>
             <button onClick={e => { e.preventDefault(); router.push(`/workouts/${w.id}/active`) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(201,165,53,0.12)', border: '1px solid rgba(201,165,53,0.35)', borderRadius: 6, padding: '5px 11px', color: 'var(--gold)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(200,165,95,0.12)', border: '1px solid rgba(200,165,95,0.35)', borderRadius: 6, padding: '5px 11px', color: 'var(--gold)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
               <PlayCircle size={13} /> Démarrer
             </button>
             {(context === 'mine' || context === 'saved') && (
@@ -525,7 +525,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
               onClick={() => setActiveTag(activeTag === tag ? null : tag)}
               style={{
                 padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                background: activeTag === tag ? 'rgba(200,169,81,0.18)' : 'var(--bg-card)',
+                background: activeTag === tag ? 'rgba(200,165,95,0.18)' : 'var(--bg-card)',
                 color: activeTag === tag ? 'var(--gold)' : 'var(--text-muted)',
                 border: `1px solid ${activeTag === tag ? 'var(--gold-border)' : 'var(--border)'}`,
                 transition: 'all 0.15s',
@@ -709,7 +709,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, whiteSpace: 'nowrap' }}>
+        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, whiteSpace: 'nowrap' }}>
           {toast}
         </div>
       )}
