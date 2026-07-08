@@ -144,7 +144,7 @@ export default function Sidebar() {
       </div>
 
       {/* ── Séparateur ── */}
-      <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(200,169,81,0.15) 0%, transparent 80%)', margin: collapsed ? '0 8px' : '0 20px', transition: 'margin 0.22s', flexShrink: 0 }} />
+      <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(200,165,95,0.15) 0%, transparent 80%)', margin: collapsed ? '0 8px' : '0 20px', transition: 'margin 0.22s', flexShrink: 0 }} />
 
       {/* ── Main nav — hauteur naturelle (pas flex:1) ── */}
       <nav style={{ display: 'flex', flexDirection: 'column', padding: collapsed ? '20px 8px 0' : '20px 12px 0', transition: 'padding 0.22s' }}>
@@ -201,7 +201,7 @@ export default function Sidebar() {
             borderRadius: 'var(--r-sm)', padding: collapsed ? '8px' : '7px 10px', cursor: 'pointer',
             color: 'rgba(255,255,255,0.35)', transition: 'color 0.15s, background 0.15s, border-color 0.15s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(200,169,81,0.4)' }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(200,165,95,0.4)' }}
           onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
         >
           <Search size={14} strokeWidth={1.8} style={{ flexShrink: 0 }} />
@@ -223,26 +223,26 @@ export default function Sidebar() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            background: 'rgba(200,169,81,0.08)',
-            border: '1px solid rgba(200,169,81,0.22)',
+            background: 'rgba(200,165,95,0.08)',
+            border: '1px solid rgba(200,165,95,0.22)',
             borderRadius: 'var(--r-sm)',
             padding: '9px',
             cursor: 'pointer',
-            color: 'rgba(200,169,81,0.7)',
+            color: 'rgba(200,165,95,0.7)',
             transition: 'color 0.15s, background 0.15s, border-color 0.15s',
             overflow: 'hidden',
           }}
           onMouseEnter={e => {
             const b = e.currentTarget as HTMLButtonElement
-            b.style.background = 'rgba(200,169,81,0.16)'
-            b.style.borderColor = 'rgba(200,169,81,0.5)'
+            b.style.background = 'rgba(200,165,95,0.16)'
+            b.style.borderColor = 'rgba(200,165,95,0.5)'
             b.style.color = 'var(--gold)'
           }}
           onMouseLeave={e => {
             const b = e.currentTarget as HTMLButtonElement
-            b.style.background = 'rgba(200,169,81,0.08)'
-            b.style.borderColor = 'rgba(200,169,81,0.22)'
-            b.style.color = 'rgba(200,169,81,0.7)'
+            b.style.background = 'rgba(200,165,95,0.08)'
+            b.style.borderColor = 'rgba(200,165,95,0.22)'
+            b.style.color = 'rgba(200,165,95,0.7)'
           }}
         >
           {collapsed ? <ChevronRight size={16} strokeWidth={2.5} /> : <ChevronLeft size={16} strokeWidth={2.5} />}
@@ -260,12 +260,12 @@ export default function Sidebar() {
           title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: 8, background: 'rgba(200,169,81,0.06)', border: '1px solid rgba(200,169,81,0.15)',
+            gap: 8, background: 'rgba(200,165,95,0.06)', border: '1px solid rgba(200,165,95,0.15)',
             borderRadius: 'var(--r-sm)', padding: collapsed ? '8px' : '8px 12px', cursor: 'pointer',
             color: 'rgba(255,255,255,0.45)', transition: 'color 0.15s, background 0.15s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.background = 'rgba(200,169,81,0.12)' }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; e.currentTarget.style.background = 'rgba(200,169,81,0.06)' }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.background = 'rgba(200,165,95,0.12)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; e.currentTarget.style.background = 'rgba(200,165,95,0.06)' }}
         >
           {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
           <span style={{ fontSize: 12, maxWidth: collapsed ? 0 : 100, opacity: collapsed ? 0 : 1, overflow: 'hidden', whiteSpace: 'nowrap', transition: 'max-width 0.22s, opacity 0.15s' }}>
@@ -307,7 +307,7 @@ export default function Sidebar() {
         >
           {/* Input */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-            <Search size={16} style={{ color: 'rgba(200,169,81,0.7)', flexShrink: 0 }} />
+            <Search size={16} style={{ color: 'rgba(200,165,95,0.7)', flexShrink: 0 }} />
             <input
               ref={searchRef}
               value={searchQ}
@@ -335,7 +335,7 @@ export default function Sidebar() {
             )}
             {!searchLoading && searchResults && searchResults.workouts.length > 0 && (
               <>
-                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(200,169,81,0.6)' }}>Séances</div>
+                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(200,165,95,0.6)' }}>Séances</div>
                 {searchResults.workouts.map(w => (
                   <button
                     key={w.id}
@@ -346,10 +346,10 @@ export default function Sidebar() {
                       textAlign: 'left', color: 'var(--text, #fff)',
                       transition: 'background 0.1s',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,169,81,0.08)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,165,95,0.08)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
                   >
-                    <BookOpen size={13} style={{ color: 'rgba(200,169,81,0.6)', flexShrink: 0 }} />
+                    <BookOpen size={13} style={{ color: 'rgba(200,165,95,0.6)', flexShrink: 0 }} />
                     <span style={{ fontSize: 14, flex: 1 }}>{w.name}</span>
                     {w.duration && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{w.duration} min</span>}
                   </button>
@@ -358,7 +358,7 @@ export default function Sidebar() {
             )}
             {!searchLoading && searchResults && searchResults.movements.length > 0 && (
               <>
-                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(200,169,81,0.6)', borderTop: searchResults.workouts.length > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', marginTop: searchResults.workouts.length > 0 ? 4 : 0 }}>Mouvements</div>
+                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(200,165,95,0.6)', borderTop: searchResults.workouts.length > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', marginTop: searchResults.workouts.length > 0 ? 4 : 0 }}>Mouvements</div>
                 {searchResults.movements.map(m => (
                   <button
                     key={m.id}
@@ -369,7 +369,7 @@ export default function Sidebar() {
                       textAlign: 'left', color: 'var(--text, #fff)',
                       transition: 'background 0.1s',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,169,81,0.08)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,165,95,0.08)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
                   >
                     <Library size={13} style={{ color: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
