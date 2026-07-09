@@ -73,7 +73,7 @@ export default function GeneratorPage() {
 
   // Random workout
   const [randomDifficulty, setRandomDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
-  // Les trois voies de la forge : hasard, temps disponible, ou composition bloc par bloc
+  // Les trois modes de composition : hasard, temps disponible, ou bloc par bloc
   const [genMode, setGenMode] = useState<'random' | 'time' | 'structure'>('random')
   const [timeTarget, setTimeTarget] = useState(30)
   // Movement detail modal
@@ -506,8 +506,8 @@ export default function GeneratorPage() {
     <AppShell>
       <div style={{ maxWidth: 1060 }}>
         <div style={{ marginBottom: 24 }}>
-          <h1 className="r-h1" style={{ fontSize: 44, fontWeight: 600, margin: 0, letterSpacing: '-0.015em' }}>La Forge</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: 8, fontSize: 16 }}>Choisis ta voie.</p>
+          <h1 className="r-h1" style={{ fontSize: 44, fontWeight: 600, margin: 0, letterSpacing: '-0.015em' }}>L&rsquo;Atelier</h1>
+          <p style={{ color: 'var(--text-muted)', marginTop: 8, fontSize: 16 }}>Trois façons de composer ta séance.</p>
           <div className="tick-rule" style={{ marginTop: 16 }} />
         </div>
 
@@ -516,12 +516,12 @@ export default function GeneratorPage() {
           {/* ── Left: Builder ── */}
           <div>
 
-            {/* ── Les trois voies de la forge ── */}
+            {/* ── Les trois modes de composition ── */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
               {([
-                { key: 'random',    icon: '⚔️', title: 'Au hasard',  sub: 'Laisse la forge décider' },
+                { key: 'random',    icon: '🎲', title: 'Au hasard',  sub: 'On compose pour toi' },
                 { key: 'time',      icon: '⏱', title: 'Au temps',   sub: 'J’ai X minutes devant moi' },
-                { key: 'structure', icon: '🏛', title: 'Sur mesure', sub: 'Je compose bloc par bloc' },
+                { key: 'structure', icon: '🧱', title: 'Sur mesure', sub: 'Je compose bloc par bloc' },
               ] as const).map(({ key, icon, title, sub }) => {
                 const active = genMode === key
                 return (
@@ -573,7 +573,7 @@ export default function GeneratorPage() {
                 disabled={loading}
                 style={{ width: '100%', padding: '13px', background: 'linear-gradient(180deg, var(--crimson-bright) 0%, var(--crimson) 100%)', color: '#F1EAD8', border: 'none', borderRadius: 'var(--r-sm)', fontWeight: 800, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1, boxShadow: '0 2px 0 rgba(0,0,0,0.4)' }}
               >
-                {loading ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> La forge travaille…</> : <><Dices size={14} /> Forger</>}
+                {loading ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Composition…</> : <><Dices size={14} /> Composer</>}
               </button>
             </div>
             )}
@@ -582,7 +582,7 @@ export default function GeneratorPage() {
             {genMode === 'time' && (
             <div className="card" style={{ padding: '18px 20px', marginBottom: 24 }}>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
-                Dis combien de temps tu as : la forge dimensionne blocs et mouvements pour tenir exactement dedans.
+                Dis combien de temps tu as : l&rsquo;atelier dimensionne blocs et mouvements pour tenir exactement dedans.
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
                 <span className="display tnum" style={{ fontSize: 56, fontWeight: 600, color: 'var(--gold)', lineHeight: 1 }}>{timeTarget}</span>
@@ -629,7 +629,7 @@ export default function GeneratorPage() {
                 disabled={loading}
                 style={{ width: '100%', padding: '13px', background: 'linear-gradient(180deg, var(--crimson-bright) 0%, var(--crimson) 100%)', color: '#F1EAD8', border: 'none', borderRadius: 'var(--r-sm)', fontWeight: 800, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1, boxShadow: '0 2px 0 rgba(0,0,0,0.4)' }}
               >
-                {loading ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> La forge travaille…</> : <><Clock size={14} /> Forger {timeTarget} min</>}
+                {loading ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Composition…</> : <><Clock size={14} /> Composer {timeTarget} min</>}
               </button>
             </div>
             )}
