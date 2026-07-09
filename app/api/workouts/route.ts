@@ -121,9 +121,9 @@ export async function POST(req: NextRequest) {
 
       const blockIdMap: Record<number, string> = {}
       if (blocks && blocks.length > 0) {
-        for (const b of blocks as { order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null }[]) {
+        for (const b of blocks as { order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean }[]) {
           const block = await tx.workoutBlock.create({
-            data: { workoutId: w.id, order: b.order, bioType: b.bioType || null, instructions: b.instructions || null, restAfter: b.restAfter != null ? Number(b.restAfter) : null },
+            data: { workoutId: w.id, order: b.order, bioType: b.bioType || null, instructions: b.instructions || null, restAfter: b.restAfter != null ? Number(b.restAfter) : null, superset: !!b.superset },
           })
           blockIdMap[b.order] = block.id
         }

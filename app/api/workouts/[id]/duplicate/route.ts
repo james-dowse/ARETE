@@ -36,6 +36,8 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
         order: b.order,
         bioType: b.bioType,
         instructions: b.instructions,
+        restAfter: b.restAfter,
+        superset: b.superset,
       },
     })
     blockIdMap[b.id] = newBlock.id

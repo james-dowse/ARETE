@@ -20,11 +20,16 @@ export async function PATCH(
   const { id, blockId } = await params
   const denied = await authorize(id, blockId)
   if (denied) return denied
-  const { instructions } = await req.json()
+  const { instructions, superset } = await req.json()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: Record<string, any> = {}
+  if (instructions !== undefined) data.instructions = instructions === '' ? null : instructions
+  if (superset !== undefined) data.superset = !!superset
 
   const updated = await prisma.workoutBlock.update({
     where: { id: blockId },
-    data: { instructions: instructions === '' ? null : instructions },
+    data,
   })
 
   return NextResponse.json(updated)

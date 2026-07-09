@@ -6,7 +6,7 @@ import { ProgressRing } from '@/components/ui'
 
 interface Movement { id: string; name: string; bioType: string; videoUrl?: string | null }
 interface WM { id: string; order: number; sets?: number | null; reps?: string | null; rest?: number | null; duration?: number | null; blockId?: string | null; movement: Movement }
-interface Block { id: string; order: number; bioType?: string | null; instructions?: string | null }
+interface Block { id: string; order: number; bioType?: string | null; instructions?: string | null; superset?: boolean }
 interface Workout { id: string; name: string; duration?: number | null; movements: WM[]; blocks: Block[] }
 
 const REST_OPTIONS = [30, 60, 90, 120]
@@ -110,6 +110,10 @@ export default function ActivePage() {
     fetch(`/api/workouts/${id}`).then(r => r.json()).then(w => {
       setWorkout(w)
 
+      // Superset persistés sur le workout (colonne DB) → pré-activés
+      const dbSuper = (w.blocks as Block[]).filter(b => b.superset).map(b => b.id)
+      if (dbSuper.length > 0) setSupersetBlocs(prev => new Set([...prev, ...dbSuper]))
+
       // Reprise d'une séance interrompue (refresh, onglet fermé) — expire après 24h
       const savedRaw = localStorage.getItem(storageKey)
       if (savedRaw) {
@@ -198,13 +202,13 @@ export default function ActivePage() {
           const d = updatedDone[m.id] ?? 0
           return d >= newRound || d >= (m.sets ?? 3)
         })
-        if (roundDone) {
-          const allComplete = blocMovs.every(m => (updatedDone[m.id] ?? 0) >= (m.sets ?? 3))
-          if (!allComplete) setRest({ sec: restDur, total: restDur, wmId: wm.id })
-        }
+        const allComplete = blocMovs.every(m => (updatedDone[m.id] ?? 0) >= (m.sets ?? 3))
+        if (roundDone && !allComplete) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+        else setRest(null)
       } else {
         setDone(d => ({ ...d, [wm.id]: next }))
         if (next < target) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+        else setRest(null)
       }
       return
     }
@@ -281,14 +285,17 @@ export default function ActivePage() {
         const d = updatedDone[m.id] ?? 0
         return d >= newRound || d >= (m.sets ?? 3)
       })
-      if (roundDone) {
-        const allComplete = blocMovs.every(m => (updatedDone[m.id] ?? 0) >= (m.sets ?? 3))
-        if (!allComplete) setRest({ sec: restDur, total: restDur, wmId: wm.id })
-      }
+      // Toute série déclarée réinitialise le repos : repos frais si le round est bouclé
+      // (et pas fini), sinon on coupe le repos en cours (on est reparti au travail).
+      const allComplete = blocMovs.every(m => (updatedDone[m.id] ?? 0) >= (m.sets ?? 3))
+      if (roundDone && !allComplete) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+      else setRest(null)
     } else {
       const next = current + 1
       setDone(d => ({ ...d, [wm.id]: next }))
+      // Repos frais si séries restantes, sinon coupé (mouvement terminé)
       if (next < target) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+      else setRest(null)
     }
   }
 

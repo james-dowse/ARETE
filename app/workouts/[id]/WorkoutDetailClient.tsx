@@ -27,7 +27,7 @@ interface WorkoutMovement {
   blockId?: string | null
 }
 interface WorkoutBlock {
-  id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null
+  id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean
 }
 interface Workout {
   id: string; name: string; createdAt: string
@@ -434,6 +434,11 @@ function BlockHeaderView({ block, index, movements, collapsed, onToggle }: {
               {BIO_TYPE_ICONS[block.bioType]} {block.bioType}
             </span>
           )}
+          {block.superset && (
+            <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 20, background: 'var(--gold-ghost)', color: 'var(--gold)', border: '1px solid var(--gold-border)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              ⚡ Superset
+            </span>
+          )}
           {movements.length > 0 && (
             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{fmtMin(estMin)}</span>
           )}
@@ -461,8 +466,9 @@ function BlockHeaderView({ block, index, movements, collapsed, onToggle }: {
 }
 
 // ─── Block Header (edit) ──────────────────────────────────────────────────────
-function BlockHeaderEdit({ block, index, instructions, onChange, isDirty, onRemove }: {
-  block: WorkoutBlock; index: number; instructions: string; onChange: (v: string) => void; isDirty: boolean; onRemove: () => void
+function BlockHeaderEdit({ block, index, instructions, onChange, superset, canSuperset, onToggleSuperset, isDirty, onRemove }: {
+  block: WorkoutBlock; index: number; instructions: string; onChange: (v: string) => void
+  superset: boolean; canSuperset: boolean; onToggleSuperset: () => void; isDirty: boolean; onRemove: () => void
 }) {
   const color = block.bioType ? BIO_TYPE_COLORS[block.bioType] : 'var(--text-muted)'
   return (
@@ -477,6 +483,19 @@ function BlockHeaderEdit({ block, index, instructions, onChange, isDirty, onRemo
           )}
           {isDirty && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 20, background: 'var(--dirty)', color: 'var(--dirty-text)', fontWeight: 600 }}>modifié</span>}
         </div>
+        {canSuperset && (
+          <button onClick={onToggleSuperset}
+            title={superset ? 'Bloc en superset : enchaîner les mouvements sans repos entre eux' : 'Passer ce bloc en superset'}
+            style={{
+              flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '2px 9px', borderRadius: 20, cursor: 'pointer',
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+              border: `1px solid ${superset ? 'var(--gold)' : 'var(--border)'}`,
+              background: superset ? 'var(--gold-ghost)' : 'transparent',
+              color: superset ? 'var(--gold)' : 'var(--text-dim)',
+            }}>
+            ⚡ Superset
+          </button>
+        )}
         <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
         <button onClick={onRemove} title="Supprimer ce bloc"
           style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center' }}
@@ -642,6 +661,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [editMode, setEditMode] = useState(false)
   const [editStates, setEditStates] = useState<EditState[]>([])
   const [blockInstructions, setBlockInstructions] = useState<Record<string, string>>({})
+  const [blockSuperset, setBlockSuperset] = useState<Record<string, boolean>>({})
   const [editDescription, setEditDescription] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -704,9 +724,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     const orig = originals[i]
     return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10') || es.duration !== (orig.duration ?? null)
   })
-  const isDirtyBlocks = editMode && initial.blocks.some(
-    b => (blockInstructions[b.id] ?? '') !== (b.instructions ?? '')
-  )
+  const blockChanged = (b: WorkoutBlock) =>
+    (blockInstructions[b.id] ?? '') !== (b.instructions ?? '') ||
+    (blockSuperset[b.id] ?? false) !== !!b.superset
+  const isDirtyBlocks = editMode && initial.blocks.some(blockChanged)
   const isDirtyDescription = editMode && stripHtml(editDescription) !== stripHtml(initial.description ?? '')
   const isDirtyImage = editMode && (imageFile !== null || removeImage)
   const isDirtyTags = editMode && editTags.join(',') !== (initial.tags ?? '')
@@ -717,7 +738,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         const orig = originals[i]
         return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10') || es.duration !== (orig.duration ?? null)
       }).length
-      + initial.blocks.filter(b => (blockInstructions[b.id] ?? '') !== (b.instructions ?? '')).length
+      + initial.blocks.filter(blockChanged).length
       + (isDirtyDescription ? 1 : 0)
       + (isDirtyImage ? 1 : 0)
       + removedWmIds.size
@@ -727,8 +748,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const handleEnterEdit = () => {
     setEditStates(initial.movements.map(toEditState))
     const initBI: Record<string, string> = {}
-    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? '' })
+    const initBS: Record<string, boolean> = {}
+    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset })
     setBlockInstructions(initBI)
+    setBlockSuperset(initBS)
     setEditDescription(initial.description ?? '')
     setImageFile(null); setImagePreview(null); setRemoveImage(false)
     setRemovedWmIds(new Set()); setRemovedBlockIds(new Set())
@@ -738,8 +761,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const handleCancelAll = () => {
     setEditStates(initial.movements.map(toEditState))
     const initBI: Record<string, string> = {}
-    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? '' })
+    const initBS: Record<string, boolean> = {}
+    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset })
     setBlockInstructions(initBI)
+    setBlockSuperset(initBS)
     setEditDescription(initial.description ?? '')
     setImageFile(null); setImagePreview(null); setRemoveImage(false)
     setRemovedWmIds(new Set()); setRemovedBlockIds(new Set())
@@ -759,7 +784,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       const orig = originals[i]
       return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10')
     })
-    const changedBlocks = initial.blocks.filter(b => (blockInstructions[b.id] ?? '') !== (b.instructions ?? ''))
+    const changedBlocks = initial.blocks.filter(blockChanged)
 
     await Promise.all([
       ...changedMovements.map(es => {
@@ -778,7 +803,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       ...changedBlocks.map(b =>
         fetch(`/api/workouts/${initial.id}/blocks/${b.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ instructions: blockInstructions[b.id] }),
+          body: JSON.stringify({ instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false }),
         })
       ),
       ...((isDirtyDescription || isDirtyTags) ? [
@@ -1053,7 +1078,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                       block={block} index={bi}
                       instructions={blockInstructions[block.id] ?? ''}
                       onChange={v => setBlockInstructions(prev => ({ ...prev, [block.id]: v }))}
-                      isDirty={(blockInstructions[block.id] ?? '') !== (block.instructions ?? '')}
+                      superset={blockSuperset[block.id] ?? false}
+                      canSuperset={blockMovements.length > 1}
+                      onToggleSuperset={() => setBlockSuperset(prev => ({ ...prev, [block.id]: !(prev[block.id] ?? false) }))}
+                      isDirty={blockChanged(block)}
                       onRemove={() => setRemovedBlockIds(prev => new Set([...prev, block.id]))}
                     />
                   ) : (

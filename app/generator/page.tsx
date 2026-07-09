@@ -273,6 +273,7 @@ export default function GeneratorPage() {
             bioType: b.bioTypes[0] ?? null,
             instructions: b.instructions || null,
             restAfter: blockRests[i] ?? null,
+            superset: !!b.superset,
           })),
         }),
       })
@@ -320,6 +321,7 @@ export default function GeneratorPage() {
             bioType: b.bioTypes[0] ?? null,
             instructions: b.instructions || null,
             restAfter: blockRests[i] ?? null,
+            superset: !!b.superset,
           })),
         }),
       })
