@@ -15,6 +15,7 @@ export interface PickableMovement {
 
 interface Props {
   currentName: string
+  currentId?: string   // si fourni, le mouvement est marqué « Actuel » et non sélectionnable
   onPick: (m: PickableMovement) => void
   onClose: () => void
 }
@@ -35,7 +36,7 @@ function Chip({ active, color, onClick, children }: {
   )
 }
 
-export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
+export default function LibraryPicker({ currentName, currentId, onPick, onClose }: Props) {
   const [search, setSearch] = useState('')
   const [bioFilter, setBioFilter] = useState('')
   const [complexityFilter, setComplexityFilter] = useState('')
@@ -165,17 +166,20 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
               }
             </div>
           )}
-          {!loading && results.map(m => (
-            <button key={m.id} onClick={() => onPick(m)}
+          {!loading && results.map(m => {
+            const isCurrent = currentId != null && m.id === currentId
+            return (
+            <button key={m.id} onClick={() => { if (!isCurrent) onPick(m) }}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                 padding: '9px 10px', borderRadius: 8,
-                background: 'transparent', border: '1px solid transparent',
-                cursor: 'pointer', marginBottom: 2, textAlign: 'left',
+                background: isCurrent ? 'var(--accent-dim)' : 'transparent',
+                border: `1px solid ${isCurrent ? 'var(--border)' : 'transparent'}`,
+                cursor: isCurrent ? 'default' : 'pointer', marginBottom: 2, textAlign: 'left',
                 transition: 'background 0.1s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = 'var(--border)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }}
+              onMouseEnter={e => { if (!isCurrent) { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = 'var(--border)' } }}
+              onMouseLeave={e => { if (!isCurrent) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' } }}
             >
               <div style={{ width: 32, height: 32, borderRadius: 8, background: `${BIO_TYPE_COLORS[m.bioType] || '#000'}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>
                 {BIO_TYPE_ICONS[m.bioType] || '⚡'}
@@ -194,8 +198,9 @@ export default function LibraryPicker({ currentName, onPick, onClose }: Props) {
                   )}
                 </div>
               </div>
+              {isCurrent && <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>Actuel</span>}
             </button>
-          ))}
+          )})}
         </div>
 
         <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
