@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { BIO_TYPE_COLORS } from '@/lib/types'
+import { useToast } from '@/components/Toast'
 import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle } from 'lucide-react'
 
 interface WorkoutUser { id: string; email: string }
@@ -394,7 +395,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [sharingWorkout, setSharingWorkout] = useState<Workout | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
+  const toast = useToast()
   const [claiming, setClaiming] = useState(false)
   const [recentsOpen, setRecentsOpen] = useState(false)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
@@ -403,16 +404,11 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
     if (p.get('imported') === '1') {
-      setToast('Séance sauvegardée ✓ ✓')
+      toast('Séance sauvegardée ✓ ✓')
       window.history.replaceState({}, '', '/workouts')
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  useEffect(() => {
-    if (!toast) return
-    const t = setTimeout(() => setToast(null), 4000)
-    return () => clearTimeout(t)
-  }, [toast])
 
   const loadMine = useCallback(async (tag?: string | null) => {
     setFetchError(null)
@@ -466,10 +462,10 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
       const res = await fetch('/api/workouts/claim', { method: 'POST' })
       const { claimed } = await res.json()
       if (claimed > 0) {
-        setToast(`${claimed} séance${claimed > 1 ? 's' : ''} récupérée${claimed > 1 ? 's' : ''} ✓`)
+        toast(`${claimed} séance${claimed > 1 ? 's' : ''} récupérée${claimed > 1 ? 's' : ''} ✓`)
         await loadMine()
       } else {
-        setToast('Aucune séance orpheline trouvée')
+        toast('Aucune séance orpheline trouvée', 'info')
       }
     } finally {
       setClaiming(false)
@@ -694,7 +690,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                   context="community"
                   onToggleSave={saved => {
                     setCommunityWorkouts(prev => prev.map(x => x.id === w.id ? { ...x, isSaved: saved } : x))
-                    if (saved) setToast('Séance sauvegardée ✓ ✓')
+                    if (saved) toast('Séance sauvegardée ✓ ✓')
                   }}
                   onShare={() => setSharingWorkout(w)}
                 />
@@ -706,13 +702,6 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
 
       {/* Modale recommandation */}
       {sharingWorkout && <ShareModal workout={sharingWorkout} onClose={() => setSharingWorkout(null)} />}
-
-      {/* Toast */}
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, whiteSpace: 'nowrap' }}>
-          {toast}
-        </div>
-      )}
 
       <style>{`@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:.8} }`}</style>
     </>

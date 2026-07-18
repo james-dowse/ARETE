@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, X, Zap, Calendar } from 'lucide-react'
 import { BIO_TYPE_COLORS } from '@/lib/types'
+import { useToast } from '@/components/Toast'
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
@@ -38,13 +39,7 @@ export default function PlannerPage() {
   const [weekStart, setWeekStart] = useState<Date>(() => getMonday(new Date()))
   const [entries, setEntries] = useState<PlanEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [toast, setToast] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!toast) return
-    const t = setTimeout(() => setToast(null), 3000)
-    return () => clearTimeout(t)
-  }, [toast])
+  const toast = useToast()
 
   const load = useCallback(async (mon: Date) => {
     setLoading(true)
@@ -57,8 +52,10 @@ export default function PlannerPage() {
   useEffect(() => { load(weekStart) }, [weekStart, load])
 
   const removeEntry = async (entryId: string) => {
-    await fetch(`/api/planner/entries/${entryId}`, { method: 'DELETE' })
+    const res = await fetch(`/api/planner/entries/${entryId}`, { method: 'DELETE' }).catch(() => null)
+    if (!res || !res.ok) { toast('Impossible de retirer cette séance', 'error'); return }
     setEntries(prev => prev.filter(e => e.id !== entryId))
+    toast('Retirée de la semaine', 'info')
   }
 
   const goWeek = (delta: number) => {
@@ -169,12 +166,6 @@ export default function PlannerPage() {
           </div>
         )}
       </div>
-
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000 }}>
-          {toast}
-        </div>
-      )}
 
       <style>{`@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:.8} }`}</style>
     </AppShell>

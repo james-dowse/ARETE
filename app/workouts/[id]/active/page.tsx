@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { BIO_TYPE_COLORS } from '@/lib/types'
 import { ProgressRing } from '@/components/ui'
+import { useToast } from '@/components/Toast'
 
 interface Movement { id: string; name: string; bioType: string; videoUrl?: string | null }
 interface WM { id: string; order: number; sets?: number | null; reps?: string | null; rest?: number | null; duration?: number | null; blockId?: string | null; movement: Movement }
@@ -28,6 +29,7 @@ export default function ActivePage() {
   const [elapsed, setElapsed] = useState(0)
   const [started, setStarted] = useState(false)
   const [finishing, setFinishing] = useState(false)
+  const toast = useToast()
   const [note, setNote] = useState('')
   const [showFinish, setShowFinish] = useState(false)
   const [videoPlaying, setVideoPlaying] = useState(false)
@@ -308,11 +310,16 @@ export default function ActivePage() {
 
   const handleFinish = async () => {
     setFinishing(true)
-    await fetch(`/api/workouts/${id}/sessions`, {
+    const res = await fetch(`/api/workouts/${id}/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ note: note || undefined }),
-    }).catch(() => {})
+    }).catch(() => null)
+    if (!res || !res.ok) {
+      toast('Impossible d\'enregistrer la séance — réessaie.', 'error')
+      setFinishing(false)
+      return
+    }
     localStorage.removeItem(storageKey)
     router.push(`/workouts/${id}`)
   }

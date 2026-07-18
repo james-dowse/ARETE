@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import { ToastProvider } from "@/components/Toast";
 import "./globals.css";
 
 const inter = Inter({
@@ -33,7 +34,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={`h-full ${inter.variable} ${fraunces.variable}`}>
-      <body className="min-h-full flex"><ServiceWorkerRegister />{children}</body>
+      <body className="min-h-full flex">
+        <ServiceWorkerRegister />
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

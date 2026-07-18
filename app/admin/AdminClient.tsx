@@ -1,6 +1,7 @@
 'use client'
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
 import { useAttributes, invalidateAttributesCache, type AttributeOption } from '@/lib/useAttributes'
+import { useToast } from '@/components/Toast'
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown, Upload, Download, CheckSquare, Copy, BarChart2 } from 'lucide-react'
 
@@ -477,7 +478,7 @@ function WorkoutsAdminTab() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
+  const toast = useToast()
 
   useEffect(() => {
     fetch('/api/admin/workouts')
@@ -490,13 +491,13 @@ function WorkoutsAdminTab() {
       .catch(e => { setFetchError(String(e)); setLoading(false) })
   }, [])
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2800) }
-
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/workouts/${id}`, { method: 'DELETE' })
     if (res.ok) {
       setWorkouts(prev => prev.filter(w => w.id !== id))
-      showToast('Séance supprimée ✓')
+      toast('Séance supprimée ✓')
+    } else {
+      toast('Échec de la suppression', 'error')
     }
     setDeletingId(null)
   }
@@ -637,12 +638,6 @@ function WorkoutsAdminTab() {
         </div>
       )}
 
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, background: 'var(--bg-elevated)', border: '1px solid var(--accent)', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, color: 'var(--accent)', zIndex: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
-          {toast}
-        </div>
-      )}
-
       <style>{`
         .admin-wod-row:hover .admin-wod-del { opacity: 1 !important; transition: opacity 0.15s; }
         .admin-wod-del { transition: opacity 0.15s; }
@@ -774,7 +769,7 @@ export default function AdminClient({
   const [showNew, setShowNew] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
+  const toast = useToast()
   const [importing, setImporting] = useState(false)
   const importRef = useRef<HTMLInputElement>(null)
 
@@ -800,8 +795,6 @@ export default function AdminClient({
   const [stagedComplexity, setStagedComplexity] = useState('')
   const [stagedEquipment, setStagedEquipment] = useState('')
   const selectAllRef = useRef<HTMLInputElement>(null)
-
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2800) }
 
   // ── Filter + sort ──
   const filtered = useMemo(() => {
@@ -856,7 +849,7 @@ export default function AdminClient({
       const updMap: Record<string, Movement> = {}
       data.updated.forEach((m: Movement) => { updMap[m.id] = m })
       setMovements(prev => prev.map(m => updMap[m.id] ?? m))
-      showToast(`${ids.length} mouvement${ids.length > 1 ? 's' : ''} mis à jour ✓`)
+      toast(`${ids.length} mouvement${ids.length > 1 ? 's' : ''} mis à jour ✓`)
       clearSelection()
     }
     setBulkWorking(false)
@@ -877,7 +870,7 @@ export default function AdminClient({
       const msg = data.skipped > 0
         ? `${data.deleted} supprimé${data.deleted > 1 ? 's' : ''} · ${data.skipped} ignoré${data.skipped > 1 ? 's' : ''} (utilisés dans des séances)`
         : `${data.deleted} mouvement${data.deleted > 1 ? 's' : ''} supprimé${data.deleted > 1 ? 's' : ''} ✓`
-      showToast(msg)
+      toast(msg)
       clearSelection()
     }
     setBulkWorking(false)
@@ -897,7 +890,7 @@ export default function AdminClient({
     if (res.ok) {
       const updated = await res.json()
       setMovements(prev => prev.map(m => m.id === id ? updated : m))
-      showToast('Mouvement mis à jour ✓')
+      toast('Mouvement mis à jour ✓')
     }
     setSaving(false)
     setEditingId(null)
@@ -915,7 +908,7 @@ export default function AdminClient({
     const res = await fetch(`/api/movements/${encodeURIComponent(id)}`, { method: 'DELETE' })
     if (res.ok) {
       setMovements(prev => prev.filter(m => m.id !== id))
-      showToast('Mouvement supprimé')
+      toast('Mouvement supprimé')
     } else {
       const d = await res.json()
       setDeleteError(d.error)
@@ -933,11 +926,11 @@ export default function AdminClient({
     try {
       const res = await fetch('/api/movements/import', { method: 'POST', body: form })
       const data = await res.json()
-      if (!res.ok) { showToast(`Erreur : ${data.error}`); return }
+      if (!res.ok) { toast(`Erreur : ${data.error}`, 'error'); return }
       const freshRes = await fetch('/api/movements')
       const freshData = await freshRes.json()
       if (Array.isArray(freshData)) setMovements(freshData)
-      showToast(`Import terminé — ${data.imported} ajoutés/mis à jour, ${data.skipped} ignorés`)
+      toast(`Import terminé — ${data.imported} ajoutés/mis à jour, ${data.skipped} ignorés`)
     } finally {
       setImporting(false)
       if (importRef.current) importRef.current.value = ''
@@ -947,7 +940,7 @@ export default function AdminClient({
   // ── New ──
   const handleCreated = (m: Movement) => {
     setMovements(prev => [...prev, m].sort((a, b) => a.bioType.localeCompare(b.bioType) || a.name.localeCompare(b.name)))
-    showToast(`"${m.name}" créé ✓`)
+    toast(`"${m.name}" créé ✓`)
   }
 
   // Stats
@@ -1373,17 +1366,9 @@ export default function AdminClient({
       {/* ── Workouts tab ── */}
       {activeTab === 'workouts' && <WorkoutsAdminTab />}
 
-      {/* Toast (global) */}
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, background: 'var(--bg-elevated)', border: '1px solid var(--accent)', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, color: 'var(--accent)', zIndex: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'slideUp 0.2s ease' }}>
-          {toast}
-        </div>
-      )}
-
       <style>{`
         tr:hover .row-actions { opacity: 1 !important; transition: opacity 0.15s; }
         .row-actions { transition: opacity 0.15s; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .usage-row:hover { background: var(--bg-elevated) !important; }
       `}</style>
