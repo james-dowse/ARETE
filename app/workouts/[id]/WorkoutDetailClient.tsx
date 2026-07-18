@@ -14,7 +14,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   ArrowLeft, Clock, Copy,
   RefreshCw, Search, X, Save, Undo2, Pencil, Minus, Plus,
-  AlignLeft, ImageIcon, Trash2, ChevronDown, ChevronUp, CalendarPlus, CheckCircle2, History, FileText, PlayCircle,
+  AlignLeft, ImageIcon, Trash2, ChevronDown, ChevronUp, CalendarPlus, CheckCircle2, History, FileText, PlayCircle, GripVertical,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -160,10 +160,12 @@ function MovementRowView({ wm, index, onMovementClick }: { wm: WorkoutMovement; 
 }
 
 // ─── Edit Row ─────────────────────────────────────────────────────────────────
-function MovementRowEdit({ es, original, index, allMovementIds, onUpdate, onRevert, onMovementClick, onRemove }: {
-  es: EditState; original: WorkoutMovement; index: number; allMovementIds: string[]
+function MovementRowEdit({ es, original, index, displayNumber, allMovementIds, onUpdate, onRevert, onMovementClick, onRemove, onDragStart, onDragOver, onDrop, onDragEnd, isDragging }: {
+  es: EditState; original: WorkoutMovement; index: number; displayNumber: number; allMovementIds: string[]
   onUpdate: (idx: number, patch: Partial<EditState>) => void; onRevert: (idx: number) => void
   onMovementClick: (id: string) => void; onRemove: () => void
+  onDragStart: () => void; onDragOver: () => void; onDrop: () => void; onDragEnd: () => void
+  isDragging: boolean
 }) {
   const [loadingRandom, setLoadingRandom] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
@@ -186,9 +188,18 @@ function MovementRowEdit({ es, original, index, allMovementIds, onUpdate, onReve
 
   return (
     <>
-      <div style={{ background: isDirty ? 'var(--dirty)' : 'var(--bg-card)', border: `1px solid ${isDirty ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 12, padding: '12px 14px', transition: 'all 0.2s' }}>
+      <div
+        draggable
+        onDragStart={onDragStart}
+        onDragOver={e => { e.preventDefault(); onDragOver() }}
+        onDrop={e => { e.preventDefault(); onDrop() }}
+        onDragEnd={onDragEnd}
+        style={{ background: isDirty ? 'var(--dirty)' : 'var(--bg-card)', border: `1px solid ${isDirty ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 12, padding: '12px 14px', transition: 'all 0.2s', opacity: isDragging ? 0.4 : 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', flexShrink: 0 }}>{index + 1}</div>
+          <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-dim)', cursor: 'grab', flexShrink: 0 }} title="Glisser pour réordonner">
+            <GripVertical size={14} />
+          </div>
+          <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', flexShrink: 0 }}>{displayNumber}</div>
           <div
             onClick={() => onMovementClick(m.id)}
             style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, cursor: 'pointer' }}
@@ -541,6 +552,23 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const toggleViewBlock = (id: string) => setCollapsedViewBlocks(prev => ({ ...prev, [id]: !prev[id] }))
   const [editTags, setEditTags] = useState<string[]>(() => initial.tags ? initial.tags.split(',').map(t => t.trim()).filter(Boolean) : [])
   const [tagInput, setTagInput] = useState('')
+  const [movementOrder, setMovementOrder] = useState<Record<string, number>>({})
+  const [draggedWmId, setDraggedWmId] = useState<string | null>(null)
+
+  const handleReorder = (draggedId: string, targetId: string) => {
+    if (draggedId === targetId) return
+    setMovementOrder(prev => {
+      const ids = Object.keys(prev).sort((a, b) => prev[a] - prev[b])
+      const from = ids.indexOf(draggedId)
+      const to = ids.indexOf(targetId)
+      if (from === -1 || to === -1) return prev
+      ids.splice(from, 1)
+      ids.splice(to, 0, draggedId)
+      const next: Record<string, number> = {}
+      ids.forEach((id, idx) => { next[id] = idx })
+      return next
+    })
+  }
 
   // Track last viewed (fire-and-forget)
   useEffect(() => {
@@ -588,7 +616,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const isDirtyDescription = editMode && stripHtml(editDescription) !== stripHtml(initial.description ?? '')
   const isDirtyImage = editMode && (imageFile !== null || removeImage)
   const isDirtyTags = editMode && editTags.join(',') !== (initial.tags ?? '')
-  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyDescription || isDirtyImage || isDirtyTags || removedWmIds.size > 0 || removedBlockIds.size > 0
+  const isDirtyOrder = editMode && originals.some(o => (movementOrder[o.id] ?? o.order) !== o.order)
+  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyDescription || isDirtyImage || isDirtyTags || isDirtyOrder || removedWmIds.size > 0 || removedBlockIds.size > 0
 
   const pendingCount = editMode
     ? editStates.filter((es, i) => {
@@ -598,6 +627,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       + initial.blocks.filter(blockChanged).length
       + (isDirtyDescription ? 1 : 0)
       + (isDirtyImage ? 1 : 0)
+      + (isDirtyOrder ? 1 : 0)
       + removedWmIds.size
       + removedBlockIds.size
     : 0
@@ -612,6 +642,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setEditDescription(initial.description ?? '')
     setImageFile(null); setImagePreview(null); setRemoveImage(false)
     setRemovedWmIds(new Set()); setRemovedBlockIds(new Set())
+    const initOrder: Record<string, number> = {}
+    initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
+    setMovementOrder(initOrder)
     setEditMode(true)
   }
 
@@ -625,6 +658,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setEditDescription(initial.description ?? '')
     setImageFile(null); setImagePreview(null); setRemoveImage(false)
     setRemovedWmIds(new Set()); setRemovedBlockIds(new Set())
+    const initOrder: Record<string, number> = {}
+    initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
+    setMovementOrder(initOrder)
     setEditMode(false)
   }
 
@@ -640,6 +676,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     const changedMovements = editStates.filter((es, i) => {
       const orig = originals[i]
       return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10')
+        || (movementOrder[orig.id] ?? orig.order) !== orig.order
     })
     const changedBlocks = initial.blocks.filter(blockChanged)
 
@@ -653,6 +690,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         if (es.sets !== (orig.sets ?? 2)) body.sets = es.sets
         if (es.reps !== (orig.reps ?? '10')) body.reps = es.reps
         if (es.duration !== (orig.duration ?? null)) body.duration = es.duration
+        if ((movementOrder[orig.id] ?? orig.order) !== orig.order) body.order = movementOrder[orig.id]
         return fetch(`/api/workouts/${initial.id}/movements/${orig.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
         })
@@ -732,6 +770,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       if (orig.blockId && blockEditStatesMap[orig.blockId])
         blockEditStatesMap[orig.blockId].push({ es: editStates[absIdx], orig, absIdx })
     })
+    Object.values(blockEditStatesMap).forEach(list =>
+      list.sort((a, b) => (movementOrder[a.orig.id] ?? a.orig.order) - (movementOrder[b.orig.id] ?? b.orig.order))
+    )
   }
 
   return (
@@ -950,9 +991,15 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                   {!blockCollapsed && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {editMode
-                        ? blockES.map(({ es, orig, absIdx }) => (
-                            <MovementRowEdit key={orig.id} es={es} original={orig} index={absIdx} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
-                              onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))} />
+                        ? blockES.map(({ es, orig, absIdx }, pos) => (
+                            <MovementRowEdit key={orig.id} es={es} original={orig} index={absIdx} displayNumber={pos + 1} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
+                              onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))}
+                              isDragging={draggedWmId === orig.id}
+                              onDragStart={() => setDraggedWmId(orig.id)}
+                              onDragOver={() => { if (draggedWmId) handleReorder(draggedWmId, orig.id) }}
+                              onDrop={() => setDraggedWmId(null)}
+                              onDragEnd={() => setDraggedWmId(null)}
+                            />
                           ))
                         : blockMovements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
                       }
@@ -976,9 +1023,16 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
               ? editStates
                   .map((es, i) => ({ es, orig: originals[i], i }))
                   .filter(({ orig }) => !removedWmIds.has(orig.id))
-                  .map(({ es, orig, i }) => (
-                    <MovementRowEdit key={orig.id} es={es} original={orig} index={i} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
-                      onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))} />
+                  .sort((a, b) => (movementOrder[a.orig.id] ?? a.orig.order) - (movementOrder[b.orig.id] ?? b.orig.order))
+                  .map(({ es, orig, i }, pos) => (
+                    <MovementRowEdit key={orig.id} es={es} original={orig} index={i} displayNumber={pos + 1} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
+                      onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))}
+                      isDragging={draggedWmId === orig.id}
+                      onDragStart={() => setDraggedWmId(orig.id)}
+                      onDragOver={() => { if (draggedWmId) handleReorder(draggedWmId, orig.id) }}
+                      onDrop={() => setDraggedWmId(null)}
+                      onDragEnd={() => setDraggedWmId(null)}
+                    />
                   ))
               : initial.movements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
           )}

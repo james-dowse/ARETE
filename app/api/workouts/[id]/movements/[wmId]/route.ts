@@ -22,7 +22,7 @@ export async function PATCH(
   const denied = await authorize(id, wmId)
   if (denied) return denied
   const body = await req.json()
-  const { newMovementId, sets, reps, duration } = body
+  const { newMovementId, sets, reps, duration, order } = body
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: Record<string, any> = {}
@@ -30,6 +30,7 @@ export async function PATCH(
   if (sets !== undefined) data.sets = sets === '' || sets === null ? null : Number(sets)
   if (reps !== undefined) data.reps = reps === '' || reps === null ? null : String(reps)
   if (duration !== undefined) data.duration = duration === '' || duration === null ? null : Number(duration)
+  if (order !== undefined) data.order = Number(order)
 
   const updated = await prisma.workoutMovement.update({
     where: { id: wmId },
