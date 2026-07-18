@@ -18,7 +18,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Adresse non reconnue' }, { status: 404 })
   }
 
-  const loginToken = randomBytes(32).toString('hex')
+  // Code à 6 chiffres (saisi dans l'app — marche dans les PWA iOS/Android) +
+  // suffixe aléatoire pour garder loginToken unique et alimenter le lien magique.
+  const code = String(Math.floor(100000 + Math.random() * 900000))
+  const loginToken = `${code}.${randomBytes(24).toString('hex')}`
   await prisma.invitedUser.update({
     where: { id: user.id },
     data: { loginToken, loginTokenExp: new Date(Date.now() + TOKEN_TTL_MS) },
@@ -30,7 +33,7 @@ export async function POST(req: NextRequest) {
   // Envoi direct ; si Resend refuse (plan sans domaine vérifié), relais vers l'admin
   let relayed = false
   try {
-    await sendMagicLinkEmail(user.email, loginUrl)
+    await sendMagicLinkEmail(user.email, loginUrl, code)
   } catch (err) {
     console.error('[magic link email error]', err)
     const ownerEmail = process.env.RESEND_OWNER_EMAIL
@@ -38,7 +41,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "L'email de connexion n'a pas pu être envoyé. Réessaie ou contacte l'administrateur." }, { status: 502 })
     }
     try {
-      await sendLoginRelayEmail(ownerEmail, user.email, loginUrl)
+      await sendLoginRelayEmail(ownerEmail, user.email, loginUrl, code)
       relayed = true
     } catch (relayErr) {
       console.error('[login relay email error]', relayErr)

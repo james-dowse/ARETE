@@ -103,6 +103,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const currentUserId = await getCurrentUserId()
+    // Connexion obligatoire : plus aucune séance orpheline (userId=null)
+    if (!currentUserId) {
+      return NextResponse.json({ error: 'Connecte-toi pour sauvegarder une séance.' }, { status: 401 })
+    }
     const body = await req.json()
     const { name, duration, notes, description, movements, templateId, blocks, blockRest } = body
 

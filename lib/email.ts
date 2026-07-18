@@ -42,12 +42,12 @@ export async function sendInvitationEmail(email: string, token: string) {
   return data
 }
 
-export async function sendMagicLinkEmail(email: string, loginUrl: string) {
+export async function sendMagicLinkEmail(email: string, loginUrl: string, code: string) {
   const from = process.env.RESEND_FROM || 'ARETE <onboarding@resend.dev>'
   const { data, error } = await resend.emails.send({
     from,
     to: [email],
-    subject: 'Ton lien de connexion ARETE',
+    subject: `Code de connexion ARETE : ${code}`,
     html: `
 <!DOCTYPE html>
 <html lang="fr">
@@ -60,11 +60,11 @@ export async function sendMagicLinkEmail(email: string, loginUrl: string) {
           <div style="font-size:11px;font-weight:700;letter-spacing:4px;color:#C9A535;margin-bottom:4px;">ARETE</div>
           <div style="font-size:10px;letter-spacing:2px;color:rgba(255,255,255,0.25);">PROTOCOL</div>
         </td></tr>
-        <tr><td style="padding:36px 40px;">
-          <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#ffffff;line-height:1.3;">Connexion à ARETE</p>
-          <p style="margin:0 0 28px;font-size:15px;color:rgba(255,255,255,0.55);line-height:1.65;">Clique sur le bouton pour te connecter. Ce lien est valable 15 minutes et ne peut être utilisé qu'une fois.</p>
-          <a href="${loginUrl}" style="display:inline-block;background:#C9A535;color:#000;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;text-decoration:none;letter-spacing:0.3px;">Se connecter</a>
-          <p style="margin:28px 0 0;font-size:12px;color:rgba(255,255,255,0.25);line-height:1.6;">Ou copie ce lien :<br/><span style="color:rgba(201,165,53,0.6);word-break:break-all;">${loginUrl}</span></p>
+        <tr><td style="padding:36px 40px;text-align:center;">
+          <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;line-height:1.3;">Ton code de connexion</p>
+          <p style="margin:0 0 24px;font-size:14px;color:rgba(255,255,255,0.55);line-height:1.6;">Saisis ce code dans l'application. Valable 15 minutes.</p>
+          <div style="display:inline-block;background:#111;border:1px solid rgba(201,165,53,0.35);border-radius:12px;padding:18px 28px;font-size:38px;font-weight:800;letter-spacing:10px;color:#C9A535;">${code}</div>
+          <p style="margin:28px 0 0;font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;">Ou clique ici depuis le même appareil :<br/><a href="${loginUrl}" style="color:#C9A535;text-decoration:none;">Se connecter directement</a></p>
         </td></tr>
         <tr><td style="padding:20px 40px;border-top:1px solid rgba(255,255,255,0.06);">
           <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.18);">ARETE Protocol · Si tu n'as pas demandé cette connexion, ignore ce message.</p>
@@ -79,12 +79,12 @@ export async function sendMagicLinkEmail(email: string, loginUrl: string) {
   return data
 }
 
-export async function sendLoginRelayEmail(ownerEmail: string, recipientEmail: string, loginUrl: string) {
+export async function sendLoginRelayEmail(ownerEmail: string, recipientEmail: string, loginUrl: string, code: string) {
   const from = process.env.RESEND_FROM || 'ARETE <onboarding@resend.dev>'
   const { data, error } = await resend.emails.send({
     from,
     to: [ownerEmail],
-    subject: `[ARETE] Lien de connexion pour ${recipientEmail}`,
+    subject: `[ARETE] Code de connexion pour ${recipientEmail} : ${code}`,
     html: `
 <!DOCTYPE html>
 <html lang="fr">
@@ -97,11 +97,12 @@ export async function sendLoginRelayEmail(ownerEmail: string, recipientEmail: st
           <div style="font-size:11px;font-weight:700;letter-spacing:4px;color:#C9A535;">ARETE</div>
         </td></tr>
         <tr><td style="padding:36px 40px;">
-          <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#fff;">Lien de connexion à transmettre</p>
-          <p style="margin:0 0 24px;font-size:14px;color:rgba(255,255,255,0.55);line-height:1.65;">
-            <strong style="color:rgba(255,255,255,0.8);">${recipientEmail}</strong> essaie de se connecter mais l'email n'a pas pu lui être envoyé directement.<br/>Transmets-lui ce lien (valable 15 minutes) :
+          <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#fff;">Code de connexion à transmettre</p>
+          <p style="margin:0 0 20px;font-size:14px;color:rgba(255,255,255,0.55);line-height:1.65;">
+            <strong style="color:rgba(255,255,255,0.8);">${recipientEmail}</strong> essaie de se connecter. Transmets-lui ce code (valable 15 minutes) :
           </p>
-          <div style="background:#111;border:1px solid rgba(201,165,53,0.2);border-radius:10px;padding:14px 18px;margin-bottom:24px;word-break:break-all;font-size:13px;color:#C9A535;">${loginUrl}</div>
+          <div style="text-align:center;background:#111;border:1px solid rgba(201,165,53,0.35);border-radius:10px;padding:16px;margin-bottom:20px;font-size:32px;font-weight:800;letter-spacing:8px;color:#C9A535;">${code}</div>
+          <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.4);word-break:break-all;">Ou lien direct : <span style="color:#C9A535;">${loginUrl}</span></p>
         </td></tr>
       </table>
     </td></tr>
