@@ -1,186 +1,104 @@
-# Pack d'optimisation — exécutable par Sonnet
+# Pack thème clair — exécutable par Haiku
 
-> **But** : corriger 3 défauts laissés par les dernières features :
-> 1. le nom d'une séance peut être vidé (PATCH `name: ''` accepté) ;
-> 2. le badge de difficulté manque sur les cartes de la page `/workouts` ;
-> 3. impossible d'ajouter un mouvement à une séance **sans blocs**.
+> **But** : en mode clair uniquement —
+> 1. renforcer le contraste des textes (aujourd'hui trop ton sur ton) ;
+> 2. passer le fond de la barre de menu du noir au bordeaux foncé.
 >
-> **Règles absolues** (ne jamais dévier) :
+> **Ce pack ne contient qu'UNE SEULE modification, dans UN SEUL fichier.**
+>
+> **Règles absolues** :
 > 1. Travailler dans `C:\Users\jimmy\ARETE`, branche `main`.
-> 2. Ne toucher QUE : `app/workouts/[id]/WorkoutDetailClient.tsx`, `app/workouts/WorkoutsTabs.tsx`, `app/api/workouts/[id]/route.ts`, et ce fichier.
-> 3. Après TOUTES les tâches : `npx tsc --noEmit` puis `npx next build`. Les deux doivent passer AVANT de committer.
-> 4. Un seul commit (message fourni en bas), puis `git push origin main`.
-> 5. Pas de migration, pas d'accès base de données.
-> 6. Si un bloc à chercher ne matche pas exactement : relire le fichier, ne pas improviser.
+> 2. Ne modifier QUE le fichier `app/globals.css`.
+> 3. Faire l'édition de l'étape 1, puis les vérifications de l'étape 2, puis le commit de l'étape 3. Dans cet ordre.
+> 4. Ne rien inventer. Si le texte à chercher ne correspond pas exactement, s'arrêter et le signaler.
 
 ---
 
-## Tâche 1 — Empêcher un nom de séance vide
+## Étape 1 — L'unique modification
 
-### 1a. Côté client
+**Fichier** : `app/globals.css`
 
-**Fichier** : `app/workouts/[id]/WorkoutDetailClient.tsx`
+Ce bloc se trouve à l'intérieur de `html[data-theme="light"] { ... }` (vers la ligne 135).
+Il n'apparaît qu'une seule fois dans le fichier.
 
-Chercher :
-```ts
-  const isDirtyName = editMode && editName.trim() !== initial.name
+**Chercher EXACTEMENT ce texte** (10 lignes, dont une ligne vide au milieu) :
+
 ```
-Remplacer par :
-```ts
-  // Champ vidé = pas un changement : on ne doit jamais envoyer un nom vide
-  const isDirtyName = editMode && editName.trim() !== '' && editName.trim() !== initial.name
+  --sidebar-bg:           #0B0A09;
+  --sidebar-border:       rgba(200,165,95,0.20);
+  --sidebar-text:         rgba(223,216,194,0.62);
+  --sidebar-text-hover:   rgba(223,216,194,0.95);
+  --sidebar-text-active:  #F1EAD8;
+  --sidebar-active-bg:    var(--crimson);
+
+  --text-primary: #1A1610;
+  --text-muted:   #5E5744;
+  --text-dim:     #9A9178;
 ```
 
-### 1b. Côté API (défense en profondeur)
+**Le remplacer EXACTEMENT par** :
 
-**Fichier** : `app/api/workouts/[id]/route.ts`
+```
+  /* Barre de menu : bordeaux foncé (plus noir), texte éclairci pour rester lisible dessus */
+  --sidebar-bg:           #3B1117;
+  --sidebar-border:       rgba(200,165,95,0.28);
+  --sidebar-text:         rgba(240,232,214,0.72);
+  --sidebar-text-hover:   #F7F2E4;
+  --sidebar-text-active:  #F7F2E4;
+  --sidebar-active-bg:    var(--crimson-bright);
 
-Chercher :
-```ts
-  if ('name' in body) data.name = body.name
+  /* Textes assombris : le gris clair passait sous le seuil de lisibilité sur fond ivoire */
+  --text-primary: #14110B;
+  --text-muted:   #4A4436;
+  --text-dim:     #6E6650;
 ```
-Remplacer par :
-```ts
-  if ('name' in body && typeof body.name === 'string' && body.name.trim()) data.name = body.name.trim()
-```
+
+C'est tout. Aucune autre modification n'est à faire.
 
 ---
 
-## Tâche 2 — Badge de difficulté sur les cartes de /workouts
+## Étape 2 — Vérifications obligatoires
 
-**Fichier** : `app/workouts/WorkoutsTabs.tsx`
-
-L'API renvoie déjà la complexité de chaque mouvement (`include: { movement: true }`),
-mais le type client ne la déclare pas.
-
-### 2a. Déclarer `complexity` dans le type
-
-Chercher :
-```ts
-interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string } }
-```
-Remplacer par :
-```ts
-interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string; complexity: string } }
-```
-
-### 2b. Importer le helper et les couleurs
-
-Chercher :
-```ts
-import { BIO_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
-```
-Remplacer par :
-```ts
-import { BIO_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
-```
-
-### 2c. Calculer la difficulté dans WorkoutCard
-
-Chercher :
-```ts
-  const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
-```
-Remplacer par :
-```ts
-  const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
-  const difficulty = computeWorkoutDifficulty(w.movements.map(m => ({ complexity: m.movement.complexity })))
-```
-
-### 2d. Afficher le badge en tête des tags
-
-Chercher :
-```tsx
-        <div style={{ marginTop: 10, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {bioTypes.map(bt => (
-```
-Remplacer par :
-```tsx
-        <div style={{ marginTop: 10, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {difficulty && (
-            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: COMPLEXITY_COLORS[difficulty], border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40` }}>{difficulty}</span>
-          )}
-          {bioTypes.map(bt => (
-```
-
----
-
-## Tâche 3 — Ajouter un mouvement à une séance sans blocs
-
-**Fichier** : `app/workouts/[id]/WorkoutDetailClient.tsx`
-
-Le bouton « Ajouter un mouvement » n'existe que dans la branche « avec blocs ».
-On réutilise le même état `addingToBlockId` avec la sentinelle `'__flat__'`
-(l'API accepte déjà `blockId: null`).
-
-### 3a. La sentinelle dans le handler
-
-Chercher :
-```ts
-      body: JSON.stringify({ movementId: m.id, blockId }),
-```
-Remplacer par :
-```ts
-      body: JSON.stringify({ movementId: m.id, blockId: blockId === '__flat__' ? null : blockId }),
-```
-
-### 3b. Le bouton en pied de liste plate
-
-Chercher :
-```tsx
-              : initial.movements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
-          )}
-        </div>
-```
-⚠️ Deux blocs du fichier ressemblent à ça — le bon est celui qui commence par `: initial.movements.map`
-(la branche sans blocs), PAS celui avec `blockMovements.map`. Le bloc ci-dessus est unique tel quel.
-
-Remplacer par :
-```tsx
-              : initial.movements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
-          )}
-          {editMode && !hasBlocks && (
-            <button onClick={() => setAddingToBlockId('__flat__')}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', background: 'none', border: '1px dashed var(--border)', borderRadius: 10, color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-              <Plus size={13} /> Ajouter un mouvement
-            </button>
-          )}
-        </div>
-```
-
-### 3c. Vérification anti-régression (grep, ne rien modifier)
-
-Dans `app/workouts/[id]/WorkoutDetailClient.tsx` :
-- `'__flat__'` → exactement **2 occurrences** (le handler 3a et le bouton 3b) ;
-- `Ajouter un mouvement` → exactement **2 occurrences** (bouton des blocs + nouveau bouton plat).
-
----
-
-## Vérification finale (obligatoire, dans cet ordre)
+Lancer ces deux commandes, dans cet ordre :
 
 ```bash
 cd "C:/Users/jimmy/ARETE"
-npx tsc --noEmit        # doit sortir sans AUCUNE erreur
-npx next build          # doit se terminer par la liste des routes, sans erreur
+npx tsc --noEmit
 ```
-
-Si l'une des deux échoue : relire la tâche concernée, corriger, relancer.
-Ne JAMAIS committer avec un build cassé.
-
-## Commit et déploiement
+→ ne doit rien afficher (aucune erreur).
 
 ```bash
-git add "app/workouts/[id]/WorkoutDetailClient.tsx" app/workouts/WorkoutsTabs.tsx "app/api/workouts/[id]/route.ts" OPTIMISATIONS.md
-git status --short      # vérifier : seulement ces 4 fichiers stagés
-git commit -m "Corrige le nom vide, badge difficulte sur les cartes, ajout hors blocs
+cd "C:/Users/jimmy/ARETE"
+npx next build
+```
+→ doit se terminer par la liste des routes, sans erreur.
 
-- Un nom de seance vide n'est plus considere comme un changement, et
-  l'API refuse desormais un name vide (defense en profondeur).
-- Les cartes de /workouts affichent le badge de difficulte global
-  (computeWorkoutDifficulty), la complexite etant deja dans le payload.
-- Les seances sans blocs ont maintenant aussi le bouton 'Ajouter un
-  mouvement' (sentinelle __flat__ -> blockId null, deja supporte par
-  l'API)."
+Si l'une des deux échoue : ne PAS committer. Relire l'étape 1 et corriger.
+
+---
+
+## Étape 3 — Commit et déploiement
+
+Lancer ces trois commandes, dans cet ordre :
+
+```bash
+cd "C:/Users/jimmy/ARETE"
+git add app/globals.css OPTIMISATIONS.md
+```
+
+```bash
+cd "C:/Users/jimmy/ARETE"
+git commit -m "Mode clair : contraste des textes renforce, barre de menu en bordeaux fonce
+
+Les textes secondaires et tertiaires etaient trop proches du fond ivoire
+(text-dim ressortait a ~2.6:1, sous le seuil WCAG AA de 4.5:1). Ils
+passent respectivement a 8.1:1 et 4.8:1. La barre de menu quitte le
+quasi-noir pour un bordeaux fonce coherent avec la palette crimson, avec
+texte eclairci et pastille active en crimson-bright pour rester lisible."
+```
+
+```bash
+cd "C:/Users/jimmy/ARETE"
 git push origin main
 ```
 
