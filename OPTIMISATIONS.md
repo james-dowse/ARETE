@@ -1,16 +1,13 @@
-# Pack d'optimisation vidéo — exécutable par Sonnet
+# Pack d'optimisation — exécutable par Sonnet
 
-> **But** : unifier la logique d'embed vidéo (aujourd'hui dupliquée et divergente entre
-> `components/MovementModal.tsx` et `app/workouts/[id]/active/page.tsx`) dans un
-> helper partagé `lib/video.ts`, et améliorer l'autoplay :
-> - support des **YouTube Shorts** et fichiers `.mp4/.webm` en séance active (aujourd'hui ignorés) ;
-> - `playsinline=1` (sans ça, iOS force le plein écran dans la PWA) ;
-> - `loop=1` (la démo tourne en boucle pendant la série au lieu de s'arrêter) ;
-> - domaine `youtube-nocookie.com` (embed sans cookies de tracking).
+> **But** : corriger 3 défauts laissés par les dernières features :
+> 1. le nom d'une séance peut être vidé (PATCH `name: ''` accepté) ;
+> 2. le badge de difficulté manque sur les cartes de la page `/workouts` ;
+> 3. impossible d'ajouter un mouvement à une séance **sans blocs**.
 >
 > **Règles absolues** (ne jamais dévier) :
 > 1. Travailler dans `C:\Users\jimmy\ARETE`, branche `main`.
-> 2. Ne toucher QUE : `lib/video.ts` (nouveau), `components/MovementModal.tsx`, `app/workouts/[id]/active/page.tsx`, et ce fichier.
+> 2. Ne toucher QUE : `app/workouts/[id]/WorkoutDetailClient.tsx`, `app/workouts/WorkoutsTabs.tsx`, `app/api/workouts/[id]/route.ts`, et ce fichier.
 > 3. Après TOUTES les tâches : `npx tsc --noEmit` puis `npx next build`. Les deux doivent passer AVANT de committer.
 > 4. Un seul commit (message fourni en bas), puis `git push origin main`.
 > 5. Pas de migration, pas d'accès base de données.
@@ -18,242 +15,144 @@
 
 ---
 
-## Tâche 1 — Créer le helper partagé `lib/video.ts`
+## Tâche 1 — Empêcher un nom de séance vide
 
-Créer le fichier `lib/video.ts` avec EXACTEMENT ce contenu :
+### 1a. Côté client
 
+**Fichier** : `app/workouts/[id]/WorkoutDetailClient.tsx`
+
+Chercher :
 ```ts
-// Résolution d'une URL vidéo vers un embed autoplay.
-// autoplay=1&mute=1 : seule combinaison d'autoplay acceptée par tous les navigateurs
-// (le son se réactive manuellement dans le player).
-// playsinline=1 : sans lui, iOS force le plein écran dans la PWA.
-// loop=1&playlist=<id> : la démo boucle — utile pendant une série.
-// youtube-nocookie.com : embed sans cookies de tracking.
-export type EmbedInfo = { url: string; type: 'youtube' | 'instagram' | 'video' }
+  const isDirtyName = editMode && editName.trim() !== initial.name
+```
+Remplacer par :
+```ts
+  // Champ vidé = pas un changement : on ne doit jamais envoyer un nom vide
+  const isDirtyName = editMode && editName.trim() !== '' && editName.trim() !== initial.name
+```
 
-export function getYouTubeId(url: string): string | null {
-  try {
-    const u = new URL(url)
-    if (u.hostname === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null
-    if (u.hostname.includes('youtube.com')) {
-      const v = u.searchParams.get('v')
-      if (v) return v
-      const m = u.pathname.match(/\/(shorts|embed)\/([^/]+)/)
-      if (m) return m[2]
-    }
-  } catch {
-    // URL invalide
-  }
-  return null
-}
+### 1b. Côté API (défense en profondeur)
 
-export function getEmbedInfo(url: string): EmbedInfo | null {
-  const yt = getYouTubeId(url)
-  if (yt) {
-    return {
-      url: `https://www.youtube-nocookie.com/embed/${yt}?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${yt}`,
-      type: 'youtube',
-    }
-  }
-  try {
-    const u = new URL(url)
-    if (u.hostname.includes('instagram.com')) {
-      const m = u.pathname.match(/\/(reel|p)\/([^/]+)/)
-      if (m) return { url: `https://www.instagram.com/${m[1]}/${m[2]}/embed/`, type: 'instagram' }
-    }
-    if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(u.pathname)) {
-      return { url, type: 'video' }
-    }
-  } catch {
-    // URL invalide
-  }
-  return null
-}
+**Fichier** : `app/api/workouts/[id]/route.ts`
+
+Chercher :
+```ts
+  if ('name' in body) data.name = body.name
+```
+Remplacer par :
+```ts
+  if ('name' in body && typeof body.name === 'string' && body.name.trim()) data.name = body.name.trim()
 ```
 
 ---
 
-## Tâche 2 — MovementModal : utiliser le helper partagé
+## Tâche 2 — Badge de difficulté sur les cartes de /workouts
 
-**Fichier** : `components/MovementModal.tsx`
+**Fichier** : `app/workouts/WorkoutsTabs.tsx`
 
-### 2a. Remplacer la logique locale par l'import
+L'API renvoie déjà la complexité de chaque mouvement (`include: { movement: true }`),
+mais le type client ne la déclare pas.
 
-Chercher le bloc exact (juste après les imports lucide/types) :
+### 2a. Déclarer `complexity` dans le type
+
+Chercher :
 ```ts
-// autoplay=1&mute=1 : seule combinaison acceptée par tous les navigateurs.
-// Le son peut être réactivé manuellement dans le player YouTube.
-// rel=0 : pas de vidéos suggérées à la fin. modestbranding=1 : logo minimal.
-const YT_PARAMS = 'autoplay=1&mute=1&rel=0&modestbranding=1'
-
-type EmbedResult = { url: string; type: 'youtube' | 'instagram' | 'video' } | null
-
-function getEmbedInfo(url: string): EmbedResult {
-  try {
-    const u = new URL(url)
-
-    // YouTube
-    if (u.hostname === 'youtu.be') {
-      return { url: `https://www.youtube.com/embed${u.pathname}?${YT_PARAMS}`, type: 'youtube' }
-    }
-    if (u.hostname.includes('youtube.com')) {
-      const v = u.searchParams.get('v')
-      if (v) return { url: `https://www.youtube.com/embed/${v}?${YT_PARAMS}`, type: 'youtube' }
-      const shorts = u.pathname.match(/\/shorts\/([^/]+)/)
-      if (shorts) return { url: `https://www.youtube.com/embed/${shorts[1]}?${YT_PARAMS}`, type: 'youtube' }
-    }
-
-    // Instagram Reels
-    if (u.hostname.includes('instagram.com')) {
-      const reel = u.pathname.match(/\/reel\/([^/]+)/)
-      if (reel) return { url: `https://www.instagram.com/reel/${reel[1]}/embed/`, type: 'instagram' }
-      const p = u.pathname.match(/\/p\/([^/]+)/)
-      if (p) return { url: `https://www.instagram.com/p/${p[1]}/embed/`, type: 'instagram' }
-    }
-
-    // Fichiers vidéo directs
-    if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(u.pathname)) {
-      return { url, type: 'video' }
-    }
-  } catch {
-    // URL invalide
-  }
-  return null
-}
+interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string } }
 ```
-**Supprimer tout ce bloc**, et ajouter à la place l'import (avec les autres imports en haut du fichier) :
+Remplacer par :
 ```ts
-import { getEmbedInfo } from '@/lib/video'
+interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string; complexity: string } }
 ```
 
-### 2b. Ajouter loop à la balise `<video>` (fichiers directs)
+### 2b. Importer le helper et les couleurs
+
+Chercher :
+```ts
+import { BIO_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
+```
+Remplacer par :
+```ts
+import { BIO_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
+```
+
+### 2c. Calculer la difficulté dans WorkoutCard
+
+Chercher :
+```ts
+  const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
+```
+Remplacer par :
+```ts
+  const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
+  const difficulty = computeWorkoutDifficulty(w.movements.map(m => ({ complexity: m.movement.complexity })))
+```
+
+### 2d. Afficher le badge en tête des tags
 
 Chercher :
 ```tsx
-                <video
-                  src={embedInfo.url}
-                  autoPlay
-                  muted
-                  playsInline
-                  controls
+        <div style={{ marginTop: 10, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {bioTypes.map(bt => (
 ```
 Remplacer par :
 ```tsx
-                <video
-                  src={embedInfo.url}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  controls
+        <div style={{ marginTop: 10, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {difficulty && (
+            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: COMPLEXITY_COLORS[difficulty], border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40` }}>{difficulty}</span>
+          )}
+          {bioTypes.map(bt => (
 ```
-
-Aucun autre changement dans ce fichier — le reste du composant utilise `embedInfo`
-exactement de la même façon (`embedInfo?.type`, `embedInfo.url`).
 
 ---
 
-## Tâche 3 — Séance active : Shorts + mp4 + playsinline via le helper
+## Tâche 3 — Ajouter un mouvement à une séance sans blocs
 
-**Fichier** : `app/workouts/[id]/active/page.tsx`
+**Fichier** : `app/workouts/[id]/WorkoutDetailClient.tsx`
 
-### 3a. Remplacer la regex locale par l'import
+Le bouton « Ajouter un mouvement » n'existe que dans la branche « avec blocs ».
+On réutilise le même état `addingToBlockId` avec la sentinelle `'__flat__'`
+(l'API accepte déjà `blockId: null`).
 
-Chercher :
-```ts
-const ytId = (url: string) => {
-  const m = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)
-  return m ? m[1] : null
-}
-```
-**Supprimer ce bloc**, et ajouter l'import en haut du fichier (après `import { useToast } from '@/components/Toast'`) :
-```ts
-import { getEmbedInfo } from '@/lib/video'
-```
-
-### 3b. Calculer l'embed au lieu de l'ID brut
+### 3a. La sentinelle dans le handler
 
 Chercher :
 ```ts
-  const currentVid = currentWm?.movement.videoUrl ? ytId(currentWm.movement.videoUrl) : null
+      body: JSON.stringify({ movementId: m.id, blockId }),
 ```
 Remplacer par :
 ```ts
-  const rawEmbed = currentWm?.movement.videoUrl ? getEmbedInfo(currentWm.movement.videoUrl) : null
-  // Instagram ne supporte pas l'autoplay en iframe — pas de panneau vidéo dans ce cas
-  const currentEmbed = rawEmbed && rawEmbed.type !== 'instagram' ? rawEmbed : null
+      body: JSON.stringify({ movementId: m.id, blockId: blockId === '__flat__' ? null : blockId }),
 ```
 
-### 3c. Adapter le panneau vidéo
+### 3b. Le bouton en pied de liste plate
 
-Chercher le bloc exact :
+Chercher :
 ```tsx
-      {/* ── Video panel (current movement) ── */}
-      {currentVid && (
-        <div style={{ position: 'relative', width: '100%', maxWidth: 680, margin: '0 auto', background: '#000', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          {/* movement name badge */}
-          <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 2, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.85)', pointerEvents: 'none' }}>
-            {currentWm?.movement.name}
-          </div>
-          <div style={{ position: 'relative', width: '100%', paddingBottom: '42%', overflow: 'hidden' }}>
-            <iframe
-              key={currentVid}
-              src={`https://www.youtube.com/embed/${currentVid}?autoplay=1&mute=1&rel=0&modestbranding=1`}
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', padding: '4px 8px' }}>
-            🔇 Lecture automatique muette — clique 🔊 dans le player pour activer le son
-          </div>
+              : initial.movements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
+          )}
         </div>
-      )}
 ```
+⚠️ Deux blocs du fichier ressemblent à ça — le bon est celui qui commence par `: initial.movements.map`
+(la branche sans blocs), PAS celui avec `blockMovements.map`. Le bloc ci-dessus est unique tel quel.
+
 Remplacer par :
 ```tsx
-      {/* ── Video panel (current movement) ── */}
-      {currentEmbed && (
-        <div style={{ position: 'relative', width: '100%', maxWidth: 680, margin: '0 auto', background: '#000', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          {/* movement name badge */}
-          <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 2, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.85)', pointerEvents: 'none' }}>
-            {currentWm?.movement.name}
-          </div>
-          <div style={{ position: 'relative', width: '100%', paddingBottom: '42%', overflow: 'hidden' }}>
-            {currentEmbed.type === 'video' ? (
-              <video
-                key={currentEmbed.url}
-                src={currentEmbed.url}
-                autoPlay
-                muted
-                loop
-                playsInline
-                controls
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              <iframe
-                key={currentEmbed.url}
-                src={currentEmbed.url}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            )}
-          </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', padding: '4px 8px' }}>
-            🔇 Lecture automatique muette en boucle — clique 🔊 dans le player pour le son
-          </div>
+              : initial.movements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
+          )}
+          {editMode && !hasBlocks && (
+            <button onClick={() => setAddingToBlockId('__flat__')}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', background: 'none', border: '1px dashed var(--border)', borderRadius: 10, color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              <Plus size={13} /> Ajouter un mouvement
+            </button>
+          )}
         </div>
-      )}
 ```
 
-### 3d. Vérification anti-régression (grep, ne rien modifier)
+### 3c. Vérification anti-régression (grep, ne rien modifier)
 
-Après les edits, vérifier avec grep dans `app/workouts/[id]/active/page.tsx` :
-- `ytId` → **0 occurrence** (sinon une référence a été oubliée) ;
-- `currentVid` → **0 occurrence** ;
-- `currentEmbed` → présent dans le calcul (3b) et le panneau (3c).
+Dans `app/workouts/[id]/WorkoutDetailClient.tsx` :
+- `'__flat__'` → exactement **2 occurrences** (le handler 3a et le bouton 3b) ;
+- `Ajouter un mouvement` → exactement **2 occurrences** (bouton des blocs + nouveau bouton plat).
 
 ---
 
@@ -271,15 +170,17 @@ Ne JAMAIS committer avec un build cassé.
 ## Commit et déploiement
 
 ```bash
-git add lib/video.ts components/MovementModal.tsx "app/workouts/[id]/active/page.tsx" OPTIMISATIONS.md
+git add "app/workouts/[id]/WorkoutDetailClient.tsx" app/workouts/WorkoutsTabs.tsx "app/api/workouts/[id]/route.ts" OPTIMISATIONS.md
 git status --short      # vérifier : seulement ces 4 fichiers stagés
-git commit -m "Unifie la logique d'embed video dans lib/video.ts
+git commit -m "Corrige le nom vide, badge difficulte sur les cartes, ajout hors blocs
 
-Supprime la duplication divergente entre MovementModal et la seance
-active : la seance gere maintenant les YouTube Shorts et les fichiers
-mp4/webm comme la bibliotheque. Ajoute playsinline (evite le plein ecran
-force sur iOS PWA), la lecture en boucle des demos, et le domaine
-youtube-nocookie.com sur tous les embeds."
+- Un nom de seance vide n'est plus considere comme un changement, et
+  l'API refuse desormais un name vide (defense en profondeur).
+- Les cartes de /workouts affichent le badge de difficulte global
+  (computeWorkoutDifficulty), la complexite etant deja dans le payload.
+- Les seances sans blocs ont maintenant aussi le bouton 'Ajouter un
+  mouvement' (sentinelle __flat__ -> blockId null, deja supporte par
+  l'API)."
 git push origin main
 ```
 
