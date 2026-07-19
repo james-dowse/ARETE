@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { X, Play, ExternalLink, Heart } from 'lucide-react'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, EQUIPMENT_ICONS } from '@/lib/types'
+import { getEmbedInfo } from '@/lib/video'
 
 interface Movement {
   id: string
@@ -18,46 +19,6 @@ interface Movement {
 interface Props {
   movementId: string | null
   onClose: () => void
-}
-
-// autoplay=1&mute=1 : seule combinaison acceptée par tous les navigateurs.
-// Le son peut être réactivé manuellement dans le player YouTube.
-// rel=0 : pas de vidéos suggérées à la fin. modestbranding=1 : logo minimal.
-const YT_PARAMS = 'autoplay=1&mute=1&rel=0&modestbranding=1'
-
-type EmbedResult = { url: string; type: 'youtube' | 'instagram' | 'video' } | null
-
-function getEmbedInfo(url: string): EmbedResult {
-  try {
-    const u = new URL(url)
-
-    // YouTube
-    if (u.hostname === 'youtu.be') {
-      return { url: `https://www.youtube.com/embed${u.pathname}?${YT_PARAMS}`, type: 'youtube' }
-    }
-    if (u.hostname.includes('youtube.com')) {
-      const v = u.searchParams.get('v')
-      if (v) return { url: `https://www.youtube.com/embed/${v}?${YT_PARAMS}`, type: 'youtube' }
-      const shorts = u.pathname.match(/\/shorts\/([^/]+)/)
-      if (shorts) return { url: `https://www.youtube.com/embed/${shorts[1]}?${YT_PARAMS}`, type: 'youtube' }
-    }
-
-    // Instagram Reels
-    if (u.hostname.includes('instagram.com')) {
-      const reel = u.pathname.match(/\/reel\/([^/]+)/)
-      if (reel) return { url: `https://www.instagram.com/reel/${reel[1]}/embed/`, type: 'instagram' }
-      const p = u.pathname.match(/\/p\/([^/]+)/)
-      if (p) return { url: `https://www.instagram.com/p/${p[1]}/embed/`, type: 'instagram' }
-    }
-
-    // Fichiers vidéo directs
-    if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(u.pathname)) {
-      return { url, type: 'video' }
-    }
-  } catch {
-    // URL invalide
-  }
-  return null
 }
 
 export default function MovementModal({ movementId, onClose }: Props) {
@@ -184,6 +145,7 @@ export default function MovementModal({ movementId, onClose }: Props) {
                   src={embedInfo.url}
                   autoPlay
                   muted
+                  loop
                   playsInline
                   controls
                   style={{ width: '100%', borderRadius: 10, background: '#000', maxHeight: 300 }}

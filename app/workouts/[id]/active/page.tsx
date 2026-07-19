@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { BIO_TYPE_COLORS } from '@/lib/types'
 import { ProgressRing } from '@/components/ui'
 import { useToast } from '@/components/Toast'
+import { getEmbedInfo } from '@/lib/video'
 
 interface Movement { id: string; name: string; bioType: string; videoUrl?: string | null }
 interface WM { id: string; order: number; sets?: number | null; reps?: string | null; rest?: number | null; duration?: number | null; blockId?: string | null; movement: Movement }
@@ -12,11 +13,6 @@ interface Workout { id: string; name: string; duration?: number | null; movement
 
 const REST_OPTIONS = [30, 60, 90, 120]
 const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-
-const ytId = (url: string) => {
-  const m = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)
-  return m ? m[1] : null
-}
 
 export default function ActivePage() {
   const { id } = useParams<{ id: string }>()
@@ -245,7 +241,9 @@ export default function ActivePage() {
     }
     return null
   })()
-  const currentVid = currentWm?.movement.videoUrl ? ytId(currentWm.movement.videoUrl) : null
+  const rawEmbed = currentWm?.movement.videoUrl ? getEmbedInfo(currentWm.movement.videoUrl) : null
+  // Instagram ne supporte pas l'autoplay en iframe — pas de panneau vidéo dans ce cas
+  const currentEmbed = rawEmbed && rawEmbed.type !== 'instagram' ? rawEmbed : null
 
   const handleSet = (wm: WM) => {
     ensureAudio()
@@ -356,23 +354,36 @@ export default function ActivePage() {
       </div>
 
       {/* ── Video panel (current movement) ── */}
-      {currentVid && (
+      {currentEmbed && (
         <div style={{ position: 'relative', width: '100%', maxWidth: 680, margin: '0 auto', background: '#000', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           {/* movement name badge */}
           <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 2, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.85)', pointerEvents: 'none' }}>
             {currentWm?.movement.name}
           </div>
           <div style={{ position: 'relative', width: '100%', paddingBottom: '42%', overflow: 'hidden' }}>
-            <iframe
-              key={currentVid}
-              src={`https://www.youtube.com/embed/${currentVid}?autoplay=1&mute=1&rel=0&modestbranding=1`}
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+            {currentEmbed.type === 'video' ? (
+              <video
+                key={currentEmbed.url}
+                src={currentEmbed.url}
+                autoPlay
+                muted
+                loop
+                playsInline
+                controls
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <iframe
+                key={currentEmbed.url}
+                src={currentEmbed.url}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )}
           </div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', padding: '4px 8px' }}>
-            🔇 Lecture automatique muette — clique 🔊 dans le player pour activer le son
+            🔇 Lecture automatique muette en boucle — clique 🔊 dans le player pour le son
           </div>
         </div>
       )}
