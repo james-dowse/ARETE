@@ -1,255 +1,259 @@
-# Runbook d'optimisation — exécutable par n'importe quel modèle
+# Pack d'optimisation vidéo — exécutable par Sonnet
 
-> **But** : finir la migration des toasts (#5) et durcir la gestion d'erreur réseau
-> dans `app/workouts/[id]/WorkoutDetailClient.tsx` et `app/planner/page.tsx`.
-> Chaque tâche est autonome : contexte, edit exact, vérification, commit.
+> **But** : unifier la logique d'embed vidéo (aujourd'hui dupliquée et divergente entre
+> `components/MovementModal.tsx` et `app/workouts/[id]/active/page.tsx`) dans un
+> helper partagé `lib/video.ts`, et améliorer l'autoplay :
+> - support des **YouTube Shorts** et fichiers `.mp4/.webm` en séance active (aujourd'hui ignorés) ;
+> - `playsinline=1` (sans ça, iOS force le plein écran dans la PWA) ;
+> - `loop=1` (la démo tourne en boucle pendant la série au lieu de s'arrêter) ;
+> - domaine `youtube-nocookie.com` (embed sans cookies de tracking).
 >
 > **Règles absolues** (ne jamais dévier) :
 > 1. Travailler dans `C:\Users\jimmy\ARETE`, branche `main`.
-> 2. Ne toucher AUCUN autre fichier que ceux listés.
-> 3. Après TOUTES les tâches : `npx tsc --noEmit` puis `npx next build`. Les deux doivent passer sans erreur AVANT de committer.
-> 4. Un seul commit pour tout le runbook (message fourni en bas), puis `git push origin main` (Vercel déploie tout seul).
-> 5. Ne PAS toucher à la base de données, ne PAS créer de migration.
-> 6. Si un `old_string` ne matche pas exactement : relire le fichier, ne pas improviser un autre changement.
+> 2. Ne toucher QUE : `lib/video.ts` (nouveau), `components/MovementModal.tsx`, `app/workouts/[id]/active/page.tsx`, et ce fichier.
+> 3. Après TOUTES les tâches : `npx tsc --noEmit` puis `npx next build`. Les deux doivent passer AVANT de committer.
+> 4. Un seul commit (message fourni en bas), puis `git push origin main`.
+> 5. Pas de migration, pas d'accès base de données.
+> 6. Si un bloc à chercher ne matche pas exactement : relire le fichier, ne pas improviser.
 
 ---
 
-## Contexte minimal
+## Tâche 1 — Créer le helper partagé `lib/video.ts`
 
-- Le système de toasts unifié existe déjà : `components/Toast.tsx` exporte `useToast()`.
-  Usage : `const toast = useToast()` puis `toast('message')` (succès) ou `toast('message', 'error')` / `toast('message', 'info')`.
-- `ToastProvider` est déjà monté dans `app/layout.tsx` — rien à faire côté layout.
-- `WorkoutDetailClient.tsx` a été découpé : ses sous-composants sont dans `app/workouts/[id]/parts.tsx` (ne pas y toucher).
+Créer le fichier `lib/video.ts` avec EXACTEMENT ce contenu :
+
+```ts
+// Résolution d'une URL vidéo vers un embed autoplay.
+// autoplay=1&mute=1 : seule combinaison d'autoplay acceptée par tous les navigateurs
+// (le son se réactive manuellement dans le player).
+// playsinline=1 : sans lui, iOS force le plein écran dans la PWA.
+// loop=1&playlist=<id> : la démo boucle — utile pendant une série.
+// youtube-nocookie.com : embed sans cookies de tracking.
+export type EmbedInfo = { url: string; type: 'youtube' | 'instagram' | 'video' }
+
+export function getYouTubeId(url: string): string | null {
+  try {
+    const u = new URL(url)
+    if (u.hostname === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null
+    if (u.hostname.includes('youtube.com')) {
+      const v = u.searchParams.get('v')
+      if (v) return v
+      const m = u.pathname.match(/\/(shorts|embed)\/([^/]+)/)
+      if (m) return m[2]
+    }
+  } catch {
+    // URL invalide
+  }
+  return null
+}
+
+export function getEmbedInfo(url: string): EmbedInfo | null {
+  const yt = getYouTubeId(url)
+  if (yt) {
+    return {
+      url: `https://www.youtube-nocookie.com/embed/${yt}?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${yt}`,
+      type: 'youtube',
+    }
+  }
+  try {
+    const u = new URL(url)
+    if (u.hostname.includes('instagram.com')) {
+      const m = u.pathname.match(/\/(reel|p)\/([^/]+)/)
+      if (m) return { url: `https://www.instagram.com/${m[1]}/${m[2]}/embed/`, type: 'instagram' }
+    }
+    if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(u.pathname)) {
+      return { url, type: 'video' }
+    }
+  } catch {
+    // URL invalide
+  }
+  return null
+}
+```
 
 ---
 
-## Tâche 1 — Migrer les 2 toasts locaux résiduels de WorkoutDetailClient
+## Tâche 2 — MovementModal : utiliser le helper partagé
 
-**Fichier** : `app/workouts/[id]/WorkoutDetailClient.tsx`
+**Fichier** : `components/MovementModal.tsx`
 
-### 1a. Ajouter l'import du hook
+### 2a. Remplacer la logique locale par l'import
 
-Chercher la ligne :
+Chercher le bloc exact (juste après les imports lucide/types) :
 ```ts
-import { BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
+// autoplay=1&mute=1 : seule combinaison acceptée par tous les navigateurs.
+// Le son peut être réactivé manuellement dans le player YouTube.
+// rel=0 : pas de vidéos suggérées à la fin. modestbranding=1 : logo minimal.
+const YT_PARAMS = 'autoplay=1&mute=1&rel=0&modestbranding=1'
+
+type EmbedResult = { url: string; type: 'youtube' | 'instagram' | 'video' } | null
+
+function getEmbedInfo(url: string): EmbedResult {
+  try {
+    const u = new URL(url)
+
+    // YouTube
+    if (u.hostname === 'youtu.be') {
+      return { url: `https://www.youtube.com/embed${u.pathname}?${YT_PARAMS}`, type: 'youtube' }
+    }
+    if (u.hostname.includes('youtube.com')) {
+      const v = u.searchParams.get('v')
+      if (v) return { url: `https://www.youtube.com/embed/${v}?${YT_PARAMS}`, type: 'youtube' }
+      const shorts = u.pathname.match(/\/shorts\/([^/]+)/)
+      if (shorts) return { url: `https://www.youtube.com/embed/${shorts[1]}?${YT_PARAMS}`, type: 'youtube' }
+    }
+
+    // Instagram Reels
+    if (u.hostname.includes('instagram.com')) {
+      const reel = u.pathname.match(/\/reel\/([^/]+)/)
+      if (reel) return { url: `https://www.instagram.com/reel/${reel[1]}/embed/`, type: 'instagram' }
+      const p = u.pathname.match(/\/p\/([^/]+)/)
+      if (p) return { url: `https://www.instagram.com/p/${p[1]}/embed/`, type: 'instagram' }
+    }
+
+    // Fichiers vidéo directs
+    if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(u.pathname)) {
+      return { url, type: 'video' }
+    }
+  } catch {
+    // URL invalide
+  }
+  return null
+}
 ```
-Ajouter juste après :
+**Supprimer tout ce bloc**, et ajouter à la place l'import (avec les autres imports en haut du fichier) :
 ```ts
-import { useToast } from '@/components/Toast'
+import { getEmbedInfo } from '@/lib/video'
 ```
 
-### 1b. Remplacer les états locaux par le hook
+### 2b. Ajouter loop à la balise `<video>` (fichiers directs)
 
-Chercher (vers les lignes 38 et 43) :
-```ts
-  const [addedToast, setAddedToast] = useState(false)
+Chercher :
+```tsx
+                <video
+                  src={embedInfo.url}
+                  autoPlay
+                  muted
+                  playsInline
+                  controls
 ```
-et
-```ts
-  const [sessionToast, setSessionToast] = useState(false)
-```
-**Supprimer ces deux lignes**, et ajouter à la place (une seule fois, à l'endroit du premier) :
-```ts
-  const toast = useToast()
+Remplacer par :
+```tsx
+                <video
+                  src={embedInfo.url}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  controls
 ```
 
-### 1c. handleLogSession — remplacer le toast local ET ajouter la gestion d'erreur
+Aucun autre changement dans ce fichier — le reste du composant utilise `embedInfo`
+exactement de la même façon (`embedInfo?.type`, `embedInfo.url`).
+
+---
+
+## Tâche 3 — Séance active : Shorts + mp4 + playsinline via le helper
+
+**Fichier** : `app/workouts/[id]/active/page.tsx`
+
+### 3a. Remplacer la regex locale par l'import
+
+Chercher :
+```ts
+const ytId = (url: string) => {
+  const m = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)
+  return m ? m[1] : null
+}
+```
+**Supprimer ce bloc**, et ajouter l'import en haut du fichier (après `import { useToast } from '@/components/Toast'`) :
+```ts
+import { getEmbedInfo } from '@/lib/video'
+```
+
+### 3b. Calculer l'embed au lieu de l'ID brut
+
+Chercher :
+```ts
+  const currentVid = currentWm?.movement.videoUrl ? ytId(currentWm.movement.videoUrl) : null
+```
+Remplacer par :
+```ts
+  const rawEmbed = currentWm?.movement.videoUrl ? getEmbedInfo(currentWm.movement.videoUrl) : null
+  // Instagram ne supporte pas l'autoplay en iframe — pas de panneau vidéo dans ce cas
+  const currentEmbed = rawEmbed && rawEmbed.type !== 'instagram' ? rawEmbed : null
+```
+
+### 3c. Adapter le panneau vidéo
 
 Chercher le bloc exact :
-```ts
-  const handleLogSession = async () => {
-    setLoggingSession(true)
-    const res = await fetch(`/api/workouts/${initial.id}/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
-    const s = await res.json()
-    setSessions(prev => [s, ...prev])
-    setLoggingSession(false)
-    setSessionToast(true)
-    setTimeout(() => setSessionToast(false), 3000)
-  }
-```
-Remplacer par :
-```ts
-  const handleLogSession = async () => {
-    setLoggingSession(true)
-    const res = await fetch(`/api/workouts/${initial.id}/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }).catch(() => null)
-    if (!res || !res.ok) {
-      toast('Impossible d\'enregistrer la séance', 'error')
-      setLoggingSession(false)
-      return
-    }
-    const s = await res.json()
-    setSessions(prev => [s, ...prev])
-    setLoggingSession(false)
-    toast('Séance enregistrée ✓')
-  }
-```
-
-### 1d. Modale « Ajouter à la semaine » — remplacer le déclencheur
-
-Chercher :
 ```tsx
-          onAdded={() => setAddedToast(true)}
-```
-Remplacer par :
-```tsx
-          onAdded={() => toast('Ajouté au planner ✓')}
-```
-
-### 1e. Supprimer les 2 blocs de rendu des anciens toasts
-
-Chercher et **supprimer entièrement** ce bloc :
-```tsx
-      {addedToast && (
-        <div onAnimationEnd={() => setTimeout(() => setAddedToast(false), 2500)}
-          style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000 }}>
-          Ajouté au planner ✓
+      {/* ── Video panel (current movement) ── */}
+      {currentVid && (
+        <div style={{ position: 'relative', width: '100%', maxWidth: 680, margin: '0 auto', background: '#000', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          {/* movement name badge */}
+          <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 2, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.85)', pointerEvents: 'none' }}>
+            {currentWm?.movement.name}
+          </div>
+          <div style={{ position: 'relative', width: '100%', paddingBottom: '42%', overflow: 'hidden' }}>
+            <iframe
+              key={currentVid}
+              src={`https://www.youtube.com/embed/${currentVid}?autoplay=1&mute=1&rel=0&modestbranding=1`}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', padding: '4px 8px' }}>
+            🔇 Lecture automatique muette — clique 🔊 dans le player pour activer le son
+          </div>
         </div>
       )}
 ```
-Puis chercher et **supprimer entièrement** ce bloc :
+Remplacer par :
 ```tsx
-      {sessionToast && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CheckCircle2 size={15} /> Séance enregistrée !
+      {/* ── Video panel (current movement) ── */}
+      {currentEmbed && (
+        <div style={{ position: 'relative', width: '100%', maxWidth: 680, margin: '0 auto', background: '#000', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          {/* movement name badge */}
+          <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 2, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.85)', pointerEvents: 'none' }}>
+            {currentWm?.movement.name}
+          </div>
+          <div style={{ position: 'relative', width: '100%', paddingBottom: '42%', overflow: 'hidden' }}>
+            {currentEmbed.type === 'video' ? (
+              <video
+                key={currentEmbed.url}
+                src={currentEmbed.url}
+                autoPlay
+                muted
+                loop
+                playsInline
+                controls
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <iframe
+                key={currentEmbed.url}
+                src={currentEmbed.url}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )}
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', padding: '4px 8px' }}>
+            🔇 Lecture automatique muette en boucle — clique 🔊 dans le player pour le son
+          </div>
         </div>
       )}
 ```
-⚠️ Après suppression, vérifier avec grep que `CheckCircle2` est encore utilisé ailleurs
-dans le fichier (il l'est : bouton « J'ai fait » et historique). NE PAS retirer son import.
 
----
+### 3d. Vérification anti-régression (grep, ne rien modifier)
 
-## Tâche 2 — Gestion d'erreur sur handleDuplicate
-
-**Fichier** : `app/workouts/[id]/WorkoutDetailClient.tsx`
-
-Chercher :
-```ts
-  const handleDuplicate = async () => {
-    setDuplicating(true)
-    const res = await fetch(`/api/workouts/${initial.id}/duplicate`, { method: 'POST' })
-    const copy = await res.json()
-    setDuplicating(false)
-    router.push(`/workouts/${copy.id}`)
-  }
-```
-Remplacer par :
-```ts
-  const handleDuplicate = async () => {
-    setDuplicating(true)
-    const res = await fetch(`/api/workouts/${initial.id}/duplicate`, { method: 'POST' }).catch(() => null)
-    setDuplicating(false)
-    if (!res || !res.ok) { toast('Échec de la duplication', 'error'); return }
-    const copy = await res.json()
-    router.push(`/workouts/${copy.id}`)
-  }
-```
-
----
-
-## Tâche 3 — Gestion d'erreur sur handleDelete
-
-**Fichier** : `app/workouts/[id]/WorkoutDetailClient.tsx`
-
-Chercher :
-```ts
-  const handleDelete = async () => {
-    if (!confirm('Supprimer définitivement cette séance ?')) return
-    setDeleting(true)
-    await fetch(`/api/workouts/${initial.id}`, { method: 'DELETE' })
-    router.push(backTo ?? '/workouts')
-  }
-```
-Remplacer par :
-```ts
-  const handleDelete = async () => {
-    if (!confirm('Supprimer définitivement cette séance ?')) return
-    setDeleting(true)
-    const res = await fetch(`/api/workouts/${initial.id}`, { method: 'DELETE' }).catch(() => null)
-    if (!res || !res.ok) {
-      toast('Échec de la suppression', 'error')
-      setDeleting(false)
-      return
-    }
-    router.push(backTo ?? '/workouts')
-  }
-```
-
----
-
-## Tâche 4 — handleSave : détecter les sauvegardes partielles
-
-**Fichier** : `app/workouts/[id]/WorkoutDetailClient.tsx`
-
-Dans `handleSave`, chercher la fin du bloc :
-```ts
-    ])
-
-    setSaving(false)
-    setEditMode(false)
-    router.refresh()
-  }
-```
-Remplacer par :
-```ts
-    ])
-
-    const failed = results.filter(r => !r || !r.ok).length
-    setSaving(false)
-    if (failed > 0) {
-      toast(`${failed} modification${failed > 1 ? 's' : ''} n'a pas pu être sauvegardée — réessaie.`, 'error')
-      return
-    }
-    setEditMode(false)
-    toast('Modifications sauvegardées ✓')
-    router.refresh()
-  }
-```
-Et changer le début du même `Promise.all` : chercher
-```ts
-    await Promise.all([
-```
-remplacer par
-```ts
-    const results = await Promise.all([
-```
-⚠️ Il n'y a qu'un seul `Promise.all` dans ce fichier. Les fetchs à l'intérieur doivent
-chacun recevoir `.catch(() => null)` ajouté en fin de chaîne — SEULEMENT ceux dans ce
-`Promise.all` (il y en a 6 : movements PATCH, blocks PATCH, workout PATCH,
-image DELETE/POST, movements DELETE, blocks DELETE). Exemple de transformation :
-`fetch(...)` → `fetch(...).catch(() => null)`. Ne pas toucher aux fetchs hors du Promise.all.
-
----
-
-## Tâche 5 — planner : ne pas planter si le chargement échoue
-
-**Fichier** : `app/planner/page.tsx`
-
-Chercher :
-```ts
-  const load = useCallback(async (mon: Date) => {
-    setLoading(true)
-    const res = await fetch(`/api/planner?weekStart=${toISODate(mon)}`)
-    const data = await res.json()
-    setEntries(data.entries ?? [])
-    setLoading(false)
-  }, [])
-```
-Remplacer par :
-```ts
-  const load = useCallback(async (mon: Date) => {
-    setLoading(true)
-    const res = await fetch(`/api/planner?weekStart=${toISODate(mon)}`).catch(() => null)
-    if (!res || !res.ok) {
-      setEntries([])
-      setLoading(false)
-      return
-    }
-    const data = await res.json()
-    setEntries(data.entries ?? [])
-    setLoading(false)
-  }, [])
-```
+Après les edits, vérifier avec grep dans `app/workouts/[id]/active/page.tsx` :
+- `ytId` → **0 occurrence** (sinon une référence a été oubliée) ;
+- `currentVid` → **0 occurrence** ;
+- `currentEmbed` → présent dans le calcul (3b) et le panneau (3c).
 
 ---
 
@@ -261,20 +265,21 @@ npx tsc --noEmit        # doit sortir sans AUCUNE erreur
 npx next build          # doit se terminer par la liste des routes, sans erreur
 ```
 
-Si l'une des deux commandes échoue : relire la tâche concernée, corriger, relancer.
+Si l'une des deux échoue : relire la tâche concernée, corriger, relancer.
 Ne JAMAIS committer avec un build cassé.
 
 ## Commit et déploiement
 
 ```bash
-git add "app/workouts/[id]/WorkoutDetailClient.tsx" app/planner/page.tsx OPTIMISATIONS.md
-git status --short      # vérifier : seulement ces 3 fichiers stagés
-git commit -m "Finit la migration des toasts et durcit la gestion d'erreur reseau
+git add lib/video.ts components/MovementModal.tsx "app/workouts/[id]/active/page.tsx" OPTIMISATIONS.md
+git status --short      # vérifier : seulement ces 4 fichiers stagés
+git commit -m "Unifie la logique d'embed video dans lib/video.ts
 
-Migre les 2 derniers toasts locaux de WorkoutDetailClient vers useToast(),
-ajoute la gestion d'erreur sur handleLogSession, handleDuplicate,
-handleDelete et handleSave (detection des sauvegardes partielles), et
-protege le chargement du planner contre les echecs reseau."
+Supprime la duplication divergente entre MovementModal et la seance
+active : la seance gere maintenant les YouTube Shorts et les fichiers
+mp4/webm comme la bibliotheque. Ajoute playsinline (evite le plein ecran
+force sur iOS PWA), la lecture en boucle des demos, et le domaine
+youtube-nocookie.com sur tous les embeds."
 git push origin main
 ```
 
