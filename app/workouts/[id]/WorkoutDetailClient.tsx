@@ -4,6 +4,7 @@ import RichEditor from '@/components/RichEditor'
 import MovementModal from '@/components/MovementModal'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
+import { useToast } from '@/components/Toast'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -35,12 +36,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [duplicating, setDuplicating] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showAddToWeek, setShowAddToWeek] = useState(false)
-  const [addedToast, setAddedToast] = useState(false)
+  const toast = useToast()
   const [saving, setSaving] = useState(false)
   const [sessions, setSessions] = useState<{ id: string; doneAt: string; note?: string | null }[]>([])
   const [sessionsOpen, setSessionsOpen] = useState(false)
   const [loggingSession, setLoggingSession] = useState(false)
-  const [sessionToast, setSessionToast] = useState(false)
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
   const [removedWmIds, setRemovedWmIds] = useState<Set<string>>(new Set())
   const [removedBlockIds, setRemovedBlockIds] = useState<Set<string>>(new Set())
@@ -81,12 +81,16 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
 
   const handleLogSession = async () => {
     setLoggingSession(true)
-    const res = await fetch(`/api/workouts/${initial.id}/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+    const res = await fetch(`/api/workouts/${initial.id}/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }).catch(() => null)
+    if (!res || !res.ok) {
+      toast('Impossible d\'enregistrer la séance', 'error')
+      setLoggingSession(false)
+      return
+    }
     const s = await res.json()
     setSessions(prev => [s, ...prev])
     setLoggingSession(false)
-    setSessionToast(true)
-    setTimeout(() => setSessionToast(false), 3000)
+    toast('Séance enregistrée ✓')
   }
 
   // Session toast auto-hide already handled above
@@ -176,7 +180,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     })
     const changedBlocks = initial.blocks.filter(blockChanged)
 
-    await Promise.all([
+    const results = await Promise.all([
       ...changedMovements.map(es => {
         const absIdx = editStates.indexOf(es)
         const orig = originals[absIdx]
@@ -189,13 +193,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         if ((movementOrder[orig.id] ?? orig.order) !== orig.order) body.order = movementOrder[orig.id]
         return fetch(`/api/workouts/${initial.id}/movements/${orig.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-        })
+        }).catch(() => null)
       }),
       ...changedBlocks.map(b =>
         fetch(`/api/workouts/${initial.id}/blocks/${b.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false }),
-        })
+        }).catch(() => null)
       ),
       ...((isDirtyDescription || isDirtyTags) ? [
         fetch(`/api/workouts/${initial.id}`, {
@@ -204,38 +208,50 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
             ...(isDirtyDescription ? { description: editDescription } : {}),
             ...(isDirtyTags ? { tags: editTags.join(',') || null } : {}),
           }),
-        })
+        }).catch(() => null)
       ] : []),
       ...(removeImage ? [
-        fetch(`/api/workouts/${initial.id}/image`, { method: 'DELETE' })
+        fetch(`/api/workouts/${initial.id}/image`, { method: 'DELETE' }).catch(() => null)
       ] : (imageFile ? [
-        (() => { const fd = new FormData(); fd.append('file', imageFile); return fetch(`/api/workouts/${initial.id}/image`, { method: 'POST', body: fd }) })()
+        (() => { const fd = new FormData(); fd.append('file', imageFile); return fetch(`/api/workouts/${initial.id}/image`, { method: 'POST', body: fd }).catch(() => null) })()
       ] : [])),
       ...[...removedWmIds].map(wmId =>
-        fetch(`/api/workouts/${initial.id}/movements/${wmId}`, { method: 'DELETE' })
+        fetch(`/api/workouts/${initial.id}/movements/${wmId}`, { method: 'DELETE' }).catch(() => null)
       ),
       ...[...removedBlockIds].map(blockId =>
-        fetch(`/api/workouts/${initial.id}/blocks/${blockId}`, { method: 'DELETE' })
+        fetch(`/api/workouts/${initial.id}/blocks/${blockId}`, { method: 'DELETE' }).catch(() => null)
       ),
     ])
 
+    const failed = results.filter(r => !r || !r.ok).length
     setSaving(false)
+    if (failed > 0) {
+      toast(`${failed} modification${failed > 1 ? 's' : ''} n'a pas pu être sauvegardée — réessaie.`, 'error')
+      return
+    }
     setEditMode(false)
+    toast('Modifications sauvegardées ✓')
     router.refresh()
   }
 
   const handleDuplicate = async () => {
     setDuplicating(true)
-    const res = await fetch(`/api/workouts/${initial.id}/duplicate`, { method: 'POST' })
-    const copy = await res.json()
+    const res = await fetch(`/api/workouts/${initial.id}/duplicate`, { method: 'POST' }).catch(() => null)
     setDuplicating(false)
+    if (!res || !res.ok) { toast('Échec de la duplication', 'error'); return }
+    const copy = await res.json()
     router.push(`/workouts/${copy.id}`)
   }
 
   const handleDelete = async () => {
     if (!confirm('Supprimer définitivement cette séance ?')) return
     setDeleting(true)
-    await fetch(`/api/workouts/${initial.id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/workouts/${initial.id}`, { method: 'DELETE' }).catch(() => null)
+    if (!res || !res.ok) {
+      toast('Échec de la suppression', 'error')
+      setDeleting(false)
+      return
+    }
     router.push(backTo ?? '/workouts')
   }
 
@@ -559,21 +575,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         <AddToWeekModal
           workoutId={initial.id}
           onClose={() => setShowAddToWeek(false)}
-          onAdded={() => setAddedToast(true)}
+          onAdded={() => toast('Ajouté au planner ✓')}
         />
-      )}
-
-      {addedToast && (
-        <div onAnimationEnd={() => setTimeout(() => setAddedToast(false), 2500)}
-          style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000 }}>
-          Ajouté au planner ✓
-        </div>
-      )}
-
-      {sessionToast && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CheckCircle2 size={15} /> Séance enregistrée !
-        </div>
       )}
 
       {/* Historique des séances */}

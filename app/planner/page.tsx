@@ -43,7 +43,12 @@ export default function PlannerPage() {
 
   const load = useCallback(async (mon: Date) => {
     setLoading(true)
-    const res = await fetch(`/api/planner?weekStart=${toISODate(mon)}`)
+    const res = await fetch(`/api/planner?weekStart=${toISODate(mon)}`).catch(() => null)
+    if (!res || !res.ok) {
+      setEntries([])
+      setLoading(false)
+      return
+    }
     const data = await res.json()
     setEntries(data.entries ?? [])
     setLoading(false)
