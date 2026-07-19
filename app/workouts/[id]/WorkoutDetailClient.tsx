@@ -3,13 +3,14 @@ import AppShell from '@/components/AppShell'
 import RichEditor from '@/components/RichEditor'
 import MovementModal from '@/components/MovementModal'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
+import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
 import { useToast } from '@/components/Toast'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import {
-  ArrowLeft, Clock, Copy, X, Pencil,
+  ArrowLeft, Clock, Copy, X, Pencil, Plus,
   Trash2, ChevronDown, ChevronUp, CalendarPlus, CheckCircle2, History, FileText, PlayCircle,
 } from 'lucide-react'
 import {
@@ -43,6 +44,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [sessionsOpen, setSessionsOpen] = useState(false)
   const [loggingSession, setLoggingSession] = useState(false)
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
+  const [addingToBlockId, setAddingToBlockId] = useState<string | null>(null)
+  const [addingMovement, setAddingMovement] = useState(false)
   const [removedWmIds, setRemovedWmIds] = useState<Set<string>>(new Set())
   const [removedBlockIds, setRemovedBlockIds] = useState<Set<string>>(new Set())
   const [collapsedViewBlocks, setCollapsedViewBlocks] = useState<Record<string, boolean>>({})
@@ -65,6 +68,18 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       ids.forEach((id, idx) => { next[id] = idx })
       return next
     })
+  }
+
+  const handleAddMovementToBlock = async (blockId: string, m: PickableMovement) => {
+    setAddingMovement(true)
+    const res = await fetch(`/api/workouts/${initial.id}/movements`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movementId: m.id, blockId }),
+    }).catch(() => null)
+    setAddingMovement(false)
+    setAddingToBlockId(null)
+    if (!res || !res.ok) { toast('Impossible d\'ajouter ce mouvement', 'error'); return }
+    router.refresh()
   }
 
   // Track last viewed (fire-and-forget)
@@ -95,6 +110,22 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   }
 
   // Session toast auto-hide already handled above
+
+  // Un mouvement ajouté (via bouton "Ajouter un mouvement") arrive par router.refresh() :
+  // `initial.movements` grandit, on complète editStates/movementOrder pour les nouvelles
+  // entrées (toujours en fin de liste) sans perdre les modifications déjà en cours.
+  useEffect(() => {
+    if (editMode && editStates.length < initial.movements.length) {
+      const newOnes = initial.movements.slice(editStates.length)
+      setEditStates(prev => [...prev, ...newOnes.map(toEditState)])
+      setMovementOrder(prev => {
+        const next = { ...prev }
+        newOnes.forEach(wm => { next[wm.id] = wm.order })
+        return next
+      })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial.movements.length])
 
   // Auto-enter edit mode if navigated with ?edit=1
   useEffect(() => {
@@ -540,6 +571,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                           ))
                         : blockMovements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
                       }
+                      {editMode && (
+                        <button onClick={() => setAddingToBlockId(block.id)}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', background: 'none', border: '1px dashed var(--border)', borderRadius: 10, color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                          <Plus size={13} /> Ajouter un mouvement
+                        </button>
+                      )}
                     </div>
                   )}
                   {/* Inter-block rest */}
@@ -595,6 +632,14 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       )}
 
       <MovementModal movementId={selectedMovementId} onClose={() => setSelectedMovementId(null)} />
+
+      {addingToBlockId && (
+        <LibraryPicker
+          currentName=""
+          onPick={m => handleAddMovementToBlock(addingToBlockId, m)}
+          onClose={() => { if (!addingMovement) setAddingToBlockId(null) }}
+        />
+      )}
 
       {showAddToWeek && (
         <AddToWeekModal
