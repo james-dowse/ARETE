@@ -27,6 +27,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [editStates, setEditStates] = useState<EditState[]>([])
   const [blockInstructions, setBlockInstructions] = useState<Record<string, string>>({})
   const [blockSuperset, setBlockSuperset] = useState<Record<string, boolean>>({})
+  const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -113,11 +114,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     (blockInstructions[b.id] ?? '') !== (b.instructions ?? '') ||
     (blockSuperset[b.id] ?? false) !== !!b.superset
   const isDirtyBlocks = editMode && initial.blocks.some(blockChanged)
+  const isDirtyName = editMode && editName.trim() !== initial.name
   const isDirtyDescription = editMode && stripHtml(editDescription) !== stripHtml(initial.description ?? '')
   const isDirtyImage = editMode && (imageFile !== null || removeImage)
   const isDirtyTags = editMode && editTags.join(',') !== (initial.tags ?? '')
   const isDirtyOrder = editMode && originals.some(o => (movementOrder[o.id] ?? o.order) !== o.order)
-  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyDescription || isDirtyImage || isDirtyTags || isDirtyOrder || removedWmIds.size > 0 || removedBlockIds.size > 0
+  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyName || isDirtyDescription || isDirtyImage || isDirtyTags || isDirtyOrder || removedWmIds.size > 0 || removedBlockIds.size > 0
 
   const pendingCount = editMode
     ? editStates.filter((es, i) => {
@@ -125,6 +127,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10') || es.duration !== (orig.duration ?? null)
       }).length
       + initial.blocks.filter(blockChanged).length
+      + (isDirtyName ? 1 : 0)
       + (isDirtyDescription ? 1 : 0)
       + (isDirtyImage ? 1 : 0)
       + (isDirtyOrder ? 1 : 0)
@@ -139,6 +142,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset })
     setBlockInstructions(initBI)
     setBlockSuperset(initBS)
+    setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageFile(null); setImagePreview(null); setRemoveImage(false)
     setRemovedWmIds(new Set()); setRemovedBlockIds(new Set())
@@ -155,6 +159,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset })
     setBlockInstructions(initBI)
     setBlockSuperset(initBS)
+    setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageFile(null); setImagePreview(null); setRemoveImage(false)
     setRemovedWmIds(new Set()); setRemovedBlockIds(new Set())
@@ -201,10 +206,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
           body: JSON.stringify({ instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false }),
         }).catch(() => null)
       ),
-      ...((isDirtyDescription || isDirtyTags) ? [
+      ...((isDirtyName || isDirtyDescription || isDirtyTags) ? [
         fetch(`/api/workouts/${initial.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            ...(isDirtyName ? { name: editName.trim() } : {}),
             ...(isDirtyDescription ? { description: editDescription } : {}),
             ...(isDirtyTags ? { tags: editTags.join(',') || null } : {}),
           }),
@@ -303,8 +309,17 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 }}>
-          <div>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>{initial.name}</h1>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {editMode ? (
+              <input
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                placeholder="Nom de la séance"
+                style={{ fontSize: 26, fontWeight: 800, background: isDirtyName ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyName ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '4px 10px', color: isDirtyName ? 'var(--dirty-text)' : 'var(--text-primary)', outline: 'none', width: '100%', maxWidth: 480 }}
+              />
+            ) : (
+              <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>{initial.name}</h1>
+            )}
             <div style={{ display: 'flex', gap: 14, marginTop: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                 {new Date(initial.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
