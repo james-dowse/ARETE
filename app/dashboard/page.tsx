@@ -1,7 +1,8 @@
 import AppShell from '@/components/AppShell'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import { prisma } from '@/lib/prisma'
-import { BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
+import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
+import { syncAttributesFromDb } from '@/lib/attributes-server'
 import { getCurrentUser } from '@/lib/session'
 import Link from 'next/link'
 
@@ -43,13 +44,6 @@ function parisWeekInfo() {
   return { dayIdx, weekStartCandidates: [sundayUTC, mondayUTC], weekBegin: sundayUTC }
 }
 
-const COMPLEXITY_COLORS: Record<string, string> = {
-  Easy:     '#6BAE7C',
-  Common:   '#7CA8D4',
-  Hard:     '#D4884A',
-  Advanced: '#C47878',
-}
-
 const SECTION_LABEL: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
@@ -69,6 +63,7 @@ const SECTION_LABEL_GOLD: React.CSSProperties = {
 }
 
 export default async function DashboardPage() {
+  await syncAttributesFromDb()
   const hour = new Date().getHours()
   const greeting = getGreeting(hour)
   const dateStr = formatDate()

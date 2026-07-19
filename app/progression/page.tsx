@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
+import { syncAttributesFromDb } from '@/lib/attributes-server'
 import { CheckCircle2, Flame, TrendingUp } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -28,6 +29,7 @@ function parisMonday(d: Date): Date {
 const WEEKS_SHOWN = 12
 
 export default async function ProgressionPage() {
+  await syncAttributesFromDb()
   const user = await getCurrentUser()
 
   const sessions = user

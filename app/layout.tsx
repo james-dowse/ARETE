@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import AttributesSync from "@/components/AttributesSync";
 import { ToastProvider } from "@/components/Toast";
 import "./globals.css";
 
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" className={`h-full ${inter.variable} ${fraunces.variable}`}>
       <body className="min-h-full flex">
         <ServiceWorkerRegister />
+        <AttributesSync />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
