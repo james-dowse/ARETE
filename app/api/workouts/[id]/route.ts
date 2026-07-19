@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: Record<string, any> = {}
   if ('description' in body) data.description = body.description || null
-  if ('name' in body) data.name = body.name
+  if ('name' in body && typeof body.name === 'string' && body.name.trim()) data.name = body.name.trim()
   if ('notes' in body) data.notes = body.notes || null
   if ('tags' in body) data.tags = body.tags || null
   const updated = await prisma.workout.update({ where: { id }, data })

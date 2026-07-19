@@ -74,7 +74,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setAddingMovement(true)
     const res = await fetch(`/api/workouts/${initial.id}/movements`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ movementId: m.id, blockId }),
+      body: JSON.stringify({ movementId: m.id, blockId: blockId === '__flat__' ? null : blockId }),
     }).catch(() => null)
     setAddingMovement(false)
     setAddingToBlockId(null)
@@ -145,7 +145,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     (blockInstructions[b.id] ?? '') !== (b.instructions ?? '') ||
     (blockSuperset[b.id] ?? false) !== !!b.superset
   const isDirtyBlocks = editMode && initial.blocks.some(blockChanged)
-  const isDirtyName = editMode && editName.trim() !== initial.name
+  // Champ vidé = pas un changement : on ne doit jamais envoyer un nom vide
+  const isDirtyName = editMode && editName.trim() !== '' && editName.trim() !== initial.name
   const isDirtyDescription = editMode && stripHtml(editDescription) !== stripHtml(initial.description ?? '')
   const isDirtyImage = editMode && (imageFile !== null || removeImage)
   const isDirtyTags = editMode && editTags.join(',') !== (initial.tags ?? '')
@@ -609,6 +610,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                     />
                   ))
               : initial.movements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
+          )}
+          {editMode && !hasBlocks && (
+            <button onClick={() => setAddingToBlockId('__flat__')}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', background: 'none', border: '1px dashed var(--border)', borderRadius: 10, color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              <Plus size={13} /> Ajouter un mouvement
+            </button>
           )}
         </div>
 

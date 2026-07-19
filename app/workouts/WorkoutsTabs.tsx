@@ -2,12 +2,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BIO_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
+import { BIO_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
 import { useToast } from '@/components/Toast'
 import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search } from 'lucide-react'
 
 interface WorkoutUser { id: string; email: string }
-interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string } }
+interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string; complexity: string } }
 interface Workout {
   id: string
   name: string
@@ -199,6 +199,7 @@ function WorkoutCard({
   const [duplicating, setDuplicating] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
+  const difficulty = computeWorkoutDifficulty(w.movements.map(m => ({ complexity: m.movement.complexity })))
   const totalSets = w.movements.reduce((sum, wm) => sum + (wm.sets ?? 3), 0)
   const estMin = Math.max(1, Math.round(totalSets * 1.5))
   const initiale = w.user?.email?.[0]?.toUpperCase() ?? '?'
@@ -287,6 +288,9 @@ function WorkoutCard({
         </div>
 
         <div style={{ marginTop: 10, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {difficulty && (
+            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: COMPLEXITY_COLORS[difficulty], border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40` }}>{difficulty}</span>
+          )}
           {bioTypes.map(bt => (
             <span key={bt} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${BIO_TYPE_COLORS[bt] || '#fff'}15`, color: BIO_TYPE_COLORS[bt] || 'var(--text-muted)', border: `1px solid ${BIO_TYPE_COLORS[bt] || '#fff'}28` }}>{bt}</span>
           ))}
