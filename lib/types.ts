@@ -2,6 +2,8 @@ export type BioType = 'Lower body' | 'Push' | 'Pull' | 'Core focus' | 'Compound'
 export type Complexity = 'Easy' | 'Common' | 'Hard' | 'Advanced'
 export type Equipment = 'Barre force' | 'Haltère' | 'Kettlebell' | 'Cable' | 'Anneaux' | 'Elastique' | 'Poids corps' | 'Barre traction' | 'Box'
 
+export const FAILURE_REPS = 'Échec'
+
 export const BIO_TYPES: BioType[] = ['Lower body', 'Push', 'Pull', 'Core focus', 'Compound', 'Boxing']
 export const COMPLEXITIES: Complexity[] = ['Easy', 'Common', 'Hard', 'Advanced']
 export const EQUIPMENT_TYPES: Equipment[] = ['Barre force', 'Haltère', 'Kettlebell', 'Cable', 'Anneaux', 'Elastique', 'Poids corps', 'Barre traction', 'Box']

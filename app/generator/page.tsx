@@ -1,6 +1,6 @@
 'use client'
 import AppShell from '@/components/AppShell'
-import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, type GeneratedMovement } from '@/lib/types'
+import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, FAILURE_REPS, type GeneratedMovement } from '@/lib/types'
 import RichEditor from '@/components/RichEditor'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -1291,8 +1291,16 @@ function Stepper({ value, min, max, onChange }: { value: number; min: number; ma
 
 // ─── Reps input ───────────────────────────────────────────────────────────────
 function RepsInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const isFailure = value === FAILURE_REPS
   return (
-    <input value={value} onChange={e => onChange(e.target.value)} placeholder="10"
-      style={{ width: 80, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, outline: 'none', textAlign: 'center' }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder="10"
+        style={{ width: 80, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, outline: 'none', textAlign: 'center' }} />
+      <button type="button" onClick={() => onChange(isFailure ? DEFAULT_REPS : FAILURE_REPS)}
+        title="Séries jusqu'à l'échec"
+        style={{ fontSize: 10, padding: '5px 8px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, border: `1px solid ${isFailure ? 'var(--red)' : 'var(--border)'}`, background: isFailure ? 'rgba(239,68,68,0.12)' : 'var(--bg-elevated)', color: isFailure ? 'var(--red)' : 'var(--text-dim)' }}>
+        🔥 Échec
+      </button>
+    </div>
   )
 }

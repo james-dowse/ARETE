@@ -3,7 +3,7 @@ import RichEditor from '@/components/RichEditor'
 import LibraryPicker from '@/components/LibraryPicker'
 import {
   BIO_TYPE_COLORS, BIO_TYPE_ICONS,
-  COMPLEXITY_COLORS, EQUIPMENT_ICONS,
+  COMPLEXITY_COLORS, EQUIPMENT_ICONS, FAILURE_REPS,
 } from '@/lib/types'
 import { useState, useRef } from 'react'
 import {
@@ -267,8 +267,15 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
                 </div>
               </div>
             ) : (
-              <input value={es.reps} onChange={e => onUpdate(index, { reps: e.target.value })}
-                style={{ width: 80, background: isDirtyReps ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyReps ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '5px 10px', color: isDirtyReps ? 'var(--dirty-text)' : 'var(--text-primary)', fontSize: 14, fontWeight: 700, outline: 'none', textAlign: 'center', transition: 'all 0.2s' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input value={es.reps} onChange={e => onUpdate(index, { reps: e.target.value })}
+                  style={{ width: 80, background: isDirtyReps ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyReps ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '5px 10px', color: isDirtyReps ? 'var(--dirty-text)' : 'var(--text-primary)', fontSize: 14, fontWeight: 700, outline: 'none', textAlign: 'center', transition: 'all 0.2s' }} />
+                <button type="button" onClick={() => onUpdate(index, { reps: es.reps === FAILURE_REPS ? '10' : FAILURE_REPS })}
+                  title="Séries jusqu'à l'échec"
+                  style={{ fontSize: 10, padding: '5px 8px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, border: `1px solid ${es.reps === FAILURE_REPS ? 'var(--red)' : 'var(--border)'}`, background: es.reps === FAILURE_REPS ? 'rgba(239,68,68,0.12)' : 'var(--bg-elevated)', color: es.reps === FAILURE_REPS ? 'var(--red)' : 'var(--text-dim)' }}>
+                  🔥 Échec
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -2,9 +2,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BIO_TYPE_COLORS } from '@/lib/types'
+import { BIO_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
 import { useToast } from '@/components/Toast'
-import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle } from 'lucide-react'
+import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search } from 'lucide-react'
 
 interface WorkoutUser { id: string; email: string }
 interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string } }
@@ -400,6 +400,8 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const [recentsOpen, setRecentsOpen] = useState(false)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
   const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [bioFilter, setBioFilter] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
@@ -478,8 +480,18 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   allSrc.forEach(w => w.tags?.split(',').map(t => t.trim()).filter(Boolean).forEach(t => allTagsSet.add(t)))
   const availableTags = Array.from(allTagsSet).sort()
 
+  // Filtre local : recherche texte + type biomécanique (indépendants du tag, appliqué côté client)
+  const matchesFilter = (w: Workout) => {
+    if (searchQuery.trim() && !w.name.toLowerCase().includes(searchQuery.trim().toLowerCase())) return false
+    if (bioFilter && !w.movements.some(wm => wm.movement.bioType === bioFilter)) return false
+    return true
+  }
+  const myWorkoutsFiltered = myWorkouts.filter(matchesFilter)
+  const savedWorkoutsFiltered = savedWorkouts.filter(matchesFilter)
+  const communityWorkoutsFiltered = communityWorkouts.filter(matchesFilter)
+
   // Sections dérivées
-  const allMine = [...myWorkouts, ...savedWorkouts]
+  const allMine = [...myWorkoutsFiltered, ...savedWorkoutsFiltered]
   const favorites = allMine.filter(w => w.isFavorite)
   // Récents : triés par lastViewedAt (saved) ou createdAt (mine), top 5, non favoris
   const nonFavs = allMine.filter(w => !w.isFavorite)
@@ -505,10 +517,50 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
         {!loading && (
           <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>
             {tab === 'mine'
-              ? `${myWorkouts.length + savedWorkouts.length} entraînement${myWorkouts.length + savedWorkouts.length !== 1 ? 's' : ''}`
-              : `${communityWorkouts.length} entraînement${communityWorkouts.length !== 1 ? 's' : ''} dans la communauté`
+              ? `${myWorkoutsFiltered.length + savedWorkoutsFiltered.length} entraînement${myWorkoutsFiltered.length + savedWorkoutsFiltered.length !== 1 ? 's' : ''}`
+              : `${communityWorkoutsFiltered.length} entraînement${communityWorkoutsFiltered.length !== 1 ? 's' : ''} dans la communauté`
             }
           </span>
+        )}
+      </div>
+
+      {/* Recherche texte */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px', marginBottom: 12, maxWidth: 340 }}>
+        <Search size={14} color="var(--text-muted)" />
+        <input
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Rechercher une séance…"
+          style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }}
+        />
+        {searchQuery && (
+          <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
+            <X size={12} color="var(--text-muted)" />
+          </button>
+        )}
+      </div>
+
+      {/* Filtre type biomécanique */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        {BIO_TYPES.map(bt => (
+          <button
+            key={bt}
+            onClick={() => setBioFilter(bioFilter === bt ? null : bt)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              background: bioFilter === bt ? `${BIO_TYPE_COLORS[bt]}18` : 'var(--bg-card)',
+              color: bioFilter === bt ? BIO_TYPE_COLORS[bt] : 'var(--text-muted)',
+              border: `1px solid ${bioFilter === bt ? BIO_TYPE_COLORS[bt] : 'var(--border)'}`,
+              transition: 'all 0.15s',
+            }}
+          >{BIO_TYPE_ICONS[bt]} {bt}</button>
+        ))}
+        {bioFilter && (
+          <button
+            onClick={() => setBioFilter(null)}
+            style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'none', border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+          ><X size={11} /> Tout</button>
         )}
       </div>
 
@@ -576,6 +628,13 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
             </div>
           )}
 
+          {hasAnything && myWorkoutsFiltered.length === 0 && savedWorkoutsFiltered.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Aucun résultat</div>
+              <div style={{ fontSize: 13 }}>Aucune séance ne correspond à ta recherche ou à ce filtre</div>
+            </div>
+          )}
+
           {/* Section Favoris */}
           {favorites.length > 0 && (
             <div style={{ marginBottom: 32 }}>
@@ -634,11 +693,11 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
             </div>
           )}
 
-          {myWorkouts.length > 0 && (
+          {myWorkoutsFiltered.length > 0 && (
             <div style={{ marginBottom: 32 }}>
-              <SectionLabel icon={<Zap size={13} />} label="Mes créations" count={myWorkouts.length} />
+              <SectionLabel icon={<Zap size={13} />} label="Mes créations" count={myWorkoutsFiltered.length} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {myWorkouts.map(w => (
+                {myWorkoutsFiltered.map(w => (
                   <WorkoutCard
                     key={w.id}
                     w={w}
@@ -652,11 +711,11 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
             </div>
           )}
 
-          {savedWorkouts.length > 0 && (
+          {savedWorkoutsFiltered.length > 0 && (
             <div>
-              <SectionLabel icon={<Layers size={13} />} label="Sauvegardés" count={savedWorkouts.length} />
+              <SectionLabel icon={<Layers size={13} />} label="Sauvegardés" count={savedWorkoutsFiltered.length} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {savedWorkouts.map(w => (
+                {savedWorkoutsFiltered.map(w => (
                   <WorkoutCard
                     key={w.id}
                     w={w}
@@ -674,16 +733,18 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
       {/* ── Onglet COMMUNAUTÉ ── */}
       {!loading && tab === 'community' && (
         <>
-          {communityWorkouts.length === 0 && (
+          {communityWorkoutsFiltered.length === 0 && (
             <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)' }}>
               <div style={{ fontSize: 44, marginBottom: 14 }}>👥</div>
               <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucune séance</div>
-              <div style={{ fontSize: 13 }}>Les séances de tes coéquipiers apparaîtront ici</div>
+              <div style={{ fontSize: 13 }}>
+                {communityWorkouts.length === 0 ? 'Les séances de tes coéquipiers apparaîtront ici' : 'Aucun résultat pour ce filtre'}
+              </div>
             </div>
           )}
-          {communityWorkouts.length > 0 && (
+          {communityWorkoutsFiltered.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {communityWorkouts.map(w => (
+              {communityWorkoutsFiltered.map(w => (
                 <WorkoutCard
                   key={w.id}
                   w={w}
