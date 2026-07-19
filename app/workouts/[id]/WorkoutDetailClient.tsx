@@ -3,7 +3,7 @@ import AppShell from '@/components/AppShell'
 import RichEditor from '@/components/RichEditor'
 import MovementModal from '@/components/MovementModal'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
-import { BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
+import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
 import { useToast } from '@/components/Toast'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -263,6 +263,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     (editMode ? editStates.map(es => es.movement.bioType) : initial.movements.map(m => m.movement.bioType))
   ))
 
+  // Difficulté globale : recalculée à chaque changement de mouvement (reroll, bibliothèque, ajout/suppression)
+  const difficulty = computeWorkoutDifficulty(
+    editMode ? editStates.map(es => ({ complexity: es.movement.complexity })) : initial.movements.map(m => ({ complexity: m.movement.complexity }))
+  )
+
   // Estimated duration: 1 min per set across all movements
   const currentSets = editMode
     ? editStates.map(es => es.sets)
@@ -366,6 +371,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
 
         {/* Bio tags */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
+          {difficulty && (
+            <span style={{ padding: '3px 11px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: COMPLEXITY_COLORS[difficulty], border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40` }}>
+              {difficulty}
+            </span>
+          )}
           {bioTypes.map(bt => (
             <span key={bt} style={{ padding: '3px 11px', borderRadius: 20, fontSize: 12, background: `${BIO_TYPE_COLORS[bt] || '#000'}10`, color: BIO_TYPE_COLORS[bt] || 'var(--text-muted)', border: `1px solid ${BIO_TYPE_COLORS[bt] || '#000'}20` }}>
               {BIO_TYPE_ICONS[bt]} {bt}

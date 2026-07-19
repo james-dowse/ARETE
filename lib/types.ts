@@ -45,6 +45,34 @@ export const COMPLEXITY_COLORS: Record<string, string> = {
   'Advanced': '#C47878',  // rouge brique
 }
 
+// Difficulté globale d'un workout : majorité des mouvements, sauf si le niveau
+// le plus élevé présent représente 30% ou plus des mouvements — auquel cas ce
+// niveau l'emporte (principe de précaution : un tiers d'exercices Advanced
+// suffit à qualifier la séance d'Advanced, même si le reste est Easy).
+// Pure fonction de la liste de mouvements : se recalcule à chaque changement
+// (reroll aléatoire, substitution bibliothèque), jamais mise en cache.
+export function computeWorkoutDifficulty(movements: { complexity: string }[]): Complexity | null {
+  if (movements.length === 0) return null
+  const counts: Partial<Record<Complexity, number>> = {}
+  movements.forEach(m => {
+    const c = m.complexity as Complexity
+    if (COMPLEXITIES.includes(c)) counts[c] = (counts[c] ?? 0) + 1
+  })
+  let highest: Complexity | null = null
+  for (const level of COMPLEXITIES) if (counts[level]) highest = level
+  if (!highest) return null
+  const highestShare = (counts[highest] ?? 0) / movements.length
+  if (highestShare >= 0.3) return highest
+
+  let majority: Complexity = COMPLEXITIES[0]
+  let max = -1
+  for (const level of COMPLEXITIES) {
+    const c = counts[level] ?? 0
+    if (c >= max) { max = c; majority = level }
+  }
+  return majority
+}
+
 export interface TemplateBlockInput {
   bioType: string | null
   complexity: string | null

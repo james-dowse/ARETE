@@ -1,6 +1,6 @@
 'use client'
 import AppShell from '@/components/AppShell'
-import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, FAILURE_REPS, type GeneratedMovement } from '@/lib/types'
+import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, FAILURE_REPS, computeWorkoutDifficulty, type GeneratedMovement } from '@/lib/types'
 import RichEditor from '@/components/RichEditor'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -417,6 +417,9 @@ export default function GeneratorPage() {
       + totalInterBlockRestGenerated
     : blocks.reduce((sum, b) => sum + b.count * minPerMov(b.sets, b.rest, b.duration), 0)
       + interBlockRest(blocks.length)
+
+  // Difficulté globale : recalculée à chaque reroll / substitution bibliothèque (dérivée de `generated`, jamais mise en cache)
+  const resultDifficulty = generated ? computeWorkoutDifficulty(generated) : null
 
   // ── Duration target logic ──
   // On retire les repos inter-blocs de la durée disponible avant de calculer les mouvements
@@ -974,7 +977,14 @@ export default function GeneratorPage() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 17 }}>{generated.length} mouvements · {fmtMin(totalEstMin)}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ fontWeight: 700, fontSize: 17 }}>{generated.length} mouvements · {fmtMin(totalEstMin)}</div>
+                      {resultDifficulty && (
+                        <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${COMPLEXITY_COLORS[resultDifficulty]}18`, color: COMPLEXITY_COLORS[resultDifficulty], border: `1px solid ${COMPLEXITY_COLORS[resultDifficulty]}40` }}>
+                          {resultDifficulty}
+                        </span>
+                      )}
+                    </div>
                     {duration && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{duration} min défini</div>}
                   </div>
                   <button onClick={generate} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
