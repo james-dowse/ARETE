@@ -32,7 +32,6 @@ export default function ActivePage() {
   const toast = useToast()
   const [note, setNote] = useState('')
   const [showFinish, setShowFinish] = useState(false)
-  const [videoPlaying, setVideoPlaying] = useState(false)
   const [supersetBlocs, setSupersetBlocs] = useState<Set<string>>(new Set())
   const [exerciseTimer, setExerciseTimer] = useState<{ wmId: string; sec: number; total: number } | null>(null)
 
@@ -248,15 +247,6 @@ export default function ActivePage() {
   })()
   const currentVid = currentWm?.movement.videoUrl ? ytId(currentWm.movement.videoUrl) : null
 
-  // Reset video player when movement changes
-  const prevWmIdRef = useRef<string | null>(null)
-  useEffect(() => {
-    if (prevWmIdRef.current !== (currentWm?.id ?? null)) {
-      prevWmIdRef.current = currentWm?.id ?? null
-      setVideoPlaying(false)
-    }
-  }, [currentWm?.id])
-
   const handleSet = (wm: WM) => {
     ensureAudio()
     if (wm.duration != null) {
@@ -373,28 +363,16 @@ export default function ActivePage() {
             {currentWm?.movement.name}
           </div>
           <div style={{ position: 'relative', width: '100%', paddingBottom: '42%', overflow: 'hidden' }}>
-            {videoPlaying ? (
-              <iframe
-                src={`https://www.youtube.com/embed/${currentVid}?autoplay=1&rel=0&modestbranding=1`}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowFullScreen
-              />
-            ) : (
-              <button onClick={() => setVideoPlaying(true)}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', cursor: 'pointer', padding: 0, background: 'none' }}>
-                <img
-                  src={`https://img.youtube.com/vi/${currentVid}/hqdefault.jpg`}
-                  alt={currentWm?.movement.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'brightness(0.75)' }}
-                />
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(200,165,95,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="#000"><path d="M8 5v14l11-7z"/></svg>
-                  </div>
-                </div>
-              </button>
-            )}
+            <iframe
+              key={currentVid}
+              src={`https://www.youtube.com/embed/${currentVid}?autoplay=1&mute=1&rel=0&modestbranding=1`}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', padding: '4px 8px' }}>
+            🔇 Lecture automatique muette — clique 🔊 dans le player pour activer le son
           </div>
         </div>
       )}
