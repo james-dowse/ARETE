@@ -159,13 +159,30 @@ model SavedWorkout {
 }
 
 model WorkoutSession {
-  id        String      @id @default(cuid())
+  id        String       @id @default(cuid())
   userId    String
   workoutId String
-  doneAt    DateTime    @default(now())
+  doneAt    DateTime     @default(now())
   note      String?
-  user      InvitedUser @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workout   Workout     @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  user      InvitedUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workout   Workout      @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  sets      SessionSet[]
+}
+
+model SessionSet {
+  id         String         @id @default(cuid())
+  sessionId  String
+  movementId String // l'exercice — permet l'historique cross-workout (pas de FK volontairement)
+  setNumber  Int // n° de série, 1-based
+  reps       Int?
+  weight     Float? // charge en kg ; null = poids du corps / non renseigné
+  rpe        Int? // ressenti 1-10, optionnel
+  completed  Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  session    WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([movementId])
+  @@index([sessionId])
 }
 
 model FavoriteWorkout {

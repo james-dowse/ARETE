@@ -30,6 +30,15 @@ export default function ActivePage() {
   const [showFinish, setShowFinish] = useState(false)
   const [supersetBlocs, setSupersetBlocs] = useState<Set<string>>(new Set())
   const [exerciseTimer, setExerciseTimer] = useState<{ wmId: string; sec: number; total: number } | null>(null)
+  // Log de performance : une charge + reps par mouvement (clé = wmId)
+  const [logInputs, setLogInputs] = useState<Record<string, { weight: string; reps: string }>>({})
+  // Dernière perf par movementId : { last: {weight, reps}, bestWeight } — indices "la dernière fois"
+  const [lastPerf, setLastPerf] = useState<Record<string, { last: { weight: number | null; reps: number | null } | null; bestWeight: number | null }>>({})
+  const setLog = (wmId: string, field: 'weight' | 'reps', value: string) =>
+    setLogInputs(prev => {
+      const cur = prev[wmId] ?? { weight: '', reps: '' }
+      return { ...prev, [wmId]: { ...cur, [field]: value } }
+    })
 
   const toggleSuperset = (blockId: string) =>
     setSupersetBlocs(prev => {
@@ -120,6 +129,7 @@ export default function ActivePage() {
             if (saved.done) setDone(saved.done)
             if (Array.isArray(saved.superset)) setSupersetBlocs(prev => new Set([...prev, ...saved.superset]))
             if (saved.note) setNote(saved.note)
+            if (saved.logInputs) setLogInputs(saved.logInputs)
             startedAtRef.current = saved.startedAt
             setElapsed(Math.max(0, Math.floor((Date.now() - saved.startedAt) / 1000)))
             setStarted(true)
@@ -153,10 +163,36 @@ export default function ActivePage() {
       done,
       superset: [...supersetBlocs],
       note,
+      logInputs,
       startedAt: startedAtRef.current,
     }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [done, supersetBlocs, note, started, workout])
+  }, [done, supersetBlocs, note, logInputs, started, workout])
+
+  // Dernière perf (indices "la dernière fois" + PR)
+  useEffect(() => {
+    fetch(`/api/workouts/${id}/last-performance`).then(r => r.json()).then(d => setLastPerf(d || {})).catch(() => {})
+  }, [id])
+
+  // Pré-remplit charge/reps depuis la dernière séance (nudge surcharge progressive),
+  // uniquement pour les mouvements pas déjà saisis/restaurés
+  useEffect(() => {
+    if (!workout) return
+    setLogInputs(prev => {
+      const next = { ...prev }
+      let changed = false
+      for (const wm of workout.movements) {
+        if (next[wm.id]?.weight || next[wm.id]?.reps) continue
+        const lp = lastPerf[wm.movement.id]?.last
+        if (lp && (lp.weight != null || lp.reps != null)) {
+          next[wm.id] = { weight: lp.weight != null ? String(lp.weight) : '', reps: lp.reps != null ? String(lp.reps) : '' }
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workout, lastPerf])
 
   // stopwatch — basé sur l'horloge réelle pour survivre à la mise en veille de l'onglet
   useEffect(() => {
@@ -298,10 +334,27 @@ export default function ActivePage() {
 
   const handleFinish = async () => {
     setFinishing(true)
+    // Construit le log de perf : N séries validées par mouvement, à la charge/reps saisie.
+    // Les mouvements chronométrés loggent aussi leurs séries (charge/reps null).
+    const sets = workout
+      ? workout.movements.flatMap(wm => {
+          const n = done[wm.id] ?? 0
+          if (n <= 0) return []
+          const li = logInputs[wm.id]
+          const weight = li?.weight?.trim() ? Number(li.weight.replace(',', '.')) : null
+          const reps = li?.reps?.trim() ? Number(li.reps) : (wm.duration != null ? null : (wm.reps ? Number(wm.reps) : null))
+          return Array.from({ length: n }, (_, i) => ({
+            movementId: wm.movement.id,
+            setNumber: i + 1,
+            weight: Number.isFinite(weight as number) ? weight : null,
+            reps: Number.isFinite(reps as number) ? reps : null,
+          }))
+        })
+      : []
     const res = await fetch(`/api/workouts/${id}/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note: note || undefined }),
+      body: JSON.stringify({ note: note || undefined, sets }),
     }).catch(() => null)
     if (!res || !res.ok) {
       toast('Impossible d\'enregistrer la séance — réessaie.', 'error')
@@ -491,6 +544,38 @@ export default function ActivePage() {
                           <span style={{ fontSize: 11, color: dimColor, marginLeft: 'auto' }}>repos {wm.rest}s</span>
                         )}
                       </div>
+
+                      {/* Log de perf : charge × reps + indice "dernière fois" + PR */}
+                      {wm.duration == null && (() => {
+                        const lp = lastPerf[wm.movement.id]
+                        const w = Number((logInputs[wm.id]?.weight ?? '').replace(',', '.'))
+                        const isPR = lp?.bestWeight != null && Number.isFinite(w) && w > 0 && w > lp.bestWeight
+                        const inpStyle: React.CSSProperties = {
+                          width: 62, textAlign: 'center', borderRadius: 8, padding: '7px 6px', fontSize: 14, fontWeight: 700, outline: 'none',
+                          background: onIvory ? 'rgba(14,12,8,0.06)' : 'rgba(255,255,255,0.06)',
+                          border: `1px solid ${onIvory ? 'rgba(14,12,8,0.18)' : 'rgba(255,255,255,0.12)'}`,
+                          color: onIvory ? 'var(--ink)' : '#fff',
+                        }
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                            <input type="number" inputMode="decimal" placeholder="kg" value={logInputs[wm.id]?.weight ?? ''}
+                              onChange={e => setLog(wm.id, 'weight', e.target.value)} style={inpStyle} />
+                            <span style={{ color: dimColor, fontSize: 13, fontWeight: 700 }}>kg&nbsp;×</span>
+                            <input type="number" inputMode="numeric" placeholder="reps" value={logInputs[wm.id]?.reps ?? ''}
+                              onChange={e => setLog(wm.id, 'reps', e.target.value)} style={{ ...inpStyle, width: 56 }} />
+                            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              {isPR && (
+                                <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 20, background: 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)', color: '#0E0C08' }}>🏆 PR</span>
+                              )}
+                              {lp?.last && (lp.last.weight != null || lp.last.reps != null) && (
+                                <span style={{ fontSize: 11, color: dimColor, whiteSpace: 'nowrap' }}>
+                                  Dernière&nbsp;: {lp.last.weight != null ? `${lp.last.weight}kg` : ''}{lp.last.weight != null && lp.last.reps != null ? ' × ' : ''}{lp.last.reps != null ? lp.last.reps : ''}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })()}
 
                       {/* Exercise timer in-card (timed mode, currently running) */}
                       {wm.duration != null && exerciseTimer?.wmId === wm.id && (
