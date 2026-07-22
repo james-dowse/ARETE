@@ -14,7 +14,7 @@ import {
   Trash2, ChevronDown, ChevronUp, CalendarPlus, CheckCircle2, History, FileText, PlayCircle,
 } from 'lucide-react'
 import {
-  Workout, WorkoutMovement, WorkoutBlock, EditState,
+  Workout, WorkoutMovement, WorkoutBlock, EditState, LastPerf,
   WorkoutImage, ImageEditZone, MovementRowView, MovementRowEdit,
   BlockHeaderView, BlockHeaderEdit, EditBar, AddToWeekModal, Stat,
   toEditState, stripHtml, fmtMin,
@@ -92,6 +92,15 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     fetch(`/api/workouts/${initial.id}/sessions`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setSessions(data) })
+      .catch(() => {})
+  }, [initial.id])
+
+  // Dernière perf par mouvement — aperçu "la dernière fois" avant de lancer la séance
+  const [lastPerf, setLastPerf] = useState<Record<string, LastPerf>>({})
+  useEffect(() => {
+    fetch(`/api/workouts/${initial.id}/last-performance`)
+      .then(r => r.json())
+      .then(d => setLastPerf(d || {}))
       .catch(() => {})
   }, [initial.id])
 
@@ -570,7 +579,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                               onDragEnd={() => setDraggedWmId(null)}
                             />
                           ))
-                        : blockMovements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
+                        : blockMovements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} lastPerf={lastPerf[wm.movement.id]} />)
                       }
                       {editMode && (
                         <button onClick={() => setAddingToBlockId(block.id)}
@@ -609,7 +618,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                       onDragEnd={() => setDraggedWmId(null)}
                     />
                   ))
-              : initial.movements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} />)
+              : initial.movements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} lastPerf={lastPerf[wm.movement.id]} />)
           )}
           {editMode && !hasBlocks && (
             <button onClick={() => setAddingToBlockId('__flat__')}

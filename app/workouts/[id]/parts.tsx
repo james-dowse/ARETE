@@ -108,9 +108,13 @@ export function ImageEditZone({ current, file, preview, onChange, onRemove }: {
 }
 
 // ─── View Row ─────────────────────────────────────────────────────────────────
-export function MovementRowView({ wm, index, onMovementClick }: { wm: WorkoutMovement; index: number; onMovementClick: (id: string) => void }) {
+export interface LastPerf { last: { weight: number | null; reps: number | null } | null; bestWeight: number | null }
+
+export function MovementRowView({ wm, index, onMovementClick, lastPerf }: { wm: WorkoutMovement; index: number; onMovementClick: (id: string) => void; lastPerf?: LastPerf }) {
   const m = wm.movement
   const hasSetsReps = wm.sets || wm.reps || wm.duration != null
+  const lp = lastPerf?.last
+  const hasLast = !!lp && (lp.weight != null || lp.reps != null)
   return (
     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', flexShrink: 0 }}>{index + 1}</div>
@@ -146,6 +150,15 @@ export function MovementRowView({ wm, index, onMovementClick }: { wm: WorkoutMov
               </>
             )}
           </div>
+          {hasLast && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, fontSize: 11, color: 'var(--text-muted)' }}>
+              <span style={{ opacity: 0.7 }}>↩</span>
+              <span style={{ fontWeight: 600 }}>Dernière fois&nbsp;:</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
+                {lp!.weight != null ? `${lp!.weight} kg` : ''}{lp!.weight != null && lp!.reps != null ? ' × ' : ''}{lp!.reps != null ? `${lp!.reps} reps` : ''}
+              </span>
+            </div>
+          )}
         </div>
       </div>
       {m.videoUrl && <span style={{ fontSize: 14, color: 'var(--text-dim)', flexShrink: 0 }}>▶</span>}
