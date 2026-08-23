@@ -33,7 +33,7 @@ export interface Workout {
   movements: WorkoutMovement[]
   blocks: WorkoutBlock[]
 }
-export interface EditState { movementId: string; movement: Movement; sets: number; reps: string; duration: number | null }
+export interface EditState { movementId: string; movement: Movement; sets: number; reps: string; duration: number | null; rest: number | null }
 
 // ─── Image zone (view) ────────────────────────────────────────────────────────
 export function WorkoutImage({ src, position }: { src: string; position?: string | null }) {
@@ -182,7 +182,7 @@ export function MovementRowView({ wm, index, onMovementClick, lastPerf }: { wm: 
                 {wm.rest != null && (
                   <>
                     <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>·</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>⏱ {wm.rest} min repos entre chaque série</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>⏱ {fmtSec(wm.rest)} repos entre chaque série</span>
                   </>
                 )}
               </>
@@ -219,7 +219,8 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
   const isDirtySets = es.sets !== (original.sets ?? 2)
   const isDirtyReps = es.reps !== (original.reps ?? '10')
   const isDirtyDuration = es.duration !== (original.duration ?? null)
-  const isDirty = isDirtyMovement || isDirtySets || isDirtyReps || isDirtyDuration
+  const isDirtyRest = es.rest !== (original.rest ?? null)
+  const isDirty = isDirtyMovement || isDirtySets || isDirtyReps || isDirtyDuration || isDirtyRest
 
   const handleRandom = async () => {
     setLoadingRandom(true)
@@ -330,6 +331,25 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
             )}
           </div>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+          <span style={{ fontSize: 11, color: isDirtyRest ? 'var(--dirty-text)' : 'var(--text-muted)', width: 46, flexShrink: 0, fontWeight: isDirtyRest ? 600 : 400 }}>Repos</span>
+          <input
+            type="number" min={0} max={600} step={5}
+            value={es.rest ?? ''}
+            placeholder="0"
+            onChange={e => onUpdate(index, { rest: e.target.value === '' ? null : Number(e.target.value) })}
+            style={{ width: 56, background: isDirtyRest ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyRest ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '4px 8px', color: isDirtyRest ? 'var(--dirty-text)' : 'var(--text-primary)', fontSize: 13, fontWeight: 700, outline: 'none', textAlign: 'center' }}
+          />
+          <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>sec entre séries</span>
+          <div style={{ display: 'flex', gap: 3 }}>
+            {[15, 30, 45, 60, 90].map(s => (
+              <button key={s} onClick={() => onUpdate(index, { rest: s })}
+                style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: es.rest === s ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${es.rest === s ? 'var(--dirty-border)' : 'var(--border)'}`, color: es.rest === s ? 'var(--dirty-text)' : 'var(--text-dim)', cursor: 'pointer' }}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
       {showPicker && (
         <LibraryPicker
@@ -395,23 +415,32 @@ export function BlockHeaderView({ block, index, movements, collapsed, onToggle }
 }
 
 // ─── Block Header (edit) ──────────────────────────────────────────────────────
-export function BlockHeaderEdit({ block, index, instructions, onChange, superset, canSuperset, onToggleSuperset, isDirty, onRemove }: {
-  block: WorkoutBlock; index: number; instructions: string; onChange: (v: string) => void
+export function BlockHeaderEdit({ block, index, title, onTitleChange, instructions, onChange, restAfter, onRestAfterChange, superset, canSuperset, onToggleSuperset, isDirty, onRemove }: {
+  block: WorkoutBlock; index: number
+  title: string; onTitleChange: (v: string) => void
+  instructions: string; onChange: (v: string) => void
+  restAfter: number | null; onRestAfterChange: (v: number | null) => void
   superset: boolean; canSuperset: boolean; onToggleSuperset: () => void; isDirty: boolean; onRemove: () => void
 }) {
-  const color = block.bioType ? BIO_TYPE_COLORS[block.bioType] : 'var(--text-muted)'
+  const isTitleDirty = title !== (block.bioType ?? '')
+  const isRestDirty = restAfter !== (block.restAfter ?? null)
   return (
     <div style={{ marginTop: index === 0 ? 0 : 14, marginBottom: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1 }}>BLOC {index + 1}</span>
-          {block.bioType && (
-            <span style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${color}14`, color, border: `1px solid ${color}30`, fontWeight: 600 }}>
-              {BIO_TYPE_ICONS[block.bioType]} {block.bioType}
-            </span>
-          )}
-          {isDirty && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 20, background: 'var(--dirty)', color: 'var(--dirty-text)', fontWeight: 600 }}>modifié</span>}
-        </div>
+        <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1, flexShrink: 0 }}>BLOC {index + 1}</span>
+        <input
+          value={title}
+          onChange={e => onTitleChange(e.target.value)}
+          placeholder="Nom du bloc (ex. ECHAUFFEMENT)"
+          style={{
+            flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase',
+            padding: '4px 9px', borderRadius: 20, outline: 'none',
+            background: isTitleDirty ? 'var(--dirty)' : 'var(--bg-elevated)',
+            border: `1px solid ${isTitleDirty ? 'var(--dirty-border)' : 'var(--border)'}`,
+            color: isTitleDirty ? 'var(--dirty-text)' : 'var(--text-primary)',
+          }}
+        />
+        {isDirty && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 20, background: 'var(--dirty)', color: 'var(--dirty-text)', fontWeight: 600, flexShrink: 0 }}>modifié</span>}
         {canSuperset && (
           <button onClick={onToggleSuperset}
             title={superset ? 'Bloc en superset : enchaîner les mouvements sans repos entre eux' : 'Passer ce bloc en superset'}
@@ -425,7 +454,6 @@ export function BlockHeaderEdit({ block, index, instructions, onChange, superset
             ⚡ Superset
           </button>
         )}
-        <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
         <button onClick={onRemove} title="Supprimer ce bloc"
           style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center' }}
           onMouseEnter={e => { e.currentTarget.style.color = 'var(--red)' }}
@@ -434,7 +462,7 @@ export function BlockHeaderEdit({ block, index, instructions, onChange, superset
           <Trash2 size={13} />
         </button>
       </div>
-      <div style={{ marginBottom: 4 }}>
+      <div style={{ marginBottom: 8 }}>
         <label style={{ fontSize: 11, color: isDirty ? 'var(--dirty-text)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5, fontWeight: 600, letterSpacing: 0.4 }}>
           <AlignLeft size={11} /> INSTRUCTIONS
         </label>
@@ -446,6 +474,17 @@ export function BlockHeaderEdit({ block, index, instructions, onChange, superset
           minHeight={60}
           highlight={isDirty}
         />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 11, color: isRestDirty ? 'var(--dirty-text)' : 'var(--text-muted)', fontWeight: isRestDirty ? 600 : 400 }}>⏸ Repos après ce bloc</span>
+        <input
+          type="number" min={0} max={600} step={5}
+          value={restAfter ?? ''}
+          placeholder="0"
+          onChange={e => onRestAfterChange(e.target.value === '' ? null : Number(e.target.value))}
+          style={{ width: 60, background: isRestDirty ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isRestDirty ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '4px 8px', color: isRestDirty ? 'var(--dirty-text)' : 'var(--text-primary)', fontSize: 13, fontWeight: 700, outline: 'none', textAlign: 'center' }}
+        />
+        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>sec</span>
       </div>
     </div>
   )
@@ -564,7 +603,7 @@ export function Stat({ value, label, color }: { value: number; label: string; co
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 export function toEditState(wm: WorkoutMovement): EditState {
-  return { movementId: wm.movementId, movement: wm.movement, sets: wm.sets ?? 2, reps: wm.reps ?? '10', duration: wm.duration ?? null }
+  return { movementId: wm.movementId, movement: wm.movement, sets: wm.sets ?? 2, reps: wm.reps ?? '10', duration: wm.duration ?? null, rest: wm.rest ?? null }
 }
 export function stripHtml(html: string) { return html.replace(/<[^>]*>/g, '').trim() }
 export function fmtMin(min: number) {
@@ -572,4 +611,11 @@ export function fmtMin(min: number) {
   if (r < 60) return `~${r}min`
   const h = Math.floor(r / 60); const m = r % 60
   return m > 0 ? `~${h}h${m}min` : `~${h}h`
+}
+// Repos : toujours stocke et affiche en secondes (les valeurs importees de Notion
+// comme la valeur par defaut du generateur sont desormais homogenes sur cette unite).
+export function fmtSec(sec: number) {
+  if (sec < 60) return `${sec} sec`
+  const m = Math.floor(sec / 60), s = sec % 60
+  return s > 0 ? `${m}min${String(s).padStart(2, '0')}` : `${m} min`
 }

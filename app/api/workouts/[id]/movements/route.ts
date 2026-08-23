@@ -11,7 +11,7 @@ export async function POST(
   const authz = await requireWorkoutOwner(id)
   if (!authz.ok) return authz.response
   const body = await req.json()
-  const { movementId, blockId, sets, reps, duration } = body
+  const { movementId, blockId, sets, reps, duration, rest } = body
   if (!movementId) return NextResponse.json({ error: 'movementId requis' }, { status: 400 })
 
   if (blockId) {
@@ -34,6 +34,7 @@ export async function POST(
       sets: sets ?? 2,
       reps: reps ?? '10',
       duration: duration ?? null,
+      rest: rest ?? null,
     },
     include: { movement: true },
   })

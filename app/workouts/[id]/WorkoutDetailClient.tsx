@@ -17,7 +17,7 @@ import {
   Workout, WorkoutMovement, WorkoutBlock, Movement, EditState, LastPerf,
   WorkoutImage, ImageEditZone, MovementRowView, MovementRowEdit,
   BlockHeaderView, BlockHeaderEdit, EditBar, AddToWeekModal, Stat,
-  toEditState, stripHtml, fmtMin,
+  toEditState, stripHtml, fmtMin, fmtSec,
 } from './parts'
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -28,6 +28,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [editStates, setEditStates] = useState<EditState[]>([])
   const [blockInstructions, setBlockInstructions] = useState<Record<string, string>>({})
   const [blockSuperset, setBlockSuperset] = useState<Record<string, boolean>>({})
+  const [blockTitle, setBlockTitle] = useState<Record<string, string>>({})
+  const [blockRestAfter, setBlockRestAfter] = useState<Record<string, number | null>>({})
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [imageUrl, setImageUrl] = useState<string | null>(initial.imageUrl ?? null)
@@ -75,7 +77,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     const resolvedBlockId = blockId === '__flat__' ? null : blockId
     const tempId = `new-${Math.random().toString(36).slice(2)}`
     const movement: Movement = { id: m.id, name: m.name, bioType: m.bioType, complexity: m.complexity, equipment: m.equipment, description: m.description, videoUrl: m.videoUrl }
-    const orig: WorkoutMovement = { id: tempId, movementId: m.id, order: Number.MAX_SAFE_INTEGER, sets: 2, reps: '10', duration: null, movement, blockId: resolvedBlockId }
+    const orig: WorkoutMovement = { id: tempId, movementId: m.id, order: Number.MAX_SAFE_INTEGER, sets: 2, reps: '10', duration: null, rest: null, movement, blockId: resolvedBlockId }
     setPendingAdds(prev => [...prev, { tempId, blockId: resolvedBlockId, orig, es: toEditState(orig) }])
     setAddingToBlockId(null)
   }
@@ -130,11 +132,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   // ── Dirty checks ──
   const isDirtyMovements = editMode && (pendingAdds.length > 0 || editStates.some((es, i) => {
     const orig = originals[i]
-    return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10') || es.duration !== (orig.duration ?? null)
+    return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10') || es.duration !== (orig.duration ?? null) || es.rest !== (orig.rest ?? null)
   }))
   const blockChanged = (b: WorkoutBlock) =>
     (blockInstructions[b.id] ?? '') !== (b.instructions ?? '') ||
-    (blockSuperset[b.id] ?? false) !== !!b.superset
+    (blockSuperset[b.id] ?? false) !== !!b.superset ||
+    (blockTitle[b.id] ?? '') !== (b.bioType ?? '') ||
+    (blockRestAfter[b.id] ?? null) !== (b.restAfter ?? null)
   const isDirtyBlocks = editMode && initial.blocks.some(blockChanged)
   // Champ vidé = pas un changement : on ne doit jamais envoyer un nom vide
   const isDirtyName = editMode && editName.trim() !== '' && editName.trim() !== initial.name
@@ -148,7 +152,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const pendingCount = editMode
     ? editStates.filter((es, i) => {
         const orig = originals[i]
-        return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10') || es.duration !== (orig.duration ?? null)
+        return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10') || es.duration !== (orig.duration ?? null) || es.rest !== (orig.rest ?? null)
       }).length
       + initial.blocks.filter(blockChanged).length
       + (isDirtyName ? 1 : 0)
@@ -164,9 +168,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setEditStates(initial.movements.map(toEditState))
     const initBI: Record<string, string> = {}
     const initBS: Record<string, boolean> = {}
-    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset })
+    const initBT: Record<string, string> = {}
+    const initRA: Record<string, number | null> = {}
+    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null })
     setBlockInstructions(initBI)
     setBlockSuperset(initBS)
+    setBlockTitle(initBT)
+    setBlockRestAfter(initRA)
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
@@ -181,9 +189,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setEditStates(initial.movements.map(toEditState))
     const initBI: Record<string, string> = {}
     const initBS: Record<string, boolean> = {}
-    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset })
+    const initBT: Record<string, string> = {}
+    const initRA: Record<string, number | null> = {}
+    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null })
     setBlockInstructions(initBI)
     setBlockSuperset(initBS)
+    setBlockTitle(initBT)
+    setBlockRestAfter(initRA)
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
@@ -206,6 +218,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     const changedMovements = editStates.filter((es, i) => {
       const orig = originals[i]
       return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10')
+        || es.duration !== (orig.duration ?? null) || es.rest !== (orig.rest ?? null)
         || (movementOrder[orig.id] ?? orig.order) !== orig.order
     })
     const changedBlocks = initial.blocks.filter(blockChanged)
@@ -220,6 +233,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         if (es.sets !== (orig.sets ?? 2)) body.sets = es.sets
         if (es.reps !== (orig.reps ?? '10')) body.reps = es.reps
         if (es.duration !== (orig.duration ?? null)) body.duration = es.duration
+        if (es.rest !== (orig.rest ?? null)) body.rest = es.rest
         if ((movementOrder[orig.id] ?? orig.order) !== orig.order) body.order = movementOrder[orig.id]
         return fetch(`/api/workouts/${initial.id}/movements/${orig.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -228,7 +242,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       ...changedBlocks.map(b =>
         fetch(`/api/workouts/${initial.id}/blocks/${b.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false }),
+          body: JSON.stringify({
+            instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false,
+            bioType: blockTitle[b.id] || null, restAfter: blockRestAfter[b.id] ?? null,
+          }),
         }).catch(() => null)
       ),
       ...((isDirtyName || isDirtyDescription || isDirtyTags || isDirtyImage || isDirtyImagePosition) ? [
@@ -252,7 +269,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       ...pendingAdds.map(p =>
         fetch(`/api/workouts/${initial.id}/movements`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ movementId: p.es.movementId, blockId: p.blockId, sets: p.es.sets, reps: p.es.reps, duration: p.es.duration }),
+          body: JSON.stringify({ movementId: p.es.movementId, blockId: p.blockId, sets: p.es.sets, reps: p.es.reps, duration: p.es.duration, rest: p.es.rest }),
         }).catch(() => null)
       ),
     ])
@@ -547,8 +564,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                   {editMode ? (
                     <BlockHeaderEdit
                       block={block} index={bi}
+                      title={blockTitle[block.id] ?? ''}
+                      onTitleChange={v => setBlockTitle(prev => ({ ...prev, [block.id]: v }))}
                       instructions={blockInstructions[block.id] ?? ''}
                       onChange={v => setBlockInstructions(prev => ({ ...prev, [block.id]: v }))}
+                      restAfter={blockRestAfter[block.id] ?? null}
+                      onRestAfterChange={v => setBlockRestAfter(prev => ({ ...prev, [block.id]: v }))}
                       superset={blockSuperset[block.id] ?? false}
                       canSuperset={blockMovements.length > 1}
                       onToggleSuperset={() => setBlockSuperset(prev => ({ ...prev, [block.id]: !(prev[block.id] ?? false) }))}
@@ -599,7 +620,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
                       <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                        ⏸ {block.restAfter ?? initial.blockRest} min · repos entre blocs
+                        ⏸ {fmtSec((block.restAfter ?? initial.blockRest)!)} · repos entre blocs
                       </span>
                       <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                     </div>
