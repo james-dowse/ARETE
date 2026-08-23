@@ -328,7 +328,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   if (hasBlocks && editMode) {
     initial.blocks.forEach(b => { blockEditStatesMap[b.id] = [] })
     originals.forEach((orig, absIdx) => {
-      if (orig.blockId && blockEditStatesMap[orig.blockId])
+      // Après un ajout de mouvement, `initial.movements` (donc `originals`) grandit sur le
+      // rendu qui suit router.refresh(), avant que l'effect ne rattrape `editStates` (un
+      // render plus tard). Sans ce garde, `editStates[absIdx]` vaut undefined pour l'entrée
+      // fraîchement ajoutée et fait planter MovementRowEdit.
+      if (orig.blockId && blockEditStatesMap[orig.blockId] && editStates[absIdx])
         blockEditStatesMap[orig.blockId].push({ es: editStates[absIdx], orig, absIdx })
     })
     Object.values(blockEditStatesMap).forEach(list =>
