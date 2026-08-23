@@ -27,7 +27,7 @@ export interface WorkoutBlock {
 export interface Workout {
   id: string; name: string; createdAt: string
   duration?: number | null
-  notes?: string | null; description?: string | null; imageUrl?: string | null
+  notes?: string | null; description?: string | null; imageUrl?: string | null; imagePosition?: string | null
   blockRest?: number | null
   tags?: string | null
   movements: WorkoutMovement[]
@@ -36,24 +36,29 @@ export interface Workout {
 export interface EditState { movementId: string; movement: Movement; sets: number; reps: string; duration: number | null }
 
 // ─── Image zone (view) ────────────────────────────────────────────────────────
-export function WorkoutImage({ src }: { src: string }) {
+export function WorkoutImage({ src, position }: { src: string; position?: string | null }) {
   return (
     <div style={{ marginBottom: 22, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
-      <img src={src} alt="" style={{ width: '100%', maxHeight: 320, objectFit: 'cover', display: 'block' }} />
+      <img src={src} alt="" style={{ width: '100%', maxHeight: 320, objectFit: 'cover', objectPosition: position || '50% 50%', display: 'block' }} />
     </div>
   )
 }
 
 // ─── Image zone (edit) ────────────────────────────────────────────────────────
-export function ImageEditZone({ current, file, preview, onChange, onRemove }: {
+export function ImageEditZone({ current, file, preview, position, onChange, onRemove, onPositionChange }: {
   current: string | null | undefined
   file: File | null
   preview: string | null
+  position: string | null | undefined
   onChange: (f: File, p: string) => void
   onRemove: () => void
+  onPositionChange: (p: string | null) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const displaySrc = preview || current
+  const objectPosition = position || '50% 50%'
+  const [dragging, setDragging] = useState(false)
 
   const handleFile = (f: File) => {
     const url = URL.createObjectURL(f)
@@ -66,30 +71,68 @@ export function ImageEditZone({ current, file, preview, onChange, onRemove }: {
     if (f && f.type.startsWith('image/')) handleFile(f)
   }
 
+  const updatePositionFromEvent = (clientX: number, clientY: number) => {
+    const el = containerRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const x = Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100))
+    const y = Math.min(100, Math.max(0, ((clientY - rect.top) / rect.height) * 100))
+    onPositionChange(`${x.toFixed(0)}% ${y.toFixed(0)}%`)
+  }
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setDragging(true)
+    updatePositionFromEvent(e.clientX, e.clientY)
+  }
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging) return
+    updatePositionFromEvent(e.clientX, e.clientY)
+  }
+  const handlePointerUp = () => setDragging(false)
+
   return (
     <div style={{ marginBottom: 16 }}>
       <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6, fontWeight: 600, letterSpacing: 0.4 }}>
         PHOTO DU WORKOUT
       </label>
       {displaySrc ? (
-        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
-          <img src={displaySrc} alt="" style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
-          <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
-            <button onClick={() => inputRef.current?.click()}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#111', backdropFilter: 'blur(4px)' }}>
-              <ImageIcon size={12} /> Changer
-            </button>
-            <button onClick={onRemove}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#b91c1c', backdropFilter: 'blur(4px)' }}>
-              <Trash2 size={12} /> Supprimer
-            </button>
-          </div>
-          {file && (
-            <div style={{ position: 'absolute', bottom: 8, left: 8, padding: '3px 8px', background: 'rgba(26,26,26,0.75)', borderRadius: 5, fontSize: 11, color: '#fff' }}>
-              Non sauvegardé
+        <>
+          <div
+            ref={containerRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none' }}>
+            <img src={displaySrc} alt="" draggable={false}
+              style={{ width: '100%', maxHeight: 220, objectFit: 'cover', objectPosition, display: 'block', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
+              <button onPointerDown={e => e.stopPropagation()} onClick={() => inputRef.current?.click()}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#111', backdropFilter: 'blur(4px)' }}>
+                <ImageIcon size={12} /> Changer
+              </button>
+              <button onPointerDown={e => e.stopPropagation()} onClick={onRemove}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#b91c1c', backdropFilter: 'blur(4px)' }}>
+                <Trash2 size={12} /> Supprimer
+              </button>
             </div>
-          )}
-        </div>
+            {position && (
+              <button onPointerDown={e => e.stopPropagation()} onClick={() => onPositionChange(null)}
+                style={{ position: 'absolute', bottom: 8, right: 8, padding: '5px 10px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#111', backdropFilter: 'blur(4px)' }}>
+                Recentrer
+              </button>
+            )}
+            {file && (
+              <div style={{ position: 'absolute', bottom: 8, left: 8, padding: '3px 8px', background: 'rgba(26,26,26,0.75)', borderRadius: 5, fontSize: 11, color: '#fff' }}>
+                Non sauvegardé
+              </div>
+            )}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6 }}>
+            Glisse dans le cadre pour repositionner l&apos;image
+          </div>
+        </>
       ) : (
         <div
           onClick={() => inputRef.current?.click()}

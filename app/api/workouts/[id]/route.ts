@@ -30,6 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('name' in body && typeof body.name === 'string' && body.name.trim()) data.name = body.name.trim()
   if ('notes' in body) data.notes = body.notes || null
   if ('tags' in body) data.tags = body.tags || null
+  if ('imagePosition' in body) data.imagePosition = body.imagePosition || null
   const updated = await prisma.workout.update({ where: { id }, data })
   return NextResponse.json(updated)
 }

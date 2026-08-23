@@ -26,7 +26,8 @@ model Workout {
   duration    Int?
   notes       String?
   description String?
-  imageUrl    String?
+  imageUrl      String?
+  imagePosition String? // "x% y%" (object-position CSS), null = centre par defaut
   templateId  String?
   userId      String?
   blockRest   Int?
