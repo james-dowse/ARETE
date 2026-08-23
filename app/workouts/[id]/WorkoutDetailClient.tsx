@@ -14,7 +14,7 @@ import {
   Trash2, ChevronDown, ChevronUp, CalendarPlus, CheckCircle2, History, FileText, PlayCircle,
 } from 'lucide-react'
 import {
-  Workout, WorkoutMovement, WorkoutBlock, EditState, LastPerf,
+  Workout, WorkoutMovement, WorkoutBlock, Movement, EditState, LastPerf,
   WorkoutImage, ImageEditZone, MovementRowView, MovementRowEdit,
   BlockHeaderView, BlockHeaderEdit, EditBar, AddToWeekModal, Stat,
   toEditState, stripHtml, fmtMin,
@@ -44,7 +44,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [loggingSession, setLoggingSession] = useState(false)
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
   const [addingToBlockId, setAddingToBlockId] = useState<string | null>(null)
-  const [addingMovement, setAddingMovement] = useState(false)
+  // Mouvements ajoutés en édition, pas encore persistés : symétrique avec la suppression
+  // (differée jusqu'à Sauvegarder), au lieu de sauvegarder immédiatement à l'ajout.
+  const [pendingAdds, setPendingAdds] = useState<{ tempId: string; blockId: string | null; orig: WorkoutMovement; es: EditState }[]>([])
   const [removedWmIds, setRemovedWmIds] = useState<Set<string>>(new Set())
   const [removedBlockIds, setRemovedBlockIds] = useState<Set<string>>(new Set())
   const [collapsedViewBlocks, setCollapsedViewBlocks] = useState<Record<string, boolean>>({})
@@ -69,16 +71,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     })
   }
 
-  const handleAddMovementToBlock = async (blockId: string, m: PickableMovement) => {
-    setAddingMovement(true)
-    const res = await fetch(`/api/workouts/${initial.id}/movements`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ movementId: m.id, blockId: blockId === '__flat__' ? null : blockId }),
-    }).catch(() => null)
-    setAddingMovement(false)
+  const handleAddMovementToBlock = (blockId: string, m: PickableMovement) => {
+    const resolvedBlockId = blockId === '__flat__' ? null : blockId
+    const tempId = `new-${Math.random().toString(36).slice(2)}`
+    const movement: Movement = { id: m.id, name: m.name, bioType: m.bioType, complexity: m.complexity, equipment: m.equipment, description: m.description, videoUrl: m.videoUrl }
+    const orig: WorkoutMovement = { id: tempId, movementId: m.id, order: Number.MAX_SAFE_INTEGER, sets: 2, reps: '10', duration: null, movement, blockId: resolvedBlockId }
+    setPendingAdds(prev => [...prev, { tempId, blockId: resolvedBlockId, orig, es: toEditState(orig) }])
     setAddingToBlockId(null)
-    if (!res || !res.ok) { toast('Impossible d\'ajouter ce mouvement', 'error'); return }
-    router.refresh()
   }
 
   // Track last viewed (fire-and-forget)
@@ -119,22 +118,6 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
 
   // Session toast auto-hide already handled above
 
-  // Un mouvement ajouté (via bouton "Ajouter un mouvement") arrive par router.refresh() :
-  // `initial.movements` grandit, on complète editStates/movementOrder pour les nouvelles
-  // entrées (toujours en fin de liste) sans perdre les modifications déjà en cours.
-  useEffect(() => {
-    if (editMode && editStates.length < initial.movements.length) {
-      const newOnes = initial.movements.slice(editStates.length)
-      setEditStates(prev => [...prev, ...newOnes.map(toEditState)])
-      setMovementOrder(prev => {
-        const next = { ...prev }
-        newOnes.forEach(wm => { next[wm.id] = wm.order })
-        return next
-      })
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initial.movements.length])
-
   // Auto-enter edit mode if navigated with ?edit=1
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('edit') === '1') {
@@ -145,10 +128,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   }, [])
 
   // ── Dirty checks ──
-  const isDirtyMovements = editMode && editStates.some((es, i) => {
+  const isDirtyMovements = editMode && (pendingAdds.length > 0 || editStates.some((es, i) => {
     const orig = originals[i]
     return es.movementId !== orig.movementId || es.sets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10') || es.duration !== (orig.duration ?? null)
-  })
+  }))
   const blockChanged = (b: WorkoutBlock) =>
     (blockInstructions[b.id] ?? '') !== (b.instructions ?? '') ||
     (blockSuperset[b.id] ?? false) !== !!b.superset
@@ -174,6 +157,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       + (isDirtyOrder ? 1 : 0)
       + removedWmIds.size
       + removedBlockIds.size
+      + pendingAdds.length
     : 0
 
   const handleEnterEdit = () => {
@@ -186,7 +170,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
-    setRemovedWmIds(new Set()); setRemovedBlockIds(new Set())
+    setRemovedWmIds(new Set()); setRemovedBlockIds(new Set()); setPendingAdds([])
     const initOrder: Record<string, number> = {}
     initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
     setMovementOrder(initOrder)
@@ -203,7 +187,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
-    setRemovedWmIds(new Set()); setRemovedBlockIds(new Set())
+    setRemovedWmIds(new Set()); setRemovedBlockIds(new Set()); setPendingAdds([])
     const initOrder: Record<string, number> = {}
     initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
     setMovementOrder(initOrder)
@@ -265,6 +249,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       ...[...removedBlockIds].map(blockId =>
         fetch(`/api/workouts/${initial.id}/blocks/${blockId}`, { method: 'DELETE' }).catch(() => null)
       ),
+      ...pendingAdds.map(p =>
+        fetch(`/api/workouts/${initial.id}/movements`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ movementId: p.es.movementId, blockId: p.blockId, sets: p.es.sets, reps: p.es.reps, duration: p.es.duration }),
+        }).catch(() => null)
+      ),
     ])
 
     const failed = results.filter(r => !r || !r.ok).length
@@ -273,6 +263,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       toast(`${failed} modification${failed > 1 ? 's' : ''} n'a pas pu être sauvegardée — réessaie.`, 'error')
       return
     }
+    setPendingAdds([])
     setEditMode(false)
     toast('Modifications sauvegardées ✓')
     router.refresh()
@@ -299,22 +290,26 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     router.push(backTo ?? '/workouts')
   }
 
+  // Inclut les ajouts encore en attente (pas persistés) dans tous les agrégats affichés,
+  // pour que le compteur de mouvements / la difficulté / la durée reflètent l'aperçu réel.
+  const allEditStates = editMode ? [...editStates, ...pendingAdds.map(p => p.es)] : []
+
   const allMovementIds = editMode
-    ? editStates.map(es => es.movementId)
+    ? allEditStates.map(es => es.movementId)
     : initial.movements.map(m => m.movementId)
 
   const bioTypes = Array.from(new Set(
-    (editMode ? editStates.map(es => es.movement.bioType) : initial.movements.map(m => m.movement.bioType))
+    (editMode ? allEditStates.map(es => es.movement.bioType) : initial.movements.map(m => m.movement.bioType))
   ))
 
   // Difficulté globale : recalculée à chaque changement de mouvement (reroll, bibliothèque, ajout/suppression)
   const difficulty = computeWorkoutDifficulty(
-    editMode ? editStates.map(es => ({ complexity: es.movement.complexity })) : initial.movements.map(m => ({ complexity: m.movement.complexity }))
+    editMode ? allEditStates.map(es => ({ complexity: es.movement.complexity })) : initial.movements.map(m => ({ complexity: m.movement.complexity }))
   )
 
   // Estimated duration: 1 min per set across all movements
   const currentSets = editMode
-    ? editStates.map(es => es.sets)
+    ? allEditStates.map(es => es.sets)
     : initial.movements.map(wm => wm.sets ?? 2)
   const estimatedMin = currentSets.reduce((sum, s) => sum + s, 0)
 
@@ -569,16 +564,26 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                   {!blockCollapsed && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {editMode
-                        ? blockES.map(({ es, orig, absIdx }, pos) => (
-                            <MovementRowEdit key={orig.id} es={es} original={orig} index={absIdx} displayNumber={pos + 1} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
-                              onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))}
-                              isDragging={draggedWmId === orig.id}
-                              onDragStart={() => setDraggedWmId(orig.id)}
-                              onDragOver={() => { if (draggedWmId) handleReorder(draggedWmId, orig.id) }}
-                              onDrop={() => setDraggedWmId(null)}
-                              onDragEnd={() => setDraggedWmId(null)}
-                            />
-                          ))
+                        ? <>
+                            {blockES.map(({ es, orig, absIdx }, pos) => (
+                              <MovementRowEdit key={orig.id} es={es} original={orig} index={absIdx} displayNumber={pos + 1} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
+                                onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))}
+                                isDragging={draggedWmId === orig.id}
+                                onDragStart={() => setDraggedWmId(orig.id)}
+                                onDragOver={() => { if (draggedWmId) handleReorder(draggedWmId, orig.id) }}
+                                onDrop={() => setDraggedWmId(null)}
+                                onDragEnd={() => setDraggedWmId(null)}
+                              />
+                            ))}
+                            {pendingAdds.filter(p => p.blockId === block.id).map((p, pos) => (
+                              <MovementRowEdit key={p.tempId} es={p.es} original={p.orig} index={-1} displayNumber={blockES.length + pos + 1} allMovementIds={allMovementIds} onMovementClick={setSelectedMovementId}
+                                onUpdate={(_, patch) => setPendingAdds(prev => prev.map(x => x.tempId === p.tempId ? { ...x, es: { ...x.es, ...patch } } : x))}
+                                onRevert={() => setPendingAdds(prev => prev.map(x => x.tempId === p.tempId ? { ...x, es: toEditState(x.orig) } : x))}
+                                onRemove={() => setPendingAdds(prev => prev.filter(x => x.tempId !== p.tempId))}
+                                isDragging={false} onDragStart={() => {}} onDragOver={() => {}} onDrop={() => {}} onDragEnd={() => {}}
+                              />
+                            ))}
+                          </>
                         : blockMovements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} lastPerf={lastPerf[wm.movement.id]} />)
                       }
                       {editMode && (
@@ -604,20 +609,30 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
             })
           ) : (
             editMode
-              ? editStates
-                  .map((es, i) => ({ es, orig: originals[i], i }))
-                  .filter(({ orig }) => !removedWmIds.has(orig.id))
-                  .sort((a, b) => (movementOrder[a.orig.id] ?? a.orig.order) - (movementOrder[b.orig.id] ?? b.orig.order))
-                  .map(({ es, orig, i }, pos) => (
-                    <MovementRowEdit key={orig.id} es={es} original={orig} index={i} displayNumber={pos + 1} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
-                      onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))}
-                      isDragging={draggedWmId === orig.id}
-                      onDragStart={() => setDraggedWmId(orig.id)}
-                      onDragOver={() => { if (draggedWmId) handleReorder(draggedWmId, orig.id) }}
-                      onDrop={() => setDraggedWmId(null)}
-                      onDragEnd={() => setDraggedWmId(null)}
+              ? <>
+                  {editStates
+                    .map((es, i) => ({ es, orig: originals[i], i }))
+                    .filter(({ orig }) => !removedWmIds.has(orig.id))
+                    .sort((a, b) => (movementOrder[a.orig.id] ?? a.orig.order) - (movementOrder[b.orig.id] ?? b.orig.order))
+                    .map(({ es, orig, i }, pos) => (
+                      <MovementRowEdit key={orig.id} es={es} original={orig} index={i} displayNumber={pos + 1} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
+                        onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))}
+                        isDragging={draggedWmId === orig.id}
+                        onDragStart={() => setDraggedWmId(orig.id)}
+                        onDragOver={() => { if (draggedWmId) handleReorder(draggedWmId, orig.id) }}
+                        onDrop={() => setDraggedWmId(null)}
+                        onDragEnd={() => setDraggedWmId(null)}
+                      />
+                    ))}
+                  {pendingAdds.filter(p => p.blockId === null).map((p, pos) => (
+                    <MovementRowEdit key={p.tempId} es={p.es} original={p.orig} index={-1} displayNumber={editStates.length + pos + 1} allMovementIds={allMovementIds} onMovementClick={setSelectedMovementId}
+                      onUpdate={(_, patch) => setPendingAdds(prev => prev.map(x => x.tempId === p.tempId ? { ...x, es: { ...x.es, ...patch } } : x))}
+                      onRevert={() => setPendingAdds(prev => prev.map(x => x.tempId === p.tempId ? { ...x, es: toEditState(x.orig) } : x))}
+                      onRemove={() => setPendingAdds(prev => prev.filter(x => x.tempId !== p.tempId))}
+                      isDragging={false} onDragStart={() => {}} onDragOver={() => {}} onDrop={() => {}} onDragEnd={() => {}}
                     />
-                  ))
+                  ))}
+                </>
               : initial.movements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} lastPerf={lastPerf[wm.movement.id]} />)
           )}
           {editMode && !hasBlocks && (
@@ -653,7 +668,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         <LibraryPicker
           currentName=""
           onPick={m => handleAddMovementToBlock(addingToBlockId, m)}
-          onClose={() => { if (!addingMovement) setAddingToBlockId(null) }}
+          onClose={() => setAddingToBlockId(null)}
         />
       )}
 
