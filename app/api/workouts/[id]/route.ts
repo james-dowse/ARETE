@@ -31,6 +31,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('notes' in body) data.notes = body.notes || null
   if ('tags' in body) data.tags = body.tags || null
   if ('imagePosition' in body) data.imagePosition = body.imagePosition || null
+  if ('imageUrl' in body) {
+    const raw = typeof body.imageUrl === 'string' ? body.imageUrl.trim() : ''
+    if (raw) {
+      let valid = false
+      try { valid = ['http:', 'https:'].includes(new URL(raw).protocol) } catch { /* URL invalide */ }
+      if (!valid) return NextResponse.json({ error: 'URL invalide' }, { status: 400 })
+      data.imageUrl = raw
+    } else {
+      data.imageUrl = null
+      data.imagePosition = null
+    }
+  }
   const updated = await prisma.workout.update({ where: { id }, data })
   return NextResponse.json(updated)
 }

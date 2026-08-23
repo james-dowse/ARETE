@@ -30,9 +30,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [blockSuperset, setBlockSuperset] = useState<Record<string, boolean>>({})
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [removeImage, setRemoveImage] = useState(false)
+  const [imageUrl, setImageUrl] = useState<string | null>(initial.imageUrl ?? null)
   const [imagePosition, setImagePosition] = useState<string | null>(initial.imagePosition ?? null)
   const originals = initial.movements
 
@@ -158,8 +156,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   // Champ vidé = pas un changement : on ne doit jamais envoyer un nom vide
   const isDirtyName = editMode && editName.trim() !== '' && editName.trim() !== initial.name
   const isDirtyDescription = editMode && stripHtml(editDescription) !== stripHtml(initial.description ?? '')
-  const isDirtyImage = editMode && (imageFile !== null || removeImage)
-  const isDirtyImagePosition = editMode && !removeImage && imageFile === null && imagePosition !== (initial.imagePosition ?? null)
+  const isDirtyImage = editMode && imageUrl !== (initial.imageUrl ?? null)
+  const isDirtyImagePosition = editMode && !isDirtyImage && imagePosition !== (initial.imagePosition ?? null)
   const isDirtyTags = editMode && editTags.join(',') !== (initial.tags ?? '')
   const isDirtyOrder = editMode && originals.some(o => (movementOrder[o.id] ?? o.order) !== o.order)
   const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyName || isDirtyDescription || isDirtyImage || isDirtyImagePosition || isDirtyTags || isDirtyOrder || removedWmIds.size > 0 || removedBlockIds.size > 0
@@ -187,7 +185,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setBlockSuperset(initBS)
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
-    setImageFile(null); setImagePreview(null); setRemoveImage(false)
+    setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
     setRemovedWmIds(new Set()); setRemovedBlockIds(new Set())
     const initOrder: Record<string, number> = {}
     initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
@@ -204,7 +202,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setBlockSuperset(initBS)
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
-    setImageFile(null); setImagePreview(null); setRemoveImage(false)
+    setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
     setRemovedWmIds(new Set()); setRemovedBlockIds(new Set())
     const initOrder: Record<string, number> = {}
     initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
@@ -249,30 +247,18 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
           body: JSON.stringify({ instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false }),
         }).catch(() => null)
       ),
-      ...((isDirtyName || isDirtyDescription || isDirtyTags || isDirtyImagePosition) ? [
+      ...((isDirtyName || isDirtyDescription || isDirtyTags || isDirtyImage || isDirtyImagePosition) ? [
         fetch(`/api/workouts/${initial.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...(isDirtyName ? { name: editName.trim() } : {}),
             ...(isDirtyDescription ? { description: editDescription } : {}),
             ...(isDirtyTags ? { tags: editTags.join(',') || null } : {}),
+            ...(isDirtyImage ? { imageUrl } : {}),
             ...(isDirtyImagePosition ? { imagePosition } : {}),
           }),
         }).catch(() => null)
       ] : []),
-      ...(removeImage ? [
-        fetch(`/api/workouts/${initial.id}/image`, { method: 'DELETE' }).catch(() => null)
-      ] : (imageFile ? [
-        (() => {
-          const fd = new FormData()
-          fd.append('file', imageFile)
-          return fetch(`/api/workouts/${initial.id}/image`, { method: 'POST', body: fd })
-            .then(r => r.ok && imagePosition ? fetch(`/api/workouts/${initial.id}`, {
-              method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imagePosition }),
-            }) : r)
-            .catch(() => null)
-        })()
-      ] : [])),
       ...[...removedWmIds].map(wmId =>
         fetch(`/api/workouts/${initial.id}/movements/${wmId}`, { method: 'DELETE' }).catch(() => null)
       ),
@@ -461,16 +447,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         {/* ── IMAGE ── */}
         {editMode ? (
           <ImageEditZone
-            current={initial.imageUrl}
-            file={imageFile}
-            preview={imagePreview}
+            url={imageUrl}
             position={imagePosition}
-            onChange={(f, p) => { setImageFile(f); setImagePreview(p); setRemoveImage(false); setImagePosition(null) }}
-            onRemove={() => { setImageFile(null); setImagePreview(null); setRemoveImage(true); setImagePosition(null) }}
+            onUrlChange={u => { setImageUrl(u); setImagePosition(null) }}
             onPositionChange={setImagePosition}
           />
         ) : (
-          (initial.imageUrl && !removeImage) && <WorkoutImage src={initial.imageUrl} position={initial.imagePosition} />
+          initial.imageUrl && <WorkoutImage src={initial.imageUrl} position={initial.imagePosition} />
         )}
 
         {/* ── DESCRIPTION ── */}

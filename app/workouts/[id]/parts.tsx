@@ -8,7 +8,7 @@ import {
 import { useState, useRef } from 'react'
 import {
   RefreshCw, Search, X, Save, Undo2, Minus, Plus,
-  AlignLeft, ImageIcon, Trash2, ChevronDown, ChevronUp, CalendarPlus, GripVertical,
+  AlignLeft, Trash2, ChevronDown, ChevronUp, CalendarPlus, GripVertical,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -45,30 +45,30 @@ export function WorkoutImage({ src, position }: { src: string; position?: string
 }
 
 // ─── Image zone (edit) ────────────────────────────────────────────────────────
-export function ImageEditZone({ current, file, preview, position, onChange, onRemove, onPositionChange }: {
-  current: string | null | undefined
-  file: File | null
-  preview: string | null
+// Photo renseignée par URL : pas d'upload de fichier, pas de stockage a gerer.
+export function ImageEditZone({ url, position, onUrlChange, onPositionChange }: {
+  url: string | null | undefined
   position: string | null | undefined
-  onChange: (f: File, p: string) => void
-  onRemove: () => void
+  onUrlChange: (u: string | null) => void
   onPositionChange: (p: string | null) => void
 }) {
-  const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const displaySrc = preview || current
-  const objectPosition = position || '50% 50%'
+  const [draft, setDraft] = useState(url || '')
+  const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
+  const objectPosition = position || '50% 50%'
 
-  const handleFile = (f: File) => {
-    const url = URL.createObjectURL(f)
-    onChange(f, url)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    const f = e.dataTransfer.files[0]
-    if (f && f.type.startsWith('image/')) handleFile(f)
+  const applyUrl = () => {
+    const trimmed = draft.trim()
+    if (!trimmed) { onUrlChange(null); setError(''); return }
+    try {
+      const u = new URL(trimmed)
+      if (!['http:', 'https:'].includes(u.protocol)) throw new Error('protocole non supporté')
+      onUrlChange(trimmed)
+      setError('')
+    } catch {
+      setError('URL invalide')
+    }
   }
 
   const updatePositionFromEvent = (clientX: number, clientY: number) => {
@@ -95,57 +95,52 @@ export function ImageEditZone({ current, file, preview, position, onChange, onRe
   return (
     <div style={{ marginBottom: 16 }}>
       <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6, fontWeight: 600, letterSpacing: 0.4 }}>
-        PHOTO DU WORKOUT
+        PHOTO DU WORKOUT (URL)
       </label>
-      {displaySrc ? (
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyUrl() } }}
+          placeholder="https://..."
+          style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13 }}
+        />
+        <button onClick={applyUrl}
+          style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--gold)', color: '#111', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          Appliquer
+        </button>
+        {url && (
+          <button onClick={() => { setDraft(''); setError(''); onUrlChange(null) }}
+            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: '#b91c1c', cursor: 'pointer' }}>
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
+      {error && <div style={{ fontSize: 11, color: '#b91c1c', marginTop: 4 }}>{error}</div>}
+      {url && (
         <>
           <div
             ref={containerRef}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none' }}>
-            <img src={displaySrc} alt="" draggable={false}
+            style={{ position: 'relative', marginTop: 8, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none' }}>
+            <img src={url} alt="" draggable={false}
+              onError={() => setError("Impossible de charger cette image — vérifie l'URL")}
+              onLoad={() => setError('')}
               style={{ width: '100%', maxHeight: 220, objectFit: 'cover', objectPosition, display: 'block', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
-              <button onPointerDown={e => e.stopPropagation()} onClick={() => inputRef.current?.click()}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#111', backdropFilter: 'blur(4px)' }}>
-                <ImageIcon size={12} /> Changer
-              </button>
-              <button onPointerDown={e => e.stopPropagation()} onClick={onRemove}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#b91c1c', backdropFilter: 'blur(4px)' }}>
-                <Trash2 size={12} /> Supprimer
-              </button>
-            </div>
             {position && (
               <button onPointerDown={e => e.stopPropagation()} onClick={() => onPositionChange(null)}
                 style={{ position: 'absolute', bottom: 8, right: 8, padding: '5px 10px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#111', backdropFilter: 'blur(4px)' }}>
                 Recentrer
               </button>
             )}
-            {file && (
-              <div style={{ position: 'absolute', bottom: 8, left: 8, padding: '3px 8px', background: 'rgba(26,26,26,0.75)', borderRadius: 5, fontSize: 11, color: '#fff' }}>
-                Non sauvegardé
-              </div>
-            )}
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6 }}>
             Glisse dans le cadre pour repositionner l&apos;image
           </div>
         </>
-      ) : (
-        <div
-          onClick={() => inputRef.current?.click()}
-          onDrop={handleDrop}
-          onDragOver={e => e.preventDefault()}
-          style={{ border: '1.5px dashed var(--border)', borderRadius: 12, padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', background: 'var(--bg-elevated)', transition: 'background 0.15s' }}>
-          <ImageIcon size={24} color="var(--text-dim)" />
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>Ajouter une photo</div>
-          <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Cliquez ou glissez une image</div>
-        </div>
       )}
-      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
-        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
     </div>
   )
 }
