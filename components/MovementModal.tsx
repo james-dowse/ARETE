@@ -155,7 +155,7 @@ export default function MovementModal({ movementId, onClose }: Props) {
                 <div>
                   <div style={{
                     position: 'relative',
-                    paddingBottom: embedInfo.type === 'instagram' ? '125%' : '56.25%',
+                    paddingBottom: embedInfo.type === 'instagram' || embedInfo.type === 'tiktok' ? '125%' : '56.25%',
                     borderRadius: 10,
                     overflow: 'hidden',
                     background: '#000',
@@ -167,7 +167,7 @@ export default function MovementModal({ movementId, onClose }: Props) {
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
                     />
                   </div>
-                  {embedInfo.type === 'youtube' && (
+                  {(embedInfo.type === 'youtube' || embedInfo.type === 'facebook') && (
                     <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
                       🔇 Lecture automatique muette — clique 🔊 dans le player pour activer le son
                     </div>
