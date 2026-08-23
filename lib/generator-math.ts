@@ -1,27 +1,31 @@
 // Logique pure de dimensionnement du générateur — extraite de app/generator/page.tsx
 // pour être testable. Règle métier : si durée fournie (mode « Au temps »), durée exacte
 // et repos exacts, jamais de dépassement ; sinon 30 s de travail par série de ~10 reps.
+//
+// Unités : les repos (rest, defaultRest, globalBlockRest, blockRestBetween) sont en
+// SECONDES partout, comme le reste de l'app (WorkoutMovement.rest, WorkoutBlock.restAfter).
+// Seule la durée totale ESTIMÉE reste exprimée en minutes (fmtMin côté UI).
 
 // Estimation : 30 s de travail par série (~10 reps) ; repos uniquement ENTRE les séries.
 // Si durationSec fourni (mode durée), il remplace les 30 s.
-export function minPerMov(sets: number, rest: number, durationSec?: number | null): number {
-  return sets * (durationSec != null ? durationSec / 60 : 0.5) + Math.max(0, sets - 1) * rest
+export function minPerMov(sets: number, restSec: number, durationSec?: number | null): number {
+  return sets * (durationSec != null ? durationSec / 60 : 0.5) + Math.max(0, sets - 1) * (restSec / 60)
 }
 
 export interface BlockLite { count: number; sets: number; rest: number; duration?: number | null }
 
 // Durée totale estimée d'une structure (blocs + repos inter-blocs).
-export function estimateTotalMinutes(blocks: BlockLite[], blockRestBetween: number): number {
+export function estimateTotalMinutes(blocks: BlockLite[], blockRestBetweenSec: number): number {
   const movts = blocks.reduce((s, b) => s + b.count * minPerMov(b.sets, b.rest, b.duration), 0)
-  const inter = Math.max(0, blocks.length - 1) * blockRestBetween
+  const inter = Math.max(0, blocks.length - 1) * (blockRestBetweenSec / 60)
   return movts + inter
 }
 
 export interface SizingInput {
   targetDur: number            // minutes cibles
   sets: number                 // séries par mouvement (selon difficulté)
-  globalBlockRest: number      // repos entre blocs (min)
-  defaultRest: number          // repos entre séries (min)
+  globalBlockRest: number      // repos entre blocs (sec)
+  defaultRest: number          // repos entre séries (sec)
   fixed: boolean               // true = mode « Au temps » (durée exacte, jamais de dépassement)
   nbBlocksSeed?: number        // pour le mode aléatoire (2-4) ; ignoré si fixed
 }
@@ -36,14 +40,14 @@ export function sizeWorkout(inp: SizingInput): Sizing {
     : (inp.nbBlocksSeed ?? 3)
 
   const round = fixed ? Math.floor : Math.round
-  const timePerMov = sets * 0.5 + Math.max(0, sets - 1) * defaultRest
-  let available = Math.max(timePerMov, targetDur - Math.max(0, nbBlocks - 1) * globalBlockRest)
+  const timePerMov = sets * 0.5 + Math.max(0, sets - 1) * (defaultRest / 60)
+  let available = Math.max(timePerMov, targetDur - Math.max(0, nbBlocks - 1) * (globalBlockRest / 60))
   let totalMovTarget = Math.max(2, round(available / timePerMov))
 
   if (fixed) {
     // Durée exacte : jamais de dépassement — on réduit les blocs si besoin.
     nbBlocks = Math.max(2, Math.min(nbBlocks, Math.floor(totalMovTarget / 2)))
-    available = Math.max(timePerMov, targetDur - Math.max(0, nbBlocks - 1) * globalBlockRest)
+    available = Math.max(timePerMov, targetDur - Math.max(0, nbBlocks - 1) * (globalBlockRest / 60))
     totalMovTarget = Math.max(2, round(available / timePerMov))
   } else {
     totalMovTarget = Math.max(nbBlocks * 2, totalMovTarget)

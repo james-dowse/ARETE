@@ -33,7 +33,7 @@ function uid() { return Math.random().toString(36).slice(2) }
 
 const DEFAULT_SETS = 2
 const DEFAULT_REPS = '10'
-const DEFAULT_REST = 1
+const DEFAULT_REST = 60 // secondes — aligné sur WorkoutMovement.rest / WorkoutBlock.restAfter
 
 export default function GeneratorPage() {
   const router = useRouter()
@@ -48,7 +48,7 @@ export default function GeneratorPage() {
   const [params, setParams] = useState<MovementParams[]>([])
 
   // Global inter-block rest (seconds between blocks, shared across all blocks)
-  const [globalBlockRest, setGlobalBlockRest] = useState(2) // minutes de repos entre blocs
+  const [globalBlockRest, setGlobalBlockRest] = useState(120) // secondes de repos entre blocs
 
   const [workoutDescription, setWorkoutDescription] = useState('')
 
@@ -513,7 +513,7 @@ export default function GeneratorPage() {
   // Si le mouvement est en mode durée, la durée exacte remplace les 30 s. (logique dans lib/generator-math)
   const minPerMov = _minPerMov
   const blockEstMin = (count: number, sets: number, rest: number, dur?: number | null) => count * minPerMov(sets, rest, dur)
-  const interBlockRest = (nbBlocks: number) => Math.max(0, nbBlocks - 1) * globalBlockRest
+  const interBlockRest = (nbBlocks: number) => Math.max(0, nbBlocks - 1) * globalBlockRest / 60
   // When generated: sum actual per-gap rests (only between non-empty adjacent blocks)
   const totalInterBlockRestGenerated = blockRests.reduce((s, r, i) => {
     const hasLeft = generatedByBlock[i]?.length > 0
@@ -522,7 +522,7 @@ export default function GeneratorPage() {
   }, 0)
   const totalEstMin = generated
     ? generated.reduce((sum, _, i) => sum + minPerMov(params[i]?.sets ?? DEFAULT_SETS, params[i]?.rest ?? DEFAULT_REST, params[i]?.duration), 0)
-      + totalInterBlockRestGenerated
+      + totalInterBlockRestGenerated / 60
     : blocks.reduce((sum, b) => sum + b.count * minPerMov(b.sets, b.rest, b.duration), 0)
       + interBlockRest(blocks.length)
 
@@ -977,8 +977,8 @@ export default function GeneratorPage() {
                               )}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', letterSpacing: 0.4 }}>REPOS (min)</label>
-                              <Stepper value={block.rest} min={0} max={10} onChange={v => updateBlock(block.id, 'rest', v)} />
+                              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', letterSpacing: 0.4 }}>REPOS (sec)</label>
+                              <Stepper value={block.rest} min={0} max={300} step={15} onChange={v => updateBlock(block.id, 'rest', v)} />
                               <span style={{ fontSize: 9, fontStyle: 'italic', color: 'var(--text-dim)' }}>entre chaque série</span>
                             </div>
                           </div>
@@ -997,8 +997,8 @@ export default function GeneratorPage() {
             {/* Inter-block rest */}
             <div style={{ marginTop: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.4 }}>REPOS ENTRE BLOCS (min)</label>
-                <Stepper value={globalBlockRest} min={0} max={15} onChange={setGlobalBlockRest} />
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.4 }}>REPOS ENTRE BLOCS (sec)</label>
+                <Stepper value={globalBlockRest} min={0} max={300} step={15} onChange={setGlobalBlockRest} />
               </div>
             </div>
 
@@ -1285,8 +1285,8 @@ export default function GeneratorPage() {
                                       )}
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Repos (min)</span>
-                                      <Stepper value={params[i]?.rest ?? DEFAULT_REST} min={0} max={10} onChange={v => setParam(i, 'rest', v)} />
+                                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Repos (sec)</span>
+                                      <Stepper value={params[i]?.rest ?? DEFAULT_REST} min={0} max={300} step={15} onChange={v => setParam(i, 'rest', v)} />
                                     </div>
                                   </div>
                                 </div>
@@ -1321,10 +1321,11 @@ export default function GeneratorPage() {
                               <Stepper
                                 value={blockRests[bi] ?? globalBlockRest}
                                 min={0}
-                                max={15}
+                                max={300}
+                                step={15}
                                 onChange={v => setBlockRests(prev => prev.map((r, i) => i === bi ? v : r))}
                               />
-                              <span style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>min entre blocs</span>
+                              <span style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>sec entre blocs</span>
                             </div>
                             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                           </div>
@@ -1399,15 +1400,15 @@ export default function GeneratorPage() {
 }
 
 // ─── Stepper component ────────────────────────────────────────────────────────
-function Stepper({ value, min, max, onChange }: { value: number; min: number; max: number; onChange: (v: number) => void }) {
+function Stepper({ value, min, max, step = 1, onChange }: { value: number; min: number; max: number; step?: number; onChange: (v: number) => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 0, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-      <button onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min}
+      <button onClick={() => onChange(Math.max(min, value - step))} disabled={value <= min}
         style={{ width: 30, height: 30, background: 'none', border: 'none', cursor: value > min ? 'pointer' : 'default', color: value > min ? 'var(--text-primary)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <Minus size={12} />
       </button>
       <span style={{ width: 32, textAlign: 'center', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{value}</span>
-      <button onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max}
+      <button onClick={() => onChange(Math.min(max, value + step))} disabled={value >= max}
         style={{ width: 30, height: 30, background: 'none', border: 'none', cursor: value < max ? 'pointer' : 'default', color: value < max ? 'var(--text-primary)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <Plus size={12} />
       </button>
