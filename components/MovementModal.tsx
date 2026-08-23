@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react'
 import { X, Play, ExternalLink, Heart } from 'lucide-react'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, EQUIPMENT_ICONS } from '@/lib/types'
-import { getEmbedInfo } from '@/lib/video'
+import { getEmbedInfo, extractEmbedVideoId } from '@/lib/video'
+import YouTubeLoopEmbed from './YouTubeLoopEmbed'
 
 interface Movement {
   id: string
@@ -160,12 +161,16 @@ export default function MovementModal({ movementId, onClose }: Props) {
                     overflow: 'hidden',
                     background: '#000',
                   }}>
-                    <iframe
-                      src={embedInfo.url}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-                    />
+                    {embedInfo.type === 'youtube' && extractEmbedVideoId(embedInfo.url) ? (
+                      <YouTubeLoopEmbed videoId={extractEmbedVideoId(embedInfo.url)!} />
+                    ) : (
+                      <iframe
+                        src={embedInfo.url}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                      />
+                    )}
                   </div>
                   {(embedInfo.type === 'youtube' || embedInfo.type === 'facebook') && (
                     <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>

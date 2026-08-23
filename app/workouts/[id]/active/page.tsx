@@ -4,7 +4,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { BIO_TYPE_COLORS } from '@/lib/types'
 import { ProgressRing } from '@/components/ui'
 import { useToast } from '@/components/Toast'
-import { getEmbedInfo } from '@/lib/video'
+import { getEmbedInfo, extractEmbedVideoId } from '@/lib/video'
+import YouTubeLoopEmbed from '@/components/YouTubeLoopEmbed'
 
 interface Movement { id: string; name: string; bioType: string; videoUrl?: string | null }
 interface WM { id: string; order: number; sets?: number | null; reps?: string | null; rest?: number | null; duration?: number | null; blockId?: string | null; movement: Movement }
@@ -425,6 +426,8 @@ export default function ActivePage() {
                 controls
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
               />
+            ) : currentEmbed.type === 'youtube' && extractEmbedVideoId(currentEmbed.url) ? (
+              <YouTubeLoopEmbed key={currentEmbed.url} videoId={extractEmbedVideoId(currentEmbed.url)!} />
             ) : (
               <iframe
                 key={currentEmbed.url}

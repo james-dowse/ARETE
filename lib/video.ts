@@ -73,3 +73,10 @@ export function getEmbedInfo(url: string): EmbedInfo | null {
   }
   return null
 }
+
+// Extrait l'ID vidéo d'une URL d'embed YouTube déjà construite (youtube-nocookie.com/embed/{id}?...).
+// Sert à réinitialiser le lecteur via l'IFrame API plutôt que de dépendre de l'URL brute d'origine.
+export function extractEmbedVideoId(embedUrl: string): string | null {
+  const m = embedUrl.match(/\/embed\/([^/?]+)/)
+  return m ? m[1] : null
+}
