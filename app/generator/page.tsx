@@ -2,12 +2,15 @@
 import AppShell from '@/components/AppShell'
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, FAILURE_REPS, computeWorkoutDifficulty, type GeneratedMovement } from '@/lib/types'
 import RichEditor from '@/components/RichEditor'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Zap, Save, RefreshCw, Clock, Minus, ChevronDown, ChevronUp, Dices, Search } from 'lucide-react'
 import MovementModal from '@/components/MovementModal'
 import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
-import { minPerMov as _minPerMov, sizeWorkout } from '@/lib/generator-math'
+import {
+  minPerMov as _minPerMov, sizeWorkout, planifierBlocs, categoriesPeuFournies,
+  type Capacity, type Plan,
+} from '@/lib/generator-math'
 
 interface Block {
   id: string
@@ -24,6 +27,7 @@ interface Block {
   superset?: boolean
 }
 interface MovementParams { sets: number; reps: string; rest: number; duration: number | null }
+interface Tier { key: string; label: string; complexities: string[]; sets: number; position: number }
 
 function uid() { return Math.random().toString(36).slice(2) }
 
@@ -71,13 +75,103 @@ export default function GeneratorPage() {
   // Result panel: collapse per result block
   const [collapsedResultBlocks, setCollapsedResultBlocks] = useState<Record<string, boolean>>({})
 
-  // Random workout
-  const [randomDifficulty, setRandomDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
-  const difficultyOptions: { key: 'easy' | 'medium' | 'hard'; label: string; sub: string }[] = [
-    { key: 'easy',   label: 'Novice',        sub: `${COMPLEXITIES[0]} / ${COMPLEXITIES[1]}` },
-    { key: 'medium', label: 'Intermédiaire', sub: `${COMPLEXITIES[1]} / ${COMPLEXITIES[2]}` },
-    { key: 'hard',   label: 'Avancé',        sub: `${COMPLEXITIES[2]} / ${COMPLEXITIES[3]}` },
-  ]
+  // Random workout — les échelons viennent d'Admin > Référentiels (table DifficultyTier),
+  // plus d'indices codés en dur dans COMPLEXITIES : modifier l'échelle ne décale plus rien.
+  const [randomDifficulty, setRandomDifficulty] = useState<string>('medium')
+  const [tiers, setTiers] = useState<Tier[]>([])
+
+  useEffect(() => {
+    fetch('/api/tiers')
+      .then(r => r.json())
+      .then((d: { tiers?: Tier[] }) => {
+        const list = d.tiers ?? []
+        setTiers(list)
+        // Garde la sélection valide si la clé par défaut n'existe pas dans la config
+        setRandomDifficulty(prev =>
+          list.some(t => t.key === prev) ? prev : (list[Math.min(1, list.length - 1)]?.key ?? prev)
+        )
+      })
+      .catch(() => { /* non bloquant : les boutons restent vides, la génération sur mesure marche */ })
+  }, [])
+
+  const difficultyOptions = tiers.map(t => ({ key: t.key, label: t.label, sub: t.complexities.join(' / ') }))
+
+  // Capacité du catalogue (mouvements par type × niveau) : sert à ne jamais demander
+  // à un bloc plus que ce que la bibliothèque contient.
+  const [capacity, setCapacity] = useState<Capacity>({})
+  const [toutesCategories, setToutesCategories] = useState(false)
+  const [infoGeneration, setInfoGeneration] = useState<string | null>(null)
+  // Référentiel lu dans l'état plutôt que via la constante partagée BIO_TYPES :
+  // celle-ci est mutée de façon asynchrone au chargement, donc au premier rendu
+  // elle contient encore les valeurs de secours (et non celles de la base).
+  const [bioTypesRef, setBioTypesRef] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch('/api/capacity')
+      .then(r => r.json())
+      .then((d: { capacity?: Capacity }) => setCapacity(d.capacity ?? {}))
+      .catch(() => { /* non bloquant : sans capacité, on retombe sur l'ancien comportement */ })
+    fetch('/api/attributes')
+      .then(r => r.json())
+      .then((d: { bioTypes?: { value: string; position: number }[] }) =>
+        setBioTypesRef([...(d.bioTypes ?? [])].sort((a, b) => a.position - b.position).map(o => o.value)))
+      .catch(() => { /* non bloquant */ })
+  }, [])
+
+  const bioTypesDispo = bioTypesRef.length > 0 ? bioTypesRef : BIO_TYPES
+
+  // Message honnête quand la bibliothèque ne peut pas servir ce qui était demandé.
+  const messageDeCouverture = (plan: Plan): string | null => {
+    const courts = plan.blocs.filter(b => b.count < b.demande)
+    if (courts.length === 0 && plan.manquants === 0) return null
+    const bouts = courts.map(b =>
+      `« ${b.bioType} » ne propose que ${b.capacite} mouvement${b.capacite > 1 ? 's' : ''} à ce niveau`
+    )
+    let msg = bouts.join(', ')
+    const reportes = courts.reduce((s, b) => s + (b.demande - b.count), 0) - plan.manquants
+    if (reportes > 0) msg += ` — ${reportes} mouvement${reportes > 1 ? 's' : ''} reporté${reportes > 1 ? 's' : ''} sur les autres blocs`
+    if (plan.manquants > 0) msg += ` — la séance sera plus courte de ${plan.manquants} mouvement${plan.manquants > 1 ? 's' : ''}`
+    return msg + '.'
+  }
+
+  // Catégories que le catalogue ne peut pas remplir seule pour l'échelon sélectionné
+  const tierCourant = tiers.find(t => t.key === randomDifficulty)
+  const peuFournies = tierCourant
+    ? categoriesPeuFournies(capacity, bioTypesDispo, tierCourant.complexities, 4)
+    : []
+
+  // Réglage partagé par les modes « Au hasard » et « Au temps ». Sur une séance
+  // courte, le générateur s'en tient par défaut aux catégories capables de remplir
+  // un bloc ; ce réglage l'autorise à piocher aussi dans les moins fournies.
+  const toggleToutesCategories = peuFournies.length > 0 ? (
+    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 12, cursor: 'pointer' }}>
+      <input
+        type="checkbox"
+        checked={toutesCategories}
+        onChange={e => setToutesCategories(e.target.checked)}
+        style={{ marginTop: 2, accentColor: 'var(--gold)', cursor: 'pointer', flexShrink: 0 }}
+      />
+      <span>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-muted)' }}>
+          Puiser dans toutes les catégories
+        </span>
+        <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2, lineHeight: 1.35 }}>
+          Y compris les moins fournies à ce niveau ({peuFournies.join(', ')}) — la séance sera complétée par d&rsquo;autres types.
+        </span>
+      </span>
+    </label>
+  ) : null
+
+  const bandeauInfo = infoGeneration ? (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 16, padding: '11px 14px', background: 'var(--dirty)', border: '1px solid var(--dirty-border)', borderRadius: 'var(--r-sm)' }}>
+      <span style={{ color: 'var(--dirty-text)', flexShrink: 0, lineHeight: 1, marginTop: 1 }}>⚠</span>
+      <span style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.45, flex: 1 }}>{infoGeneration}</span>
+      <button onClick={() => setInfoGeneration(null)}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 0, lineHeight: 1, flexShrink: 0 }}>
+        ✕
+      </button>
+    </div>
+  ) : null
   // Les trois modes de composition : hasard, temps disponible, ou bloc par bloc
   const [genMode, setGenMode] = useState<'random' | 'time' | 'structure'>('random')
   const [timeTarget, setTimeTarget] = useState(30)
@@ -235,6 +329,15 @@ export default function GeneratorPage() {
         body: JSON.stringify({ blocks: blocks.map(b => ({ bioTypes: b.bioTypes, complexities: b.complexities, equipments: b.equipments, count: b.count })), videoOnly }),
       })
       const data = await res.json()
+      // Mode sur mesure : les filtres viennent de l'utilisateur, on les respecte tels
+      // quels — mais on l'avertit si la bibliothèque n'a pas pu servir son quota.
+      const manque = blocks
+        .map((b, i) => ({ b, i, recu: (data.movements as GeneratedMovement[]).filter(m => m.blockIndex === i).length }))
+        .filter(x => x.recu < x.b.count)
+      setInfoGeneration(manque.length === 0 ? null : manque.map(({ b, i, recu }) => {
+        const critere = [b.bioTypes.join('/'), b.complexities.join('/'), b.equipments.join('/')].filter(Boolean).join(' · ') || 'tous critères'
+        return `Bloc ${i + 1} (${critere}) : ${recu} mouvement${recu > 1 ? 's' : ''} disponible${recu > 1 ? 's' : ''} sur ${b.count} demandé${b.count > 1 ? 's' : ''}`
+      }).join(' — ') + '.')
       setResultBlocks([...blocks])
       setBlockRests(Array(Math.max(0, blocks.length - 1)).fill(globalBlockRest))
       setGenerated(data.movements)
@@ -449,16 +552,16 @@ export default function GeneratorPage() {
   }
 
   // fixedDur : mode « Temps » — la durée cible devient l'input de base au lieu d'être tirée au sort
-  const generateRandom = async (difficulty: 'easy' | 'medium' | 'hard', fixedDur?: number) => {
+  const generateRandom = async (difficulty: string, fixedDur?: number) => {
+    const tier = tiers.find(t => t.key === difficulty) ?? tiers[0]
+    if (!tier) return
+    const complexities = tier.complexities.filter(Boolean)
+    const sets = tier.sets
+    const label = tier.label
+    if (complexities.length === 0) return
+
     setLoading(true)
     setSavedId(null)
-
-    const difficultyMap = {
-      easy:   { complexities: [COMPLEXITIES[0], COMPLEXITIES[1]].filter(Boolean), sets: 2, label: 'Novice' },
-      medium: { complexities: [COMPLEXITIES[1], COMPLEXITIES[2]].filter(Boolean), sets: 3, label: 'Intermédiaire' },
-      hard:   { complexities: [COMPLEXITIES[2], COMPLEXITIES[3]].filter(Boolean), sets: 4, label: 'Avancé' },
-    }
-    const { complexities, sets, label } = difficultyMap[difficulty]
 
     // Durée fournie (mode Temps) ou tirée au sort (20-60 min) ; dimensionnement dans lib/generator-math
     const targetDur = fixedDur ?? Math.floor(Math.random() * 41) + 20
@@ -468,15 +571,26 @@ export default function GeneratorPage() {
       nbBlocksSeed: Math.floor(Math.random() * 3) + 2,
     })
 
-    // Pick nbBlocks distinct bio types (shuffle)
-    const shuffledBioTypes = [...BIO_TYPES].sort(() => Math.random() - 0.5)
+    // Répartition pilotée par la capacité réelle du catalogue : chaque bloc reçoit
+    // au plus ce que la bibliothèque peut servir, le reliquat part sur les autres.
+    // Chaque bloc tire sur TOUS les niveaux de l'échelon (et non un seul tiré au
+    // sort, ce qui réduisait le vivier de moitié et vidait les petites catégories).
+    const totalMov = distribution.reduce((s, n) => s + n, 0)
+    const plan = planifierBlocs({
+      capacity,
+      bioTypes: bioTypesDispo,
+      complexities,
+      nbBlocks,
+      totalMov,
+      autoriserPeuFournies: toutesCategories ? true : undefined,
+    })
 
-    const randomBlocks: Block[] = Array.from({ length: nbBlocks }, (_, i) => ({
+    const randomBlocks: Block[] = plan.blocs.map((p, i) => ({
       id: uid(),
-      bioTypes: [shuffledBioTypes[i % shuffledBioTypes.length]],
-      complexities: [complexities[Math.floor(Math.random() * complexities.length)]],
+      bioTypes: [p.bioType],
+      complexities,
       equipments: [],
-      count: distribution[i],
+      count: p.count,
       order: i,
       instructions: '',
       sets,
@@ -484,6 +598,8 @@ export default function GeneratorPage() {
       rest: DEFAULT_REST,
       duration: null,
     }))
+
+    setInfoGeneration(messageDeCouverture(plan))
 
     setBlocks(randomBlocks)
     setDuration(String(targetDur))
@@ -514,7 +630,7 @@ export default function GeneratorPage() {
     <AppShell>
       <div style={{ maxWidth: 1060 }}>
         <div style={{ marginBottom: 24 }}>
-          <h1 className="r-h1" style={{ fontSize: 44, fontWeight: 600, margin: 0, letterSpacing: '-0.015em' }}>L&rsquo;Atelier</h1>
+          <h1 className="r-h1" style={{ fontSize: 44, fontWeight: 600, margin: 0, letterSpacing: '-0.015em' }}>Générateur</h1>
           <p style={{ color: 'var(--text-muted)', marginTop: 8, fontSize: 16 }}>Trois façons de composer ta séance.</p>
           <div className="tick-rule" style={{ marginTop: 16 }} />
         </div>
@@ -572,6 +688,7 @@ export default function GeneratorPage() {
                   )
                 })}
               </div>
+              {toggleToutesCategories}
               <button
                 onClick={() => generateRandom(randomDifficulty)}
                 disabled={loading}
@@ -610,11 +727,7 @@ export default function GeneratorPage() {
                 ))}
               </div>
               <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-                {([
-                  { key: 'easy',   label: 'Novice' },
-                  { key: 'medium', label: 'Intermédiaire' },
-                  { key: 'hard',   label: 'Avancé' },
-                ] as const).map(({ key, label }) => {
+                {difficultyOptions.map(({ key, label }) => {
                   const active = randomDifficulty === key
                   return (
                     <button key={key} onClick={() => setRandomDifficulty(key)} style={{
@@ -628,6 +741,7 @@ export default function GeneratorPage() {
                   )
                 })}
               </div>
+              {toggleToutesCategories}
               <button
                 onClick={() => generateRandom(randomDifficulty, timeTarget)}
                 disabled={loading}
@@ -976,6 +1090,7 @@ export default function GeneratorPage() {
 
             {generated && (
               <div>
+                {bandeauInfo}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -393,10 +393,145 @@ export function AttributesTab() {
           onReload={reload}
         />
       </div>
+      <DifficultyTiersSection complexities={complexities} />
       <style>{`
         div:hover .attr-row-actions { opacity: 1 !important; }
         .attr-row-actions { transition: opacity 0.15s; }
       `}</style>
+    </div>
+  )
+}
+
+// ─── Échelons de difficulté ──────────────────────────────────────────────────
+// Le générateur tirait ses niveaux sur COMPLEXITIES[0..3] : toute modification de
+// l'échelle décalait silencieusement les échelons. Ils sont désormais paramétrés ici.
+interface Tier { key: string; label: string; complexities: string[]; sets: number; position: number }
+
+export function DifficultyTiersSection({ complexities }: { complexities: AttributeOption[] }) {
+  const [tiers, setTiers] = useState<Tier[] | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const toast = useToast()
+
+  useEffect(() => {
+    fetch('/api/tiers')
+      .then(r => r.json())
+      .then(d => setTiers(d.tiers ?? []))
+      .catch(() => setTiers([]))
+  }, [])
+
+  const patch = (i: number, field: keyof Tier, value: string | number | string[]) => {
+    setTiers(prev => prev!.map((t, j) => j === i ? { ...t, [field]: value } : t))
+    setDirty(true)
+  }
+  const toggleCx = (i: number, value: string) =>
+    setTiers(prev => {
+      setDirty(true)
+      return prev!.map((t, j) => {
+        if (j !== i) return t
+        const has = t.complexities.includes(value)
+        return { ...t, complexities: has ? t.complexities.filter(c => c !== value) : [...t.complexities, value] }
+      })
+    })
+  const addTier = () => {
+    setTiers(prev => [...prev!, { key: `tier${Date.now().toString(36)}`, label: 'Nouvel échelon', complexities: [], sets: 3, position: prev!.length }])
+    setDirty(true)
+  }
+  const removeTier = (i: number) => {
+    setTiers(prev => prev!.filter((_, j) => j !== i))
+    setDirty(true)
+  }
+
+  const save = async () => {
+    if (!tiers) return
+    setSaving(true)
+    try {
+      const res = await fetch('/api/tiers', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tiers }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast(data?.error ?? `Erreur ${res.status}`, 'error'); return }
+      setTiers(data.tiers)
+      setDirty(false)
+      toast('Échelons enregistrés', 'success')
+    } catch {
+      toast('Erreur réseau', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!tiers) return null
+  const scale = complexities.map(c => c.value)
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 14 }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>Échelons de difficulté</h3>
+          <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+            Niveaux tirés par le générateur pour chaque échelon, et nombre de séries associé.
+            Si tu modifies l&rsquo;échelle des complexités ci-dessus, ajuste ces correspondances ici.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button onClick={addTier}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-muted)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <Plus size={13} /> Échelon
+          </button>
+          <button onClick={save} disabled={!dirty || saving}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 'var(--r-sm)', border: 'none', background: dirty ? 'var(--gold)' : 'var(--bg-elevated)', color: dirty ? 'var(--ink)' : 'var(--text-dim)', fontSize: 13, fontWeight: 800, cursor: dirty && !saving ? 'pointer' : 'default' }}>
+            <Check size={13} /> {saving ? '…' : 'Enregistrer'}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {tiers.map((t, i) => {
+          const vide = t.complexities.length === 0
+          return (
+            <div key={t.key} style={{ background: 'var(--bg-card)', border: `1px solid ${vide ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+                <input
+                  value={t.label}
+                  onChange={e => patch(i, 'label', e.target.value)}
+                  style={{ flex: 1, minWidth: 180, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px 12px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, outline: 'none' }}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  Séries
+                  <input
+                    type="number" min={1} max={10} value={t.sets}
+                    onChange={e => patch(i, 'sets', Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+                    style={{ width: 58, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px 6px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, textAlign: 'center', outline: 'none' }}
+                  />
+                </label>
+                <button onClick={() => removeTier(i)} title="Supprimer cet échelon"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 4, display: 'flex' }}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {scale.map(c => {
+                  const active = t.complexities.includes(c)
+                  return (
+                    <button key={c} onClick={() => toggleCx(i, c)}
+                      style={{ padding: '5px 13px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? 'var(--gold)' : 'var(--border)'}`, background: active ? 'var(--gold-ghost)' : 'var(--bg-elevated)', color: active ? 'var(--gold)' : 'var(--text-muted)', fontWeight: active ? 700 : 400 }}>
+                      {c}
+                    </button>
+                  )
+                })}
+                {vide && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--dirty-text)', marginLeft: 4 }}>
+                    <AlertTriangle size={12} /> aucun niveau sélectionné
+                  </span>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

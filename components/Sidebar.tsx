@@ -8,12 +8,12 @@ import { useRouter } from 'next/navigation'
 import { useRef, useCallback } from 'react'
 
 const allNav = [
-  { href: '/generator',   label: 'L’Atelier',     icon: Zap,             admin: false },
+  { href: '/dashboard',   label: 'Tableau de bord', icon: LayoutDashboard, admin: false },
+  { href: '/generator',   label: 'Générateur',    icon: Zap,             admin: false },
   { href: '/workouts',    label: 'Mes Séances',   icon: BookOpen,        admin: false },
   { href: '/planner',     label: 'Semaine',       icon: Calendar,        admin: false },
   { href: '/library',     label: 'Bibliothèque',  icon: Library,         admin: false },
   { href: '/progression', label: 'Progression',   icon: TrendingUp,      admin: false },
-  { href: '/dashboard',   label: 'Tableau de bord', icon: LayoutDashboard, admin: false },
   { href: '/profile',     label: 'Mon profil',    icon: UserCircle,      admin: false },
   { href: '/admin',       label: 'Mouvements',    icon: Settings2,       admin: true, sub: true },
   { href: '/admin/users', label: 'Utilisateurs',  icon: Users,           admin: true, sub: true },

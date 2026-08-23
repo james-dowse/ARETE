@@ -207,6 +207,19 @@ model AttributeOption {
   @@unique([category, value])
 }
 
+// Échelons de difficulté du générateur (Novice / Intermédiaire / Avancé…).
+// Paramétrable depuis Admin > Référentiels : chaque échelon liste les valeurs de
+// complexité qu'il tire, pour que modifier l'échelle des complexités ne décale
+// plus la génération (avant, le générateur indexait COMPLEXITIES[0..3] en dur).
+model DifficultyTier {
+  id           String @id @default(cuid())
+  key          String @unique // identifiant stable utilisé par le générateur
+  label        String // libellé affiché
+  complexities String // JSON : ["Facile","Commun"] — valeurs de AttributeOption(category='complexity')
+  sets         Int    @default(3)
+  position     Int    @default(0)
+}
+
 model WorkoutShare {
   id             String       @id @default(cuid())
   workoutId      String

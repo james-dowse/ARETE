@@ -311,13 +311,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   color: var(--text-dim);
 }
 
-/* ── Display serif — Fraunces : titres et grands chiffres ─────────── */
+/* ── Display condensé — Barlow Condensed : titres et grands chiffres ── */
 .display,
 h1,
 .r-stat-num {
-  font-family: var(--font-display), Georgia, 'Times New Roman', serif;
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  font-family: var(--font-display), 'Arial Narrow', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.92;
 }
 
 /* ── Skeleton loading ───────────────────────────────────────────── */
