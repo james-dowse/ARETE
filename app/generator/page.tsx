@@ -73,6 +73,11 @@ export default function GeneratorPage() {
 
   // Random workout
   const [randomDifficulty, setRandomDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
+  const difficultyOptions: { key: 'easy' | 'medium' | 'hard'; label: string; sub: string }[] = [
+    { key: 'easy',   label: 'Novice',        sub: `${COMPLEXITIES[0]} / ${COMPLEXITIES[1]}` },
+    { key: 'medium', label: 'Intermédiaire', sub: `${COMPLEXITIES[1]} / ${COMPLEXITIES[2]}` },
+    { key: 'hard',   label: 'Avancé',        sub: `${COMPLEXITIES[2]} / ${COMPLEXITIES[3]}` },
+  ]
   // Les trois modes de composition : hasard, temps disponible, ou bloc par bloc
   const [genMode, setGenMode] = useState<'random' | 'time' | 'structure'>('random')
   const [timeTarget, setTimeTarget] = useState(30)
@@ -449,9 +454,9 @@ export default function GeneratorPage() {
     setSavedId(null)
 
     const difficultyMap = {
-      easy:   { complexities: ['Easy', 'Common'],   sets: 2, label: 'Novice' },
-      medium: { complexities: ['Common', 'Hard'],   sets: 3, label: 'Intermédiaire' },
-      hard:   { complexities: ['Hard', 'Advanced'], sets: 4, label: 'Avancé' },
+      easy:   { complexities: [COMPLEXITIES[0], COMPLEXITIES[1]].filter(Boolean), sets: 2, label: 'Novice' },
+      medium: { complexities: [COMPLEXITIES[1], COMPLEXITIES[2]].filter(Boolean), sets: 3, label: 'Intermédiaire' },
+      hard:   { complexities: [COMPLEXITIES[2], COMPLEXITIES[3]].filter(Boolean), sets: 4, label: 'Avancé' },
     }
     const { complexities, sets, label } = difficultyMap[difficulty]
 
@@ -551,11 +556,7 @@ export default function GeneratorPage() {
                 Structure, mouvements et durée (20-60 min) tirés au sort. Choisis juste l&apos;intensité.
               </div>
               <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-                {([
-                  { key: 'easy',   label: 'Novice',       sub: 'Easy / Common' },
-                  { key: 'medium', label: 'Intermédiaire',sub: 'Common / Hard' },
-                  { key: 'hard',   label: 'Avancé',       sub: 'Hard / Advanced' },
-                ] as const).map(({ key, label, sub }) => {
+                {difficultyOptions.map(({ key, label, sub }) => {
                   const active = randomDifficulty === key
                   return (
                     <button key={key} onClick={() => setRandomDifficulty(key)} style={{

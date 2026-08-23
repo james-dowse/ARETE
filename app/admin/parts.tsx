@@ -294,9 +294,9 @@ function AttributeSection({
               </>
             ) : (
               <>
-                {opt.icon && <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{opt.icon}</span>}
+                {opt.icon && <span title={opt.icon} style={{ fontSize: 16, lineHeight: 1, flexShrink: 0, maxWidth: 24, overflow: 'hidden', whiteSpace: 'nowrap', display: 'inline-block' }}>{opt.icon}</span>}
                 {opt.color && <span style={{ width: 10, height: 10, borderRadius: '50%', background: opt.color, flexShrink: 0, border: '1px solid rgba(255,255,255,0.15)' }} />}
-                <span style={{ fontSize: 13, flex: 1, color: opt.color || 'var(--text-primary)' }}>{opt.value}</span>
+                <span title={opt.value} style={{ fontSize: 13, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: opt.color || 'var(--text-primary)' }}>{opt.value}</span>
                 <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
                   <button onClick={() => handleMove(opt, idx, 'up')} disabled={idx === 0} title="Monter"
                     style={{ width: 22, height: 22, borderRadius: 5, background: 'none', border: 'none', color: idx === 0 ? 'var(--text-dim)' : 'var(--text-muted)', cursor: idx === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: idx === 0 ? 0.3 : 1 }}>

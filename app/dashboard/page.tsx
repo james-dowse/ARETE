@@ -1,7 +1,7 @@
 import AppShell from '@/components/AppShell'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import { prisma } from '@/lib/prisma'
-import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS } from '@/lib/types'
+import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, COMPLEXITIES } from '@/lib/types'
 import { syncAttributesFromDb } from '@/lib/attributes-server'
 import { getCurrentUser } from '@/lib/session'
 import Link from 'next/link'
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
     : [null, 0]
   const todayEntries = todayPlan?.entries ?? []
 
-  const complexityOrder = ['Easy', 'Common', 'Hard', 'Advanced']
+  const complexityOrder = COMPLEXITIES
   const maxBio = Math.max(...bioStats.map(s => s._count), 1)
 
   return (
