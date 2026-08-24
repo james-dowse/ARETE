@@ -240,8 +240,8 @@ export default function AdminClient({
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>Administration</h1>
-            <p style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: 14 }}>
+            <h1 className="r-h1">Administration</h1>
+            <p className="r-subtitle">
               {movements.length} mouvements · {filtered.length} affichés
             </p>
           </div>

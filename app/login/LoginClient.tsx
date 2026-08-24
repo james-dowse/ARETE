@@ -93,7 +93,7 @@ export default function LoginClient() {
               <div style={errorBox}>⏱ Ce lien de connexion est invalide ou expiré. Demande un nouveau code.</div>
             )}
             <div>
-              <label style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-dim)', letterSpacing: '0.10em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Adresse email</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-dim)', letterSpacing: '0.03em', display: 'block', marginBottom: 8 }}>Adresse email</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ton@email.com" required autoFocus style={inputStyle(!!error)} />
             </div>
             {error && (
@@ -116,7 +116,7 @@ export default function LoginClient() {
                 : <>Code envoyé à <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>. Valable 15 min.</>}
             </div>
             <div>
-              <label style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-dim)', letterSpacing: '0.10em', textTransform: 'uppercase', display: 'block', marginBottom: 8, textAlign: 'center' }}>Code à 6 chiffres</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-dim)', letterSpacing: '0.03em', display: 'block', marginBottom: 8, textAlign: 'center' }}>Code à 6 chiffres</label>
               <input
                 type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6}
                 value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}

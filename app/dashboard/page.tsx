@@ -72,11 +72,12 @@ function computeStreak(doneAtDates: Date[]): number {
   return streak
 }
 
+// Libellés de section — capitales réservées au seul cadre héros (séance du jour) ;
+// partout ailleurs dans la page, casse normale pour rester lisible sans crier.
 const SECTION_LABEL: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
-  letterSpacing: '0.10em',
-  textTransform: 'uppercase' as const,
+  letterSpacing: '0.02em',
   color: 'var(--text-muted)',
   margin: 0,
 }
@@ -84,8 +85,7 @@ const SECTION_LABEL: React.CSSProperties = {
 const SECTION_LABEL_GOLD: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
-  letterSpacing: '0.10em',
-  textTransform: 'uppercase' as const,
+  letterSpacing: '0.02em',
   color: 'var(--gold-dim)',
   margin: 0,
 }
@@ -342,7 +342,7 @@ export default async function DashboardPage() {
                     borderTop: i > 0 ? '1px solid var(--border)' : 'none',
                     cursor: 'pointer',
                   }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gold)', width: 76, flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.02em', color: 'var(--gold)', width: 76, flexShrink: 0 }}>
                       {entry.dayOfWeek === dayIdx ? "Aujourd'hui" : DAY_LABELS[entry.dayOfWeek]}
                     </span>
                     <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', flexGrow: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -390,7 +390,7 @@ export default async function DashboardPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <p style={SECTION_LABEL_GOLD}>Campagnes récentes</p>
               {recentSessions.length > 0 && (
-                <Link href="/workouts" style={{ fontSize: 13, color: 'var(--gold-dim)', textDecoration: 'none', letterSpacing: '0.06em', fontWeight: 600, textTransform: 'uppercase' }}>
+                <Link href="/workouts" style={{ fontSize: 13, color: 'var(--gold-dim)', textDecoration: 'none', letterSpacing: '0.02em', fontWeight: 600 }}>
                   Tout voir →
                 </Link>
               )}
@@ -420,7 +420,7 @@ export default async function DashboardPage() {
                             {doneStr}{s.workout.duration ? ` · ${s.workout.duration} min` : ''}
                           </div>
                         </div>
-                        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '2px 9px', border: '1px solid rgba(187,176,147,0.4)', color: 'var(--cypress-light)', flexShrink: 0 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.02em', padding: '2px 9px', border: '1px solid rgba(187,176,147,0.4)', color: 'var(--cypress-light)', flexShrink: 0 }}>
                           Accomplie
                         </span>
                       </div>
@@ -483,8 +483,8 @@ export default async function DashboardPage() {
         {/* ── État vide ─────────────────────────────────────────── */}
         {workoutCount === 0 && (
           <div style={{ padding: '80px 0', textAlign: 'center' }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 24 }}>
-              — Aucune séance encore —
+            <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.02em', color: 'var(--text-dim)', marginBottom: 24 }}>
+              Aucune séance encore
             </div>
             <Link href="/generator" style={{ textDecoration: 'none' }}>
               <button style={{ padding: '12px 32px', background: 'var(--crimson)', color: '#F1EAD8', border: 'none', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>

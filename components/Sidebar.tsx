@@ -171,7 +171,7 @@ export default function Sidebar() {
       {/* ── Main nav — hauteur naturelle (pas flex:1) ── */}
       <nav style={{ display: 'flex', flexDirection: 'column', padding: collapsed ? '16px 6px 0' : '16px 8px 0', transition: 'padding 0.22s' }}>
         {!collapsed && (
-          <div style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', padding: '0 8px', marginBottom: 8, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', padding: '0 8px', marginBottom: 8, whiteSpace: 'nowrap' }}>
             Navigation
           </div>
         )}
@@ -296,7 +296,7 @@ export default function Sidebar() {
         </button>
 
         {!collapsed && (
-          <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.10)', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '2px 0 0' }}>
+          <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.10)', letterSpacing: '0.06em', padding: '2px 0 0' }}>
             © 2026 ARETE
           </div>
         )}
@@ -357,7 +357,7 @@ export default function Sidebar() {
             )}
             {!searchLoading && searchResults && searchResults.workouts.length > 0 && (
               <>
-                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(200,165,95,0.6)' }}>Séances</div>
+                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(200,165,95,0.6)' }}>Séances</div>
                 {searchResults.workouts.map(w => (
                   <button
                     key={w.id}
@@ -380,7 +380,7 @@ export default function Sidebar() {
             )}
             {!searchLoading && searchResults && searchResults.movements.length > 0 && (
               <>
-                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(200,165,95,0.6)', borderTop: searchResults.workouts.length > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', marginTop: searchResults.workouts.length > 0 ? 4 : 0 }}>Mouvements</div>
+                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(200,165,95,0.6)', borderTop: searchResults.workouts.length > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none', marginTop: searchResults.workouts.length > 0 ? 4 : 0 }}>Mouvements</div>
                 {searchResults.movements.map(m => (
                   <button
                     key={m.id}

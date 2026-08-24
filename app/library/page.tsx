@@ -108,8 +108,8 @@ export default function LibraryPage() {
     <AppShell>
       <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%' }}>
         <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontSize: 40, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>Bibliothèque</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: 8, fontSize: 16 }}>
+          <h1 className="r-h1">Bibliothèque</h1>
+          <p className="r-subtitle">
             {loading ? '...' : `${displayed.length} mouvement${displayed.length !== 1 ? 's' : ''}`}
           </p>
         </div>

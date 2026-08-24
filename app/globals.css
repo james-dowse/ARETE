@@ -311,12 +311,30 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 /* Chiffres à chasse fixe : chronos, stats, compteurs — évite le « saut » du texte */
 .tnum { font-variant-numeric: tabular-nums; }
 
+/* Libellé de section (« Récent », « Prochaines séances », « Navigation »…) —
+   PAS de majuscules : seul le cadre d'accueil (hero rouge, logo en filigrane)
+   garde les capitales, comme identité propre à ce bloc-là. */
 .eyebrow {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
   color: var(--text-dim);
+}
+
+/* ── Échelle de titres, unifiée sur toutes les pages ─────────────────────
+   Un seul jeu de tailles pour titre de page / sous-titre, plutôt que des
+   valeurs ad hoc (28 à 44px) réparties page par page. */
+.r-h1 {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.r-subtitle {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 8px;
 }
 
 /* ── Display serif — Newsreader : titres et grands chiffres ────── */
@@ -508,7 +526,7 @@ h1,
   .r-grid-2 { grid-template-columns: 1fr !important; }
 
   /* Typographie */
-  .r-h1    { font-size: 34px !important; letter-spacing: -0.02em !important; }
+  .r-h1    { font-size: 28px !important; letter-spacing: -0.02em !important; }
   .r-h2    { font-size: 22px !important; }
 
   /* Flexbox utilitaires */
@@ -539,7 +557,7 @@ h1,
 
 @media (max-width: 480px) {
   .main-grid { padding: 16px 12px !important; }
-  .r-h1 { font-size: 28px !important; }
+  .r-h1 { font-size: 24px !important; }
   .r-grid-3 { grid-template-columns: 1fr !important; }
   .r-lib-grid { grid-template-columns: 1fr !important; }
 }

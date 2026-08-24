@@ -78,8 +78,8 @@ export default function PlannerPage() {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 style={{ fontSize: 40, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>Planner</h1>
-            <p style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: 15 }}>
+            <h1 className="r-h1">Planner</h1>
+            <p className="r-subtitle">
               {loading ? '…' : `${totalWorkouts} entraînement${totalWorkouts !== 1 ? 's' : ''} cette semaine`}
             </p>
           </div>

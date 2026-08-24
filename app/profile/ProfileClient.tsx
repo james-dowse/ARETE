@@ -106,8 +106,8 @@ export default function ProfileClient() {
     <AppShell>
       <div style={{ maxWidth: 560, margin: '0 auto', width: '100%' }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 className="r-h1" style={{ fontSize: 32, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>Mon profil</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: 8, fontSize: 15 }}>Informations personnelles</p>
+          <h1 className="r-h1">Mon profil</h1>
+          <p className="r-subtitle">Informations personnelles</p>
         </div>
 
         {/* ── Avatar ── */}
