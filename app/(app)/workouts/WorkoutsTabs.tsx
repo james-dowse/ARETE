@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
+import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty, estimateWorkoutMinutes } from '@/lib/types'
 import { useToast } from '@/components/Toast'
 import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search, ArrowUpDown } from 'lucide-react'
 
@@ -39,10 +39,7 @@ const SORT_LABELS: Record<SortOption, string> = {
   movements: 'Nb mouvements',
 }
 
-function estimatedMinutes(w: Workout): number {
-  const totalSets = w.movements.reduce((sum, wm) => sum + (wm.sets ?? 3), 0)
-  return Math.max(1, Math.round(totalSets * 1.5))
-}
+const estimatedMinutes = (w: Workout): number => estimateWorkoutMinutes(w.movements)
 
 function sortWorkouts(list: Workout[], sortBy: SortOption): Workout[] {
   const arr = [...list]
@@ -232,8 +229,7 @@ function WorkoutCard({
   const [deleting, setDeleting] = useState(false)
   const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
   const difficulty = computeWorkoutDifficulty(w.movements.map(m => ({ complexity: m.movement.complexity })))
-  const totalSets = w.movements.reduce((sum, wm) => sum + (wm.sets ?? 3), 0)
-  const estMin = Math.max(1, Math.round(totalSets * 1.5))
+  const estMin = estimateWorkoutMinutes(w.movements)
   const initiale = w.user?.email?.[0]?.toUpperCase() ?? '?'
 
   async function handleDuplicate(e: React.MouseEvent) {

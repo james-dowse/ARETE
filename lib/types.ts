@@ -58,6 +58,16 @@ export const COMPLEXITY_COLORS: Record<string, string> = {
 // suffit à qualifier la séance d'Advanced, même si le reste est Easy).
 // Pure fonction de la liste de mouvements : se recalcule à chaque changement
 // (reroll aléatoire, substitution bibliothèque), jamais mise en cache.
+// Estimation de durée, utilisée partout où une séance affiche un temps prévu
+// (liste des séances, fiche détail, aperçu de bloc) : ~1min30 par série, un
+// mouvement sans valeur de séries compte pour 3. Existait auparavant en deux
+// versions divergentes (1min/série ici, 1min30 ailleurs, défaut 2 vs 3) —
+// unifié pour que l'estimation soit la même partout dans l'app.
+export function estimateWorkoutMinutes(movements: { sets?: number | null }[]): number {
+  const totalSets = movements.reduce((sum, m) => sum + (m.sets ?? 3), 0)
+  return Math.max(1, Math.round(totalSets * 1.5))
+}
+
 export function computeWorkoutDifficulty(movements: { complexity: string }[]): string | null {
   if (movements.length === 0) return null
   const counts: Record<string, number> = {}

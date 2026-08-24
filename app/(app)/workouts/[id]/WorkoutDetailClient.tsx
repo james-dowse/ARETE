@@ -3,7 +3,7 @@ import RichEditor from '@/components/RichEditor'
 import MovementModal from '@/components/MovementModal'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
-import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
+import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty, estimateWorkoutMinutes } from '@/lib/types'
 import { useToast } from '@/components/Toast'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -471,11 +471,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     editMode ? allEditStates.map(es => ({ complexity: es.movement.complexity })) : initial.movements.map(m => ({ complexity: m.movement.complexity }))
   )
 
-  // Estimated duration: 1 min per set across all movements
-  const currentSets = editMode
-    ? allEditStates.map(es => es.sets)
-    : initial.movements.map(wm => wm.sets ?? 2)
-  const estimatedMin = currentSets.reduce((sum, s) => sum + s, 0)
+  // Même estimation que partout ailleurs dans l'app (liste des séances, aperçu
+  // de bloc) — voir estimateWorkoutMinutes.
+  const estimatedMin = estimateWorkoutMinutes(
+    editMode ? allEditStates.map(es => ({ sets: es.sets })) : initial.movements.map(wm => ({ sets: wm.sets }))
+  )
 
   const hasBlocks = initial.blocks.length > 0
   const blockMovementsMap: Record<string, WorkoutMovement[]> = {}

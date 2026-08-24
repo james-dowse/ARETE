@@ -3,7 +3,7 @@ import RichEditor from '@/components/RichEditor'
 import LibraryPicker from '@/components/LibraryPicker'
 import {
   BIO_TYPE_COLORS, BIO_TYPE_ICONS,
-  COMPLEXITY_COLORS, EQUIPMENT_ICONS, FAILURE_REPS,
+  COMPLEXITY_COLORS, EQUIPMENT_ICONS, FAILURE_REPS, estimateWorkoutMinutes,
 } from '@/lib/types'
 import { useState, useRef } from 'react'
 import {
@@ -398,7 +398,7 @@ export function BlockHeaderView({ block, index, movements, collapsed, onToggle }
   collapsed: boolean; onToggle: () => void
 }) {
   const color = block.bioType ? BIO_TYPE_COLORS[block.bioType] : 'var(--text-muted)'
-  const estMin = movements.reduce((sum, wm) => sum + (wm.sets ?? 2) * 1, 0)
+  const estMin = estimateWorkoutMinutes(movements)
   return (
     <div style={{ marginTop: index === 0 ? 0 : 10, marginBottom: collapsed ? 0 : 8 }}>
       <div
