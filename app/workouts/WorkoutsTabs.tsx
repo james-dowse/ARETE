@@ -13,6 +13,8 @@ interface Workout {
   name: string
   createdAt: string
   duration?: number | null
+  imageUrl?: string | null
+  imagePosition?: string | null
   movements: WorkoutMovementItem[]
   user?: WorkoutUser | null
   isSaved?: boolean
@@ -247,7 +249,14 @@ function WorkoutCard({
   return (
     <div className="card card-interactive" style={{ borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
       <Link href={`/workouts/${w.id}`} style={{ textDecoration: 'none', display: 'block', padding: '18px 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {w.imageUrl ? (
+              <img src={w.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block' }} />
+            ) : (
+              <img src="/logo.svg" alt="" style={{ width: '60%', height: '60%', objectFit: 'contain', opacity: 0.18, display: 'block' }} />
+            )}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ fontWeight: 700, fontSize: 15 }}>{w.name}</div>
