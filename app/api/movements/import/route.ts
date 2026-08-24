@@ -91,20 +91,21 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Passe 3 : écriture ───────────────────────────────────────────────────────
-  let imported = 0
+  const createdIds: string[] = []
   for (const r of toCreate) {
     try {
       await prisma.movement.create({
         data: { id: r.id!, name: r.name, bioType: r.bioType, complexity: r.complexity, equipment: r.equipment, description: r.description, videoUrl: r.videoUrl },
       })
-      imported++
+      createdIds.push(r.id!)
     } catch (e) {
       errors.push({ line: r.line, name: r.name, id: r.id!, type: 'erreur_bdd', message: e instanceof Error ? e.message : String(e) })
     }
   }
 
   return NextResponse.json({
-    imported,
+    imported: createdIds.length,
+    createdIds, // permet d'annuler l'import (voir /api/movements/import/undo)
     errorCount: errors.length,
     errors: errors.map(e => ({ ...e, typeLabel: ERROR_LABELS[e.type] })),
   })

@@ -234,6 +234,29 @@ export default function AdminClient({
     }
   }
 
+  // ── Annuler un import ──
+  const handleUndoImport = async () => {
+    if (!importResult?.createdIds?.length) return
+    const res = await fetch('/api/movements/import/undo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: importResult.createdIds }),
+    })
+    const data: { deleted: string[]; blocked: string[]; error?: string } = await res.json()
+    if (!res.ok) { toast(`Erreur : ${data.error}`, 'error'); return }
+
+    setMovements(prev => prev.filter(m => !data.deleted.includes(m.id)))
+
+    if (data.blocked.length > 0) {
+      toast(`${data.deleted.length} supprimé${data.deleted.length > 1 ? 's' : ''}, ${data.blocked.length} conservé${data.blocked.length > 1 ? 's' : ''} (déjà utilisé${data.blocked.length > 1 ? 's' : ''} dans une séance)`, 'error')
+      // On garde le résultat visible, avec les ID encore existants, pour permettre un nouvel essai
+      persistImportResult({ ...importResult, createdIds: data.blocked, undone: data.blocked.length === 0 })
+    } else {
+      toast(`Import annulé — ${data.deleted.length} mouvement${data.deleted.length > 1 ? 's' : ''} supprimé${data.deleted.length > 1 ? 's' : ''}`)
+      persistImportResult({ ...importResult, createdIds: [], undone: true })
+    }
+  }
+
   // ── New ──
   const handleCreated = (m: Movement) => {
     setMovements(prev => [...prev, m].sort((a, b) => a.bioType.localeCompare(b.bioType) || a.name.localeCompare(b.name)))
@@ -600,7 +623,7 @@ export default function AdminClient({
         {/* Modals */}
         {showNew && <NewMovementModal onSave={handleCreated} onClose={() => setShowNew(false)} />}
         {importResult && showImportModal && (
-          <ImportResultModal result={importResult} onClose={() => setShowImportModal(false)} onDiscard={discardImportResult} />
+          <ImportResultModal result={importResult} onClose={() => setShowImportModal(false)} onDiscard={discardImportResult} onUndo={handleUndoImport} />
         )}
         {deletingId && (
           <DeleteConfirm

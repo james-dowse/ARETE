@@ -185,9 +185,11 @@ export interface ImportErrorDetail {
 }
 export interface ImportResult {
   imported: number
+  createdIds?: string[] // permet d'annuler l'import (POST /api/movements/import/undo)
   errorCount: number
   errors: ImportErrorDetail[]
   at?: string // horodatage ISO, ajouté côté client pour l'historique local
+  undone?: boolean // l'annulation a déjà été effectuée
 }
 
 const ERROR_TYPE_COLORS: Record<string, string> = {
@@ -198,7 +200,22 @@ const ERROR_TYPE_COLORS: Record<string, string> = {
   erreur_bdd: 'var(--red)',
 }
 
-export function ImportResultModal({ result, onClose, onDiscard }: { result: ImportResult; onClose: () => void; onDiscard: () => void }) {
+export function ImportResultModal({
+  result, onClose, onDiscard, onUndo,
+}: {
+  result: ImportResult; onClose: () => void; onDiscard: () => void; onUndo: () => Promise<void>
+}) {
+  const [undoing, setUndoing] = useState(false)
+  const [confirmingUndo, setConfirmingUndo] = useState(false)
+
+  const handleUndoClick = async () => {
+    if (!confirmingUndo) { setConfirmingUndo(true); return }
+    setUndoing(true)
+    try { await onUndo() } finally { setUndoing(false); setConfirmingUndo(false) }
+  }
+
+  const canUndo = !result.undone && (result.createdIds?.length ?? 0) > 0
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div onClick={onClose} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.5)' }} />
@@ -207,12 +224,25 @@ export function ImportResultModal({ result, onClose, onDiscard }: { result: Impo
           <div>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Résultat de l&apos;import</h2>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-              <span style={{ color: 'var(--cypress-light, #86A06B)', fontWeight: 600 }}>{result.imported} importé{result.imported !== 1 ? 's' : ''}</span>
+              {result.undone ? (
+                <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Import annulé — mouvements supprimés</span>
+              ) : (
+                <span style={{ color: 'var(--cypress-light, #86A06B)', fontWeight: 600 }}>{result.imported} importé{result.imported !== 1 ? 's' : ''}</span>
+              )}
               {result.errorCount > 0 && <> · <span style={{ color: 'var(--red)', fontWeight: 600 }}>{result.errorCount} erreur{result.errorCount !== 1 ? 's' : ''}</span></>}
               {result.at && <> · {new Date(result.at).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</>}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            {canUndo && (
+              <button
+                onClick={handleUndoClick}
+                disabled={undoing}
+                style={{ background: 'none', border: 'none', cursor: undoing ? 'wait' : 'pointer', color: confirmingUndo ? 'var(--red)' : 'var(--text-muted)', fontSize: 12, fontWeight: confirmingUndo ? 700 : 400 }}
+              >
+                {undoing ? 'Annulation…' : confirmingUndo ? `Confirmer — supprimer ${result.createdIds!.length} mouvement${result.createdIds!.length > 1 ? 's' : ''} ?` : "Annuler l'import"}
+              </button>
+            )}
             <button onClick={onDiscard} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 12 }}>Purger</button>
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
           </div>
