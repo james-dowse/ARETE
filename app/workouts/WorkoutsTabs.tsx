@@ -2,9 +2,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BIO_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
+import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
 import { useToast } from '@/components/Toast'
-import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search } from 'lucide-react'
+import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search, ArrowUpDown } from 'lucide-react'
 
 interface WorkoutUser { id: string; email: string }
 interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string; complexity: string } }
@@ -26,6 +26,36 @@ interface Workout {
 }
 
 const fmtMin = (min: number) => min < 60 ? `~${min}min` : `~${Math.floor(min / 60)}h${min % 60 > 0 ? `${min % 60}min` : ''}`
+
+// ── Tri ──────────────────────────────────────────────────────────────────────
+type SortOption = 'recent' | 'oldest' | 'name' | 'name-desc' | 'duration' | 'movements'
+
+const SORT_LABELS: Record<SortOption, string> = {
+  recent: 'Plus récent',
+  oldest: 'Plus ancien',
+  name: 'Nom (A→Z)',
+  'name-desc': 'Nom (Z→A)',
+  duration: 'Durée croissante',
+  movements: 'Nb mouvements',
+}
+
+function estimatedMinutes(w: Workout): number {
+  const totalSets = w.movements.reduce((sum, wm) => sum + (wm.sets ?? 3), 0)
+  return Math.max(1, Math.round(totalSets * 1.5))
+}
+
+function sortWorkouts(list: Workout[], sortBy: SortOption): Workout[] {
+  const arr = [...list]
+  switch (sortBy) {
+    case 'oldest':    return arr.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    case 'name':      return arr.sort((a, b) => a.name.localeCompare(b.name))
+    case 'name-desc': return arr.sort((a, b) => b.name.localeCompare(a.name))
+    case 'duration':  return arr.sort((a, b) => estimatedMinutes(a) - estimatedMinutes(b))
+    case 'movements': return arr.sort((a, b) => b.movements.length - a.movements.length)
+    case 'recent':
+    default:          return arr.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }
+}
 
 // ── Helpers semaine ─────────────────────────────────────────────────────────
 function getMonday(d: Date): Date {
@@ -417,9 +447,19 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const [claiming, setClaiming] = useState(false)
   const [recentsOpen, setRecentsOpen] = useState(false)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
-  const [activeTag, setActiveTag] = useState<string | null>(null)
-  const [bioFilter, setBioFilter] = useState<string | null>(null)
+  // Filtres multi-sélection : un ensemble vide = pas de restriction sur ce critère
+  const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
+  const [bioFilters, setBioFilters] = useState<Set<string>>(new Set())
+  const [difficultyFilters, setDifficultyFilters] = useState<Set<string>>(new Set())
+  const [sortBy, setSortBy] = useState<SortOption>('recent')
   const [searchQuery, setSearchQuery] = useState('')
+
+  const toggleInSet = (set: Set<string>, setSet: (s: Set<string>) => void, value: string) => {
+    const next = new Set(set)
+    if (next.has(value)) next.delete(value)
+    else next.add(value)
+    setSet(next)
+  }
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
@@ -430,17 +470,20 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadMine = useCallback(async (tag?: string | null) => {
+  // Le tag n'est plus filtré côté serveur : toutes les données du tab sont
+  // chargées une fois, puis les filtres (bio/difficulté/tags, multi-sélection)
+  // s'appliquent côté client comme le reste — plus de rechargement réseau
+  // à chaque clic sur un tag.
+  const loadMine = useCallback(async () => {
     setFetchError(null)
     try {
-      const tagParam = tag ? `&tag=${encodeURIComponent(tag)}` : ''
       const [rMine, rSaved] = await Promise.all([
-        fetch(`/api/workouts?filter=mine${tagParam}`).then(async r => {
+        fetch('/api/workouts?filter=mine').then(async r => {
           const data = await r.json()
           if (!r.ok) throw new Error(data?.details ?? data?.error ?? `HTTP ${r.status}`)
           return Array.isArray(data) ? data : []
         }),
-        fetch(`/api/workouts?filter=saved${tagParam}`).then(async r => {
+        fetch('/api/workouts?filter=saved').then(async r => {
           const data = await r.json()
           if (!r.ok) throw new Error(data?.details ?? data?.error ?? `HTTP ${r.status}`)
           return Array.isArray(data) ? data : []
@@ -453,17 +496,16 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
     }
   }, [])
 
-  const loadCommunity = useCallback(async (tag?: string | null) => {
-    const tagParam = tag ? `&tag=${encodeURIComponent(tag)}` : ''
-    const data = await fetch(`/api/workouts?filter=community${tagParam}`).then(r => r.json())
+  const loadCommunity = useCallback(async () => {
+    const data = await fetch('/api/workouts?filter=community').then(r => r.json())
     setCommunityWorkouts(data)
   }, [])
 
   useEffect(() => {
     setLoading(true)
-    const p = tab === 'mine' ? loadMine(activeTag) : loadCommunity(activeTag)
+    const p = tab === 'mine' ? loadMine() : loadCommunity()
     p.finally(() => setLoading(false))
-  }, [tab, activeTag, loadMine, loadCommunity])
+  }, [tab, loadMine, loadCommunity])
 
   const tabStyle = (t: 'mine' | 'community'): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: 7,
@@ -498,15 +540,25 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   allSrc.forEach(w => w.tags?.split(',').map(t => t.trim()).filter(Boolean).forEach(t => allTagsSet.add(t)))
   const availableTags = Array.from(allTagsSet).sort()
 
-  // Filtre local : recherche texte + type biomécanique (indépendants du tag, appliqué côté client)
+  // Filtre local, multi-sélection : recherche texte + type biomécanique + difficulté + tags,
+  // tous appliqués côté client. À l'intérieur d'un critère c'est un OU (une séance "Tirage"
+  // OU "Poussée" matche si les deux sont cochés), entre critères c'est un ET.
   const matchesFilter = (w: Workout) => {
     if (searchQuery.trim() && !w.name.toLowerCase().includes(searchQuery.trim().toLowerCase())) return false
-    if (bioFilter && !w.movements.some(wm => wm.movement.bioType === bioFilter)) return false
+    if (bioFilters.size > 0 && !w.movements.some(wm => bioFilters.has(wm.movement.bioType))) return false
+    if (difficultyFilters.size > 0) {
+      const diff = computeWorkoutDifficulty(w.movements.map(wm => ({ complexity: wm.movement.complexity })))
+      if (!diff || !difficultyFilters.has(diff)) return false
+    }
+    if (activeTags.size > 0) {
+      const tags = w.tags?.split(',').map(t => t.trim()).filter(Boolean) ?? []
+      if (!tags.some(t => activeTags.has(t))) return false
+    }
     return true
   }
-  const myWorkoutsFiltered = myWorkouts.filter(matchesFilter)
-  const savedWorkoutsFiltered = savedWorkouts.filter(matchesFilter)
-  const communityWorkoutsFiltered = communityWorkouts.filter(matchesFilter)
+  const myWorkoutsFiltered = sortWorkouts(myWorkouts.filter(matchesFilter), sortBy)
+  const savedWorkoutsFiltered = sortWorkouts(savedWorkouts.filter(matchesFilter), sortBy)
+  const communityWorkoutsFiltered = sortWorkouts(communityWorkouts.filter(matchesFilter), sortBy)
 
   // Sections dérivées
   const allMine = [...myWorkoutsFiltered, ...savedWorkoutsFiltered]
@@ -542,41 +594,86 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
         )}
       </div>
 
-      {/* Recherche texte */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px', marginBottom: 12, maxWidth: 340 }}>
-        <Search size={14} color="var(--text-muted)" />
-        <input
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Rechercher une séance…"
-          style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }}
-        />
-        {searchQuery && (
-          <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
-            <X size={12} color="var(--text-muted)" />
-          </button>
+      {/* Recherche texte + tri */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px', maxWidth: 340, flex: 1, minWidth: 200 }}>
+          <Search size={14} color="var(--text-muted)" />
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Rechercher une séance…"
+            style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
+              <X size={12} color="var(--text-muted)" />
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px' }}>
+          <ArrowUpDown size={13} color="var(--text-muted)" />
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as SortOption)}
+            style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer' }}
+          >
+            {(Object.keys(SORT_LABELS) as SortOption[]).map(opt => (
+              <option key={opt} value={opt} style={{ background: 'var(--bg-card)' }}>{SORT_LABELS[opt]}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Filtre type biomécanique (multi-sélection) */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        {BIO_TYPES.map(bt => {
+          const active = bioFilters.has(bt)
+          return (
+            <button
+              key={bt}
+              onClick={() => toggleInSet(bioFilters, setBioFilters, bt)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                background: active ? `${BIO_TYPE_COLORS[bt]}18` : 'var(--bg-card)',
+                color: active ? BIO_TYPE_COLORS[bt] : 'var(--text-muted)',
+                border: `1px solid ${active ? BIO_TYPE_COLORS[bt] : 'var(--border)'}`,
+                transition: 'all 0.15s',
+              }}
+            >{BIO_TYPE_ICONS[bt]} {bt}</button>
+          )
+        })}
+        {bioFilters.size > 0 && (
+          <button
+            onClick={() => setBioFilters(new Set())}
+            style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'none', border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+          ><X size={11} /> Tout</button>
         )}
       </div>
 
-      {/* Filtre type biomécanique */}
+      {/* Filtre difficulté (multi-sélection) */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-        {BIO_TYPES.map(bt => (
+        {COMPLEXITIES.map(c => {
+          const active = difficultyFilters.has(c)
+          const color = COMPLEXITY_COLORS[c]
+          return (
+            <button
+              key={c}
+              onClick={() => toggleInSet(difficultyFilters, setDifficultyFilters, c)}
+              style={{
+                padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                background: active ? `${color}18` : 'var(--bg-card)',
+                color: active ? color : 'var(--text-muted)',
+                border: `1px solid ${active ? color : 'var(--border)'}`,
+                transition: 'all 0.15s',
+              }}
+            >{c}</button>
+          )
+        })}
+        {difficultyFilters.size > 0 && (
           <button
-            key={bt}
-            onClick={() => setBioFilter(bioFilter === bt ? null : bt)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              background: bioFilter === bt ? `${BIO_TYPE_COLORS[bt]}18` : 'var(--bg-card)',
-              color: bioFilter === bt ? BIO_TYPE_COLORS[bt] : 'var(--text-muted)',
-              border: `1px solid ${bioFilter === bt ? BIO_TYPE_COLORS[bt] : 'var(--border)'}`,
-              transition: 'all 0.15s',
-            }}
-          >{BIO_TYPE_ICONS[bt]} {bt}</button>
-        ))}
-        {bioFilter && (
-          <button
-            onClick={() => setBioFilter(null)}
+            onClick={() => setDifficultyFilters(new Set())}
             style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'none', border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
           ><X size={11} /> Tout</button>
         )}
@@ -588,19 +685,19 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
           {availableTags.map(tag => (
             <button
               key={tag}
-              onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+              onClick={() => toggleInSet(activeTags, setActiveTags, tag)}
               style={{
                 padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                background: activeTag === tag ? 'var(--crimson-ghost)' : 'var(--bg-card)',
-                color: activeTag === tag ? 'var(--crimson-bright)' : 'var(--text-muted)',
-                border: `1px solid ${activeTag === tag ? 'var(--crimson-border)' : 'var(--border)'}`,
+                background: activeTags.has(tag) ? 'var(--crimson-ghost)' : 'var(--bg-card)',
+                color: activeTags.has(tag) ? 'var(--crimson-bright)' : 'var(--text-muted)',
+                border: `1px solid ${activeTags.has(tag) ? 'var(--crimson-border)' : 'var(--border)'}`,
                 transition: 'all 0.15s',
               }}
             >#{tag}</button>
           ))}
-          {activeTag && (
+          {activeTags.size > 0 && (
             <button
-              onClick={() => setActiveTag(null)}
+              onClick={() => setActiveTags(new Set())}
               style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'none', border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
             ><X size={11} /> Tout</button>
           )}

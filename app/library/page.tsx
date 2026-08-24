@@ -3,7 +3,16 @@ import AppShell from '@/components/AppShell'
 import MovementModal from '@/components/MovementModal'
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, EQUIPMENT_ICONS } from '@/lib/types'
 import { useState, useEffect, useCallback } from 'react'
-import { Search, X, Star, BookOpen } from 'lucide-react'
+import { Search, X, Star, BookOpen, ArrowUpDown } from 'lucide-react'
+
+type SortOption = 'name' | 'name-desc' | 'complexity' | 'complexity-desc'
+
+const SORT_LABELS: Record<SortOption, string> = {
+  name: 'Nom (A→Z)',
+  'name-desc': 'Nom (Z→A)',
+  complexity: 'Difficulté ↑',
+  'complexity-desc': 'Difficulté ↓',
+}
 
 interface Movement {
   id: string
@@ -19,9 +28,18 @@ export default function LibraryPage() {
   const [movements, setMovements] = useState<Movement[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [bioFilter, setBioFilter] = useState<string | null>(null)
-  const [complexityFilter, setComplexityFilter] = useState<string | null>(null)
-  const [equipmentFilter, setEquipmentFilter] = useState<string | null>(null)
+  // Multi-sélection : un ensemble vide = pas de restriction sur ce critère
+  const [bioFilters, setBioFilters] = useState<Set<string>>(new Set())
+  const [complexityFilters, setComplexityFilters] = useState<Set<string>>(new Set())
+  const [equipmentFilters, setEquipmentFilters] = useState<Set<string>>(new Set())
+  const [sortBy, setSortBy] = useState<SortOption>('name')
+
+  const toggleInSet = (set: Set<string>, setSet: (s: Set<string>) => void, value: string) => {
+    const next = new Set(set)
+    if (next.has(value)) next.delete(value)
+    else next.add(value)
+    setSet(next)
+  }
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
   const [favIds, setFavIds] = useState<Set<string>>(new Set())
   const [tab, setTab] = useState<'all' | 'favorites'>('all')
@@ -33,18 +51,17 @@ export default function LibraryPage() {
     }).catch(() => {})
   }, [])
 
+  // bioType/complexity/equipment sont désormais filtrés côté client (multi-sélection) :
+  // seule la recherche texte reste envoyée au serveur.
   const fetchMovements = useCallback(async () => {
     setLoading(true)
     const params = new URLSearchParams()
-    if (bioFilter) params.set('bioType', bioFilter)
-    if (complexityFilter) params.set('complexity', complexityFilter)
-    if (equipmentFilter) params.set('equipment', equipmentFilter)
     if (search) params.set('search', search)
     const res = await fetch(`/api/movements?${params}`)
     const data = await res.json()
     setMovements(data)
     setLoading(false)
-  }, [bioFilter, complexityFilter, equipmentFilter, search])
+  }, [search])
 
   useEffect(() => {
     const t = setTimeout(fetchMovements, 300)
@@ -77,16 +94,45 @@ export default function LibraryPage() {
     return 0
   }
 
+  const complexityRank = (c: string) => {
+    const i = COMPLEXITIES.indexOf(c)
+    return i === -1 ? COMPLEXITIES.length : i
+  }
+
+  const sortComparator = (a: Movement, b: Movement) => {
+    switch (sortBy) {
+      case 'name-desc': return b.name.localeCompare(a.name)
+      case 'complexity': {
+        const d = complexityRank(a.complexity) - complexityRank(b.complexity)
+        return d !== 0 ? d : a.name.localeCompare(b.name)
+      }
+      case 'complexity-desc': {
+        const d = complexityRank(b.complexity) - complexityRank(a.complexity)
+        return d !== 0 ? d : a.name.localeCompare(b.name)
+      }
+      case 'name':
+      default: return a.name.localeCompare(b.name)
+    }
+  }
+
+  // La pertinence de recherche prime sur le tri choisi quand on filtre par texte
   const sorted = search
     ? [...movements].sort((a, b) => {
         const diff = relevanceScore(b.name, search) - relevanceScore(a.name, search)
         return diff !== 0 ? diff : a.name.localeCompare(b.name)
       })
-    : movements
+    : [...movements].sort(sortComparator)
 
-  const displayed = tab === 'favorites' ? sorted.filter(m => favIds.has(m.id)) : sorted
+  // Filtres client-side, multi-sélection : OR à l'intérieur d'un critère, AND entre critères
+  const matchesFilters = (m: Movement) =>
+    (bioFilters.size === 0 || bioFilters.has(m.bioType)) &&
+    (complexityFilters.size === 0 || complexityFilters.has(m.complexity)) &&
+    (equipmentFilters.size === 0 || (m.equipment != null && equipmentFilters.has(m.equipment)))
 
-  const groupByBio = !bioFilter
+  const filtered = sorted.filter(matchesFilters)
+  const displayed = tab === 'favorites' ? filtered.filter(m => favIds.has(m.id)) : filtered
+
+  const groupByBio = bioFilters.size === 0
   const grouped: Record<string, Movement[]> = {}
   if (groupByBio) {
     displayed.forEach(m => {
@@ -125,19 +171,41 @@ export default function LibraryPage() {
         {/* Filters (hidden in favorites tab) */}
         {tab === 'all' && (
           <div style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px' }}>
-              <Search size={16} color="var(--text-muted)" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un mouvement..." style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 14, flex: 1 }} />
-              {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={14} color="var(--text-muted)" /></button>}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', flex: 1, minWidth: 220 }}>
+                <Search size={16} color="var(--text-muted)" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un mouvement..." style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 14, flex: 1 }} />
+                {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={14} color="var(--text-muted)" /></button>}
+              </div>
+
+              <div
+                title={search ? 'Recherche active : tri par pertinence' : undefined}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', opacity: search ? 0.5 : 1 }}
+              >
+                <ArrowUpDown size={14} color="var(--text-muted)" />
+                <select
+                  value={sortBy}
+                  disabled={!!search}
+                  onChange={e => setSortBy(e.target.value as SortOption)}
+                  style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 14, cursor: search ? 'default' : 'pointer' }}
+                >
+                  {(Object.keys(SORT_LABELS) as SortOption[]).map(opt => (
+                    <option key={opt} value={opt} style={{ background: 'var(--bg-card)' }}>{SORT_LABELS[opt]}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
+            {/* Multi-sélection : clique plusieurs types pour les combiner (OR) */}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <button onClick={() => setBioFilter(null)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: !bioFilter ? '1px solid var(--text-primary)' : '1px solid var(--border)', background: !bioFilter ? 'rgba(255,255,255,0.1)' : 'var(--bg-card)', color: !bioFilter ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: !bioFilter ? 600 : 400 }}>Tous</button>
+              {bioFilters.size > 0 && (
+                <button onClick={() => setBioFilters(new Set())} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}><X size={11} /> Tout</button>
+              )}
               {BIO_TYPES.map(bt => {
-                const active = bioFilter === bt
+                const active = bioFilters.has(bt)
                 const color = BIO_TYPE_COLORS[bt]
                 return (
-                  <button key={bt} onClick={() => setBioFilter(active ? null : bt)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? color : 'var(--border)'}`, background: active ? `${color}22` : 'var(--bg-card)', color: active ? color : 'var(--text-muted)', fontWeight: active ? 600 : 400 }}>
+                  <button key={bt} onClick={() => toggleInSet(bioFilters, setBioFilters, bt)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? color : 'var(--border)'}`, background: active ? `${color}22` : 'var(--bg-card)', color: active ? color : 'var(--text-muted)', fontWeight: active ? 600 : 400 }}>
                     {BIO_TYPE_ICONS[bt]} {bt}
                   </button>
                 )
@@ -145,12 +213,14 @@ export default function LibraryPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <button onClick={() => setComplexityFilter(null)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: !complexityFilter ? '1px solid var(--text-primary)' : '1px solid var(--border)', background: !complexityFilter ? 'rgba(255,255,255,0.1)' : 'var(--bg-card)', color: !complexityFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}>Tous niveaux</button>
+              {complexityFilters.size > 0 && (
+                <button onClick={() => setComplexityFilters(new Set())} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}><X size={11} /> Tout</button>
+              )}
               {COMPLEXITIES.map(c => {
-                const active = complexityFilter === c
+                const active = complexityFilters.has(c)
                 const color = COMPLEXITY_COLORS[c]
                 return (
-                  <button key={c} onClick={() => setComplexityFilter(active ? null : c)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? color : 'var(--border)'}`, background: active ? `${color}22` : 'var(--bg-card)', color: active ? color : 'var(--text-muted)' }}>
+                  <button key={c} onClick={() => toggleInSet(complexityFilters, setComplexityFilters, c)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? color : 'var(--border)'}`, background: active ? `${color}22` : 'var(--bg-card)', color: active ? color : 'var(--text-muted)' }}>
                     {c}
                   </button>
                 )
@@ -158,11 +228,13 @@ export default function LibraryPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <button onClick={() => setEquipmentFilter(null)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: !equipmentFilter ? '1px solid var(--text-primary)' : '1px solid var(--border)', background: !equipmentFilter ? 'rgba(255,255,255,0.1)' : 'var(--bg-card)', color: !equipmentFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}>Tout équipement</button>
+              {equipmentFilters.size > 0 && (
+                <button onClick={() => setEquipmentFilters(new Set())} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}><X size={11} /> Tout</button>
+              )}
               {EQUIPMENT_TYPES.map(eq => {
-                const active = equipmentFilter === eq
+                const active = equipmentFilters.has(eq)
                 return (
-                  <button key={eq} onClick={() => setEquipmentFilter(active ? null : eq)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: `1px solid ${active ? 'var(--text-muted)' : 'var(--border)'}`, background: active ? 'rgba(255,255,255,0.1)' : 'var(--bg-card)', color: active ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: active ? 600 : 400 }}>
+                  <button key={eq} onClick={() => toggleInSet(equipmentFilters, setEquipmentFilters, eq)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: `1px solid ${active ? 'var(--text-muted)' : 'var(--border)'}`, background: active ? 'rgba(255,255,255,0.1)' : 'var(--bg-card)', color: active ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: active ? 600 : 400 }}>
                     {EQUIPMENT_ICONS[eq]} {eq}
                   </button>
                 )
