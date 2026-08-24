@@ -58,8 +58,14 @@ export function ImageEditZone({ url, position, onUrlChange, onPositionChange }: 
   const [dragging, setDragging] = useState(false)
   const objectPosition = position || '50% 50%'
 
+  const toDirectImageUrl = (raw: string) => {
+    const driveMatch = raw.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([\w-]+)/)
+    if (driveMatch) return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`
+    return raw
+  }
+
   const applyUrl = () => {
-    const trimmed = draft.trim()
+    const trimmed = toDirectImageUrl(draft.trim())
     if (!trimmed) { onUrlChange(null); setError(''); return }
     try {
       const u = new URL(trimmed)
