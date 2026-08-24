@@ -249,51 +249,56 @@ function WorkoutCard({
   return (
     <div className="card card-interactive" style={{ borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
       <Link href={`/workouts/${w.id}`} style={{ textDecoration: 'none', display: 'block', padding: '18px 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'stretch', gap: 14 }}>
+          <div style={{ width: 130, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {w.imageUrl ? (
               <img src={w.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block' }} />
             ) : (
-              <img src="/logo.svg" alt="" style={{ width: '60%', height: '60%', objectFit: 'contain', opacity: 0.18, display: 'block' }} />
+              <img src="/logo.svg" alt="" style={{ width: '40%', height: '40%', objectFit: 'contain', opacity: 0.18, display: 'block' }} />
             )}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>{w.name}</div>
-              {isFavorite && <Star size={12} fill="var(--gold)" color="var(--gold)" style={{ flexShrink: 0 }} />}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              {new Date(w.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
-              {w.duration ? ` · ${w.duration} min cible` : ''}
-              {context !== 'mine' && w.user && (
-                <>
-                  <span>·</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--bg-elevated)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'var(--text-muted)' }}>{initiale}</span>
-                    {w.user.email.split('@')[0]}
-                  </span>
-                </>
-              )}
-              {context === 'saved' && w._savedSource === 'shared' && (
-                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(200,165,95,0.12)', color: 'var(--gold)', border: '1px solid rgba(200,165,95,0.25)', fontWeight: 600 }}>recommandé</span>
-              )}
-            </div>
-          </div>
-          <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-dim)' }}>{w.movements.length}</div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--orange)', marginTop: 1 }}>{fmtMin(estMin)}</div>
-          </div>
-        </div>
 
-        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {w.movements.slice(0, 3).map((wm, i) => (
-            <div key={wm.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 10, color: 'var(--text-dim)', width: 14, textAlign: 'right' }}>{i + 1}</span>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{wm.movement.name}</span>
-              <span style={{ fontSize: 10, color: BIO_TYPE_COLORS[wm.movement.bioType] || 'var(--text-muted)', marginLeft: 'auto' }}>{wm.movement.bioType}</span>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>{w.name}</div>
+                  {isFavorite && <Star size={12} fill="var(--gold)" color="var(--gold)" style={{ flexShrink: 0 }} />}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {new Date(w.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                  {w.duration ? ` · ${w.duration} min cible` : ''}
+                  {context !== 'mine' && w.user && (
+                    <>
+                      <span>·</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--bg-elevated)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'var(--text-muted)' }}>{initiale}</span>
+                        {w.user.email.split('@')[0]}
+                      </span>
+                    </>
+                  )}
+                  {context === 'saved' && w._savedSource === 'shared' && (
+                    <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(200,165,95,0.12)', color: 'var(--gold)', border: '1px solid rgba(200,165,95,0.25)', fontWeight: 600 }}>recommandé</span>
+                  )}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-dim)' }}>{w.movements.length}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--orange)', marginTop: 1 }}>{fmtMin(estMin)}</div>
+              </div>
             </div>
-          ))}
-          {w.movements.length > 3 && <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>+{w.movements.length - 3} autres</div>}
+
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {w.movements.slice(0, 3).map((wm, i) => (
+                <div key={wm.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 10, color: 'var(--text-dim)', width: 14, textAlign: 'right' }}>{i + 1}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{wm.movement.name}</span>
+                  <span style={{ fontSize: 10, color: BIO_TYPE_COLORS[wm.movement.bioType] || 'var(--text-muted)', marginLeft: 'auto' }}>{wm.movement.bioType}</span>
+                </div>
+              ))}
+              {w.movements.length > 3 && <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>+{w.movements.length - 3} autres</div>}
+            </div>
+          </div>
         </div>
 
         <div style={{ marginTop: 10, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
