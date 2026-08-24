@@ -1,5 +1,8 @@
 import Sidebar from './Sidebar'
 
+// Volontairement synchrone et sans accès aux données : AppShell est rendu aussi
+// bien depuis des pages serveur que depuis des composants client (générateur,
+// planner, profil, détail séance…), ce qui interdit un composant serveur async.
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', width: '100%', minHeight: '100vh', background: 'var(--bg-primary)' }}>

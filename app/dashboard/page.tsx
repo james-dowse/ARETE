@@ -101,58 +101,54 @@ export default async function DashboardPage() {
     ? (user.firstName?.trim() || getDisplayName(user.email))
     : null
 
-  const [movementCount, workoutCount, templateCount, bioStats] = await Promise.all([
-    prisma.movement.count(),
-    prisma.workout.count(),
-    prisma.workoutTemplate.count(),
-    prisma.movement.groupBy({ by: ['bioType'], _count: true }),
-  ])
-
   const monthBegin = new Date()
   monthBegin.setDate(1)
   monthBegin.setHours(0, 0, 0, 0)
   const streakWindowBegin = new Date()
   streakWindowBegin.setDate(streakWindowBegin.getDate() - 60)
+  const { dayIdx, weekStartCandidates, weekBegin } = parisWeekInfo()
 
-  const [recentSessions, streakSessions, monthSessions] = user
-    ? await Promise.all([
-        prisma.workoutSession.findMany({
-          where: { userId: user.id },
-          take: 5,
-          orderBy: { doneAt: 'desc' },
-          include: { workout: { select: { id: true, name: true, duration: true, movements: { select: { movement: { select: { bioType: true } } } } } } },
-        }).catch(() => []),
-        prisma.workoutSession.findMany({
-          where: { userId: user.id, doneAt: { gte: streakWindowBegin } },
-          select: { doneAt: true },
-        }).catch(() => []),
-        prisma.workoutSession.findMany({
-          where: { userId: user.id, doneAt: { gte: monthBegin } },
-          include: { workout: { select: { duration: true } } },
-        }).catch(() => []),
-      ])
-    : [[], [], []]
+  // Un seul aller-retour : ces neuf requêtes sont indépendantes entre elles et
+  // ne dépendent que de `user`. Les enchaîner en quatre vagues successives
+  // multipliait la latence réseau par quatre sur la page d'accueil.
+  const [
+    movementCount, workoutCount, templateCount, bioStats,
+    recentSessions, streakSessions, monthSessions,
+    weekPlan, weekSessionCount,
+  ] = await Promise.all([
+    prisma.movement.count(),
+    prisma.workout.count(),
+    prisma.workoutTemplate.count(),
+    prisma.movement.groupBy({ by: ['bioType'], _count: true }),
+    user ? prisma.workoutSession.findMany({
+      where: { userId: user.id },
+      take: 5,
+      orderBy: { doneAt: 'desc' },
+      include: { workout: { select: { id: true, name: true, duration: true, movements: { select: { movement: { select: { bioType: true } } } } } } },
+    }).catch(() => []) : Promise.resolve([]),
+    user ? prisma.workoutSession.findMany({
+      where: { userId: user.id, doneAt: { gte: streakWindowBegin } },
+      select: { doneAt: true },
+    }).catch(() => []) : Promise.resolve([]),
+    user ? prisma.workoutSession.findMany({
+      where: { userId: user.id, doneAt: { gte: monthBegin } },
+      include: { workout: { select: { duration: true } } },
+    }).catch(() => []) : Promise.resolve([]),
+    user ? prisma.weekPlan.findFirst({
+      where: { userId: user.id, weekStart: { in: weekStartCandidates } },
+      include: {
+        entries: {
+          orderBy: [{ dayOfWeek: 'asc' }, { order: 'asc' }],
+          include: { workout: { select: { id: true, name: true, duration: true, movements: { select: { id: true, movement: { select: { bioType: true } } } } } } },
+        },
+      },
+    }).catch(() => null) : Promise.resolve(null),
+    user ? prisma.workoutSession.count({ where: { userId: user.id, doneAt: { gte: weekBegin } } }).catch(() => 0) : Promise.resolve(0),
+  ])
 
   const streak = computeStreak(streakSessions.map(s => s.doneAt))
   const monthMinutes = monthSessions.reduce((sum, s) => sum + (s.workout?.duration || 0), 0)
   const monthHours = Math.round(monthMinutes / 60)
-
-  // Séance(s) prévue(s) cette semaine (planner) + nombre de séances déjà faites
-  const { dayIdx, weekStartCandidates, weekBegin } = parisWeekInfo()
-  const [weekPlan, weekSessionCount] = user
-    ? await Promise.all([
-        prisma.weekPlan.findFirst({
-          where: { userId: user.id, weekStart: { in: weekStartCandidates } },
-          include: {
-            entries: {
-              orderBy: [{ dayOfWeek: 'asc' }, { order: 'asc' }],
-              include: { workout: { select: { id: true, name: true, duration: true, movements: { select: { id: true, movement: { select: { bioType: true } } } } } } },
-            },
-          },
-        }).catch(() => null),
-        prisma.workoutSession.count({ where: { userId: user.id, doneAt: { gte: weekBegin } } }).catch(() => 0),
-      ])
-    : [null, 0]
   const weekEntries = weekPlan?.entries ?? []
   const todayEntries = weekEntries.filter(e => e.dayOfWeek === dayIdx)
   const heroEntry = todayEntries[0]

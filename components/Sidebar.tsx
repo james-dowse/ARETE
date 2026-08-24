@@ -42,6 +42,8 @@ export default function Sidebar() {
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    // Réponse mise en cache par le navigateur (voir /api/me) : sur les
+    // navigations suivantes ce fetch ne repart pas sur le réseau.
     fetch('/api/me').then(r => r.json()).then(data => {
       if (data?.isAdmin) setIsAdmin(true)
     }).catch(() => {})

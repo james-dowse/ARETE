@@ -2,9 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserId } from '@/lib/session'
 
-const WORKOUT_INCLUDE = {
-  movements: { include: { movement: true }, orderBy: { order: 'asc' } },
+// Projection minimale pour les listes : la carte n'affiche que le nom, la date,
+// 3 mouvements et les pastilles. Charger `movement: true` tirait aussi
+// description / imageUrl / videoUrl de chaque mouvement de chaque séance —
+// plusieurs centaines de lignes de texte inutiles par chargement de page.
+const WORKOUT_SELECT = {
+  id: true,
+  name: true,
+  createdAt: true,
+  duration: true,
+  imageUrl: true,
+  imagePosition: true,
+  tags: true,
+  userId: true,
   user: { select: { id: true, email: true } },
+  movements: {
+    orderBy: { order: 'asc' },
+    select: {
+      id: true,
+      sets: true,
+      movement: { select: { name: true, bioType: true, complexity: true } },
+    },
+  },
 } as const
 
 export async function GET(req: NextRequest) {
@@ -28,7 +47,10 @@ export async function GET(req: NextRequest) {
           },
         },
         orderBy: { savedAt: 'desc' },
-        include: { workout: { include: WORKOUT_INCLUDE } },
+        select: {
+          source: true, savedAt: true, lastViewedAt: true, workoutId: true,
+          workout: { select: WORKOUT_SELECT },
+        },
       }),
       prisma.favoriteWorkout.findMany({
         where: { userId: currentUserId },
@@ -71,8 +93,8 @@ export async function GET(req: NextRequest) {
     prisma.workout.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: {
-        ...WORKOUT_INCLUDE,
+      select: {
+        ...WORKOUT_SELECT,
         ...(needsSavedBy
           ? { savedBy: { where: { userId: currentUserId! }, select: { id: true } } }
           : {}),

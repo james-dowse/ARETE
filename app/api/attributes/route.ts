@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { AttributeOption } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { isAdmin } from '@/lib/admin'
+import {
+  getCachedAttributes, setCachedAttributes, invalidateAttributes,
+  type AttributesPayload,
+} from '@/lib/attributes-cache'
+
+// Référentiel quasi statique : le navigateur peut le garder une minute et
+// continuer à l'afficher pendant la revalidation.
+const CACHE_HEADERS = { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' }
 
 // Default seed values (used only when DB is empty for a category)
 const DEFAULTS = {
@@ -32,31 +41,50 @@ const DEFAULTS = {
   ],
 }
 
-async function ensureSeeded() {
-  for (const [category, items] of Object.entries(DEFAULTS)) {
-    const count = await prisma.attributeOption.count({ where: { category } })
-    if (count === 0) {
-      for (const [i, item] of items.entries()) {
-        await prisma.attributeOption.upsert({
-          where: { category_value: { category, value: item.value } },
-          create: { ...item, category, position: i },
-          update: {},
-        })
-      }
+// Seed uniquement les catégories réellement absentes. N'est déclenché que
+// lorsqu'une lecture révèle un trou — pas avant chaque lecture comme avant.
+async function seedMissing(missing: string[]) {
+  for (const category of missing) {
+    const items = DEFAULTS[category as keyof typeof DEFAULTS]
+    if (!items) continue
+    for (const [i, item] of items.entries()) {
+      await prisma.attributeOption.upsert({
+        where: { category_value: { category, value: item.value } },
+        create: { ...item, category, position: i },
+        update: {},
+      })
     }
   }
 }
 
-export async function GET() {
-  try { await ensureSeeded() } catch { /* non-fatal: return whatever is already in DB */ }
+const ORDER_BY = [{ category: 'asc' }, { position: 'asc' }, { value: 'asc' }] as const
 
-  const all = await prisma.attributeOption.findMany({ orderBy: [{ category: 'asc' }, { position: 'asc' }, { value: 'asc' }] })
-
-  return NextResponse.json({
-    bioTypes:    all.filter(o => o.category === 'bioType'),
+function split(all: AttributeOption[]): AttributesPayload {
+  return {
+    bioTypes:     all.filter(o => o.category === 'bioType'),
     complexities: all.filter(o => o.category === 'complexity'),
-    equipments:  all.filter(o => o.category === 'equipment'),
-  })
+    equipments:   all.filter(o => o.category === 'equipment'),
+  }
+}
+
+export async function GET() {
+  const hit = getCachedAttributes()
+  if (hit) return NextResponse.json(hit, { headers: CACHE_HEADERS })
+
+  let all = await prisma.attributeOption.findMany({ orderBy: [...ORDER_BY] })
+
+  // Base neuve ou catégorie vidée : on sème puis on relit, une seule fois.
+  const missing = Object.keys(DEFAULTS).filter(c => !all.some(o => o.category === c))
+  if (missing.length > 0) {
+    try {
+      await seedMissing(missing)
+      all = await prisma.attributeOption.findMany({ orderBy: [...ORDER_BY] })
+    } catch { /* non bloquant : on renvoie ce que la base contient déjà */ }
+  }
+
+  const payload = split(all)
+  setCachedAttributes(payload)
+  return NextResponse.json(payload, { headers: CACHE_HEADERS })
 }
 
 export async function POST(req: NextRequest) {
@@ -72,5 +100,6 @@ export async function POST(req: NextRequest) {
   const opt = await prisma.attributeOption.create({
     data: { category, value: value.trim(), icon: icon?.trim() || null, color: color?.trim() || null, position },
   })
+  invalidateAttributes()
   return NextResponse.json(opt, { status: 201 })
 }
