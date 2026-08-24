@@ -441,12 +441,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         {/* Bio tags */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
           {difficulty && (
-            <span style={{ padding: '3px 11px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: COMPLEXITY_COLORS[difficulty], border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40` }}>
+            <span style={{ padding: '6px 16px', borderRadius: 20, fontSize: 15, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: COMPLEXITY_COLORS[difficulty], border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40` }}>
               {difficulty}
             </span>
           )}
           {bioTypes.map(bt => (
-            <span key={bt} style={{ padding: '3px 11px', borderRadius: 20, fontSize: 12, background: `${BIO_TYPE_COLORS[bt] || '#000'}10`, color: BIO_TYPE_COLORS[bt] || 'var(--text-muted)', border: `1px solid ${BIO_TYPE_COLORS[bt] || '#000'}20` }}>
+            <span key={bt} style={{ padding: '6px 16px', borderRadius: 20, fontSize: 15, fontWeight: 600, background: `${BIO_TYPE_COLORS[bt] || '#000'}10`, color: BIO_TYPE_COLORS[bt] || 'var(--text-muted)', border: `1px solid ${BIO_TYPE_COLORS[bt] || '#000'}20` }}>
               {BIO_TYPE_ICONS[bt]} {bt}
             </span>
           ))}
