@@ -46,3 +46,8 @@ next-env.d.ts
 prisma/*.db
 prisma/*.db-shm
 prisma/*.db-wal
+
+# Outils locaux et notes de travail — ne doivent pas partir en production
+.claude/
+REDESIGN_BRIEF.md
+REPAIR-GENERATEUR.md
