@@ -1,5 +1,4 @@
 'use client'
-import AppShell from '@/components/AppShell'
 import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, X, Zap, Calendar } from 'lucide-react'
@@ -73,7 +72,7 @@ export default function PlannerPage() {
   const totalWorkouts = entries.length
 
   return (
-    <AppShell>
+    <>
       <div style={{ maxWidth: 1320, margin: '0 auto', width: '100%' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
@@ -173,6 +172,6 @@ export default function PlannerPage() {
       </div>
 
       <style>{`@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:.8} }`}</style>
-    </AppShell>
+    </>
   )
 }

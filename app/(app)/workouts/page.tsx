@@ -1,4 +1,3 @@
-import AppShell from '@/components/AppShell'
 import Link from 'next/link'
 import { Zap } from 'lucide-react'
 import { getCurrentUserId } from '@/lib/session'
@@ -10,7 +9,7 @@ export default async function WorkoutsPage() {
   const currentUserId = await getCurrentUserId()
 
   return (
-    <AppShell>
+    <>
       <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
           <div>
@@ -25,6 +24,6 @@ export default async function WorkoutsPage() {
 
         <WorkoutsTabs currentUserId={currentUserId} />
       </div>
-    </AppShell>
+    </>
   )
 }

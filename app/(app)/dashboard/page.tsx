@@ -1,4 +1,3 @@
-import AppShell from '@/components/AppShell'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import { prisma } from '@/lib/prisma'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
@@ -172,7 +171,7 @@ export default async function DashboardPage() {
     : []
 
   return (
-    <AppShell>
+    <>
       <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%' }}>
 
         <ResumeSessionBanner />
@@ -504,6 +503,6 @@ export default async function DashboardPage() {
           .r-grid-2 { grid-template-columns: 1fr !important; }
         }
       `}</style>
-    </AppShell>
+    </>
   )
 }

@@ -1,9 +1,16 @@
+'use client'
+import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 
-// Volontairement synchrone et sans accès aux données : AppShell est rendu aussi
-// bien depuis des pages serveur que depuis des composants client (générateur,
-// planner, profil, détail séance…), ce qui interdit un composant serveur async.
+// Routes plein écran : séance en cours et vue impression n'affichent pas la
+// sidebar. Comme AppShell est désormais monté par le layout partagé, c'est ici
+// qu'on les laisse passer — un layout imbriqué ne pourrait pas s'en extraire.
+const FULLSCREEN = [/\/active$/, /\/print$/]
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const path = usePathname()
+  if (FULLSCREEN.some(re => re.test(path))) return <>{children}</>
+
   return (
     <div style={{ display: 'flex', width: '100%', minHeight: '100vh', background: 'var(--bg-primary)' }}>
       <Sidebar />

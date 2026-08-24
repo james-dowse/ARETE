@@ -1,5 +1,4 @@
 'use client'
-import AppShell from '@/components/AppShell'
 import RichEditor from '@/components/RichEditor'
 import MovementModal from '@/components/MovementModal'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
@@ -353,7 +352,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   }
 
   return (
-    <AppShell>
+    <>
       <div style={{ maxWidth: 900, margin: '0 auto', width: '100%', paddingBottom: isDirty ? 100 : 32 }}>
         <Link href={backTo ?? '/workouts'} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', textDecoration: 'none', fontSize: 13, marginBottom: 24 }}>
           <ArrowLeft size={14} /> {backTo === '/admin' ? 'Retour à l\'administration' : 'Retour aux séances'}
@@ -742,6 +741,6 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(16px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
       `}</style>
-    </AppShell>
+    </>
   )
 }

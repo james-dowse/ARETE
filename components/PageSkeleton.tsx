@@ -1,16 +1,14 @@
-import AppShell from './AppShell'
-
 // Squelette affiché pendant le rendu serveur d'une page.
 //
 // Sans loading.tsx, cliquer un lien vers une page dynamique fige l'écran
 // précédent jusqu'au retour du serveur : le clic semble ignoré. Avec ce
 // squelette, Next.js bascule instantanément et la page se remplit ensuite.
-// La sidebar est rendue ici aussi pour qu'elle ne clignote pas.
+//
+// La coquille (sidebar) n'est pas rendue ici : elle vient du layout partagé
+// de (app), qui reste monté pendant la navigation.
 
 function Bar({ w, h = 14, r = 6 }: { w: string | number; h?: number; r?: number }) {
-  return (
-    <div className="skeleton" style={{ width: w, height: h, borderRadius: r }} />
-  )
+  return <div className="skeleton" style={{ width: w, height: h, borderRadius: r }} />
 }
 
 export function SkeletonCard({ lines = 3 }: { lines?: number }) {
@@ -35,16 +33,14 @@ export function SkeletonCard({ lines = 3 }: { lines?: number }) {
 
 export default function PageSkeleton({ cards = 3 }: { cards?: number }) {
   return (
-    <AppShell>
-      <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
-          <Bar w={240} h={30} r={8} />
-          <Bar w={330} h={14} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {Array.from({ length: cards }).map((_, i) => <SkeletonCard key={i} />)}
-        </div>
+    <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
+        <Bar w={240} h={30} r={8} />
+        <Bar w={330} h={14} />
       </div>
-    </AppShell>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {Array.from({ length: cards }).map((_, i) => <SkeletonCard key={i} />)}
+      </div>
+    </div>
   )
 }

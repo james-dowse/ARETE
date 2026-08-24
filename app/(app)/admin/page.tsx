@@ -1,4 +1,3 @@
-import AppShell from '@/components/AppShell'
 import AdminClient from './AdminClient'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
@@ -19,11 +18,11 @@ export default async function AdminPage() {
   usageCounts.forEach((u: { movementId: string; _count: { _all: number } }) => { usageMap[u.movementId] = u._count._all })
 
   return (
-    <AppShell>
+    <>
       <AdminClient
         initialMovements={JSON.parse(JSON.stringify(movements))}
         usageMap={usageMap}
       />
-    </AppShell>
+    </>
   )
 }

@@ -1,6 +1,5 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import AppShell from '@/components/AppShell'
 import { Camera, Trash2, Save, Check } from 'lucide-react'
 
 interface Profile {
@@ -67,7 +66,7 @@ export default function ProfileClient() {
 
   if (notLoggedIn) {
     return (
-      <AppShell>
+      <>
         <div style={{ maxWidth: 560, margin: '0 auto', width: '100%', textAlign: 'center', paddingTop: 64 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Connexion requise</h2>
@@ -81,17 +80,17 @@ export default function ProfileClient() {
             Se connecter
           </a>
         </div>
-      </AppShell>
+      </>
     )
   }
 
   if (!profile) {
     return (
-      <AppShell>
+      <>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 560, margin: '0 auto', width: '100%' }}>
           {[1, 2].map(i => <div key={i} style={{ height: 140, background: 'var(--bg-card)', borderRadius: 14, opacity: 0.5 }} />)}
         </div>
-      </AppShell>
+      </>
     )
   }
 
@@ -103,7 +102,7 @@ export default function ProfileClient() {
     : profile.email
 
   return (
-    <AppShell>
+    <>
       <div style={{ maxWidth: 560, margin: '0 auto', width: '100%' }}>
         <div style={{ marginBottom: 32 }}>
           <h1 className="r-h1">Mon profil</h1>
@@ -208,7 +207,7 @@ export default function ProfileClient() {
       </div>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-    </AppShell>
+    </>
   )
 }
 

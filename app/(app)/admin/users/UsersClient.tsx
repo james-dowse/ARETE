@@ -1,5 +1,4 @@
 'use client'
-import AppShell from '@/components/AppShell'
 import { useState, useEffect, useRef } from 'react'
 import { Mail, Trash2, RefreshCw, UserPlus, CheckCircle, Clock, Copy, Check, Link2, AlertTriangle, Pencil, X, Save, Camera } from 'lucide-react'
 
@@ -117,7 +116,7 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
   const accepted = users.filter(u => u.status === 'accepted')
 
   return (
-    <AppShell>
+    <>
       <div style={{ maxWidth: 680 }}>
 
         {/* Header */}
@@ -240,7 +239,7 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
       `}</style>
-    </AppShell>
+    </>
   )
 }
 

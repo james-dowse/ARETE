@@ -1,5 +1,4 @@
 'use client'
-import AppShell from '@/components/AppShell'
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, FAILURE_REPS, computeWorkoutDifficulty, type GeneratedMovement } from '@/lib/types'
 import RichEditor from '@/components/RichEditor'
 import { useState, useEffect } from 'react'
@@ -627,7 +626,7 @@ export default function GeneratorPage() {
   }
 
   return (
-    <AppShell>
+    <>
       <div style={{ maxWidth: 1320, margin: '0 auto', width: '100%' }}>
         <div style={{ marginBottom: 24 }}>
           <h1 className="r-h1">Générateur</h1>
@@ -1395,7 +1394,7 @@ export default function GeneratorPage() {
           onClose={() => { setSubstitutingIndex(null); setAddingToBlockIndex(null) }}
         />
       )}
-    </AppShell>
+    </>
   )
 }
 

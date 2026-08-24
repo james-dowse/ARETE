@@ -1,9 +1,8 @@
 'use client'
-import AppShell from '@/components/AppShell'
 import MovementModal from '@/components/MovementModal'
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, EQUIPMENT_ICONS } from '@/lib/types'
 import { useState, useEffect, useCallback } from 'react'
-import { Search, X, Star, BookOpen, ArrowUpDown } from 'lucide-react'
+import { Search, X, Star, BookOpen, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react'
 
 type SortOption = 'name' | 'name-desc' | 'complexity' | 'complexity-desc'
 
@@ -33,6 +32,9 @@ export default function LibraryPage() {
   const [complexityFilters, setComplexityFilters] = useState<Set<string>>(new Set())
   const [equipmentFilters, setEquipmentFilters] = useState<Set<string>>(new Set())
   const [sortBy, setSortBy] = useState<SortOption>('name')
+  // On stocke les sections REPLIÉES : une typologie qui apparaît (nouveau filtre,
+  // nouvelle donnée) est donc dépliée par défaut, sans avoir à l'enregistrer.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
   const toggleInSet = (set: Set<string>, setSet: (s: Set<string>) => void, value: string) => {
     const next = new Set(set)
@@ -140,6 +142,7 @@ export default function LibraryPage() {
       grouped[m.bioType].push(m)
     })
   }
+  const groupNames = Object.keys(grouped).sort((a, b) => a.localeCompare(b))
 
   const tabBtn = (t: 'all' | 'favorites'): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: 6,
@@ -151,7 +154,7 @@ export default function LibraryPage() {
   })
 
   return (
-    <AppShell>
+    <>
       <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%' }}>
         <div style={{ marginBottom: 28 }}>
           <h1 className="r-h1">Bibliothèque</h1>
@@ -260,19 +263,44 @@ export default function LibraryPage() {
           </div>
         )}
 
+        {!loading && groupByBio && groupNames.length > 0 && (
+          <div style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
+            <button
+              onClick={() => setCollapsedGroups(new Set(groupNames))}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--text-muted)' }}
+            >Tout replier</button>
+            <button
+              onClick={() => setCollapsedGroups(new Set())}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--text-muted)' }}
+            >Tout déplier</button>
+          </div>
+        )}
+
         {!loading && groupByBio && (
-          Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([bt, mvts]) => (
-            <div key={bt} style={{ marginBottom: 28 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <span style={{ fontSize: 18 }}>{BIO_TYPE_ICONS[bt]}</span>
-                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: BIO_TYPE_COLORS[bt] || 'var(--text-primary)' }}>{bt}</h2>
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{mvts.length}</span>
+          groupNames.map(bt => {
+            const mvts = grouped[bt]
+            const collapsed = collapsedGroups.has(bt)
+            return (
+              <div key={bt} style={{ marginBottom: collapsed ? 10 : 28 }}>
+                <div
+                  onClick={() => toggleInSet(collapsedGroups, setCollapsedGroups, bt)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: collapsed ? 0 : 12, cursor: 'pointer', userSelect: 'none' }}
+                >
+                  <span style={{ fontSize: 18 }}>{BIO_TYPE_ICONS[bt]}</span>
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: BIO_TYPE_COLORS[bt] || 'var(--text-primary)' }}>{bt}</h2>
+                  <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{mvts.length}</span>
+                  <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', display: 'flex' }}>
+                    {collapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+                  </span>
+                </div>
+                {!collapsed && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
+                    {mvts.map(m => <MovementCard key={m.id} movement={m} isFav={favIds.has(m.id)} onFav={toggleFav} onClick={() => setSelectedMovementId(m.id)} />)}
+                  </div>
+                )}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
-                {mvts.map(m => <MovementCard key={m.id} movement={m} isFav={favIds.has(m.id)} onFav={toggleFav} onClick={() => setSelectedMovementId(m.id)} />)}
-              </div>
-            </div>
-          ))
+            )
+          })
         )}
 
         {!loading && !groupByBio && (
@@ -292,7 +320,7 @@ export default function LibraryPage() {
       <MovementModal movementId={selectedMovementId} onClose={() => setSelectedMovementId(null)} />
 
       <style>{`@keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }`}</style>
-    </AppShell>
+    </>
   )
 }
 

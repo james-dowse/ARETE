@@ -1,4 +1,3 @@
-import AppShell from '@/components/AppShell'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
@@ -80,7 +79,7 @@ export default async function ProgressionPage() {
   const weekSessionCount = weekBuckets[weekBuckets.length - 1]?.count ?? 0
 
   return (
-    <AppShell>
+    <>
       <div style={{ maxWidth: 1160, margin: '0 auto', width: '100%' }}>
         <div style={{ marginBottom: 32 }}>
           <h1 className="r-h1">Progression</h1>
@@ -232,6 +231,6 @@ export default async function ProgressionPage() {
       </div>
 
       <style>{`.workout-row:hover { background: var(--bg-elevated) !important; }`}</style>
-    </AppShell>
+    </>
   )
 }
