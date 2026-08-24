@@ -34,7 +34,34 @@ export default function AdminClient({
   const toast = useToast()
   const [importing, setImporting] = useState(false)
   const importRef = useRef<HTMLInputElement>(null)
+
+  // Résultat du dernier import : conservé dans localStorage (pas en base — c'est
+  // un outil de travail, pas un audit) pour rester accessible après un reload ou
+  // une fermeture d'onglet, jusqu'à purge explicite. La modale ne se rouvre pas
+  // automatiquement ; un bandeau discret reste cliquable tant que la donnée existe.
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const IMPORT_RESULT_KEY = 'arete_last_import_result'
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(IMPORT_RESULT_KEY)
+      if (raw) setImportResult(JSON.parse(raw))
+    } catch { /* localStorage indisponible ou donnée corrompue : on ignore */ }
+  }, [])
+
+  const persistImportResult = (r: ImportResult | null) => {
+    setImportResult(r)
+    try {
+      if (r) localStorage.setItem(IMPORT_RESULT_KEY, JSON.stringify(r))
+      else localStorage.removeItem(IMPORT_RESULT_KEY)
+    } catch { /* quota dépassé ou navigation privée : la session reste utilisable */ }
+  }
+
+  const discardImportResult = () => {
+    persistImportResult(null)
+    setShowImportModal(false)
+  }
 
   // ── Usage panel ──
   const [usagePanel, setUsagePanel] = useState<{ id: string; name: string; workouts: UsageWorkout[] } | null>(null)
@@ -193,7 +220,8 @@ export default function AdminClient({
       const freshRes = await fetch('/api/movements')
       const freshData = await freshRes.json()
       if (Array.isArray(freshData)) setMovements(freshData)
-      setImportResult(data)
+      persistImportResult({ ...data, at: new Date().toISOString() })
+      setShowImportModal(true)
       toast(
         data.errorCount > 0
           ? `Import terminé — ${data.imported} importés, ${data.errorCount} erreur${data.errorCount > 1 ? 's' : ''}`
@@ -251,6 +279,22 @@ export default function AdminClient({
             <p className="r-subtitle">
               {movements.length} mouvements · {filtered.length} affichés
             </p>
+            {importResult && !showImportModal && (
+              <button
+                onClick={() => setShowImportModal(true)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8,
+                  padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  background: importResult.errorCount > 0 ? 'rgba(185,28,28,0.1)' : 'rgba(134,160,107,0.12)',
+                  border: `1px solid ${importResult.errorCount > 0 ? 'rgba(185,28,28,0.3)' : 'rgba(134,160,107,0.3)'}`,
+                  color: importResult.errorCount > 0 ? 'var(--red)' : 'var(--cypress-light, #86A06B)',
+                }}
+              >
+                <AlertTriangle size={12} />
+                Dernier import : {importResult.imported} importé{importResult.imported !== 1 ? 's' : ''}
+                {importResult.errorCount > 0 ? `, ${importResult.errorCount} erreur${importResult.errorCount > 1 ? 's' : ''}` : ''}
+              </button>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <input ref={importRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: 'none' }} />
@@ -555,7 +599,9 @@ export default function AdminClient({
 
         {/* Modals */}
         {showNew && <NewMovementModal onSave={handleCreated} onClose={() => setShowNew(false)} />}
-        {importResult && <ImportResultModal result={importResult} onClose={() => setImportResult(null)} />}
+        {importResult && showImportModal && (
+          <ImportResultModal result={importResult} onClose={() => setShowImportModal(false)} onDiscard={discardImportResult} />
+        )}
         {deletingId && (
           <DeleteConfirm
             movement={movements.find(m => m.id === deletingId)!}

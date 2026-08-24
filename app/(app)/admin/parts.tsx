@@ -187,6 +187,7 @@ export interface ImportResult {
   imported: number
   errorCount: number
   errors: ImportErrorDetail[]
+  at?: string // horodatage ISO, ajouté côté client pour l'historique local
 }
 
 const ERROR_TYPE_COLORS: Record<string, string> = {
@@ -197,7 +198,7 @@ const ERROR_TYPE_COLORS: Record<string, string> = {
   erreur_bdd: 'var(--red)',
 }
 
-export function ImportResultModal({ result, onClose }: { result: ImportResult; onClose: () => void }) {
+export function ImportResultModal({ result, onClose, onDiscard }: { result: ImportResult; onClose: () => void; onDiscard: () => void }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div onClick={onClose} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.5)' }} />
@@ -208,9 +209,16 @@ export function ImportResultModal({ result, onClose }: { result: ImportResult; o
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
               <span style={{ color: 'var(--cypress-light, #86A06B)', fontWeight: 600 }}>{result.imported} importé{result.imported !== 1 ? 's' : ''}</span>
               {result.errorCount > 0 && <> · <span style={{ color: 'var(--red)', fontWeight: 600 }}>{result.errorCount} erreur{result.errorCount !== 1 ? 's' : ''}</span></>}
+              {result.at && <> · {new Date(result.at).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</>}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <button onClick={onDiscard} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 12 }}>Purger</button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
+          </div>
+        </div>
+        <div style={{ padding: '0 24px 14px', fontSize: 11.5, color: 'var(--text-dim)', marginTop: -10 }}>
+          Ce résultat reste accessible (bouton en haut de la page Mouvements) tant que tu ne le purges pas.
         </div>
 
         {result.errors.length > 0 ? (
