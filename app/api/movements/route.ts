@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, getCurrentUserId } from '@/lib/session'
 import { isAdmin } from '@/lib/admin'
+import { nextMovementId } from '@/lib/movement-id'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -36,29 +38,34 @@ export async function POST(req: NextRequest) {
   if (!isAdmin(user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { id, name, bioType, complexity, equipment, description, imageUrl, videoUrl } = body
+  const { name, bioType, complexity, equipment, description, imageUrl, videoUrl } = body
 
-  if (!id?.trim() || !name?.trim() || !bioType?.trim() || !complexity?.trim()) {
-    return NextResponse.json({ error: 'id, name, bioType et complexity sont requis' }, { status: 400 })
+  if (!name?.trim() || !bioType?.trim() || !complexity?.trim()) {
+    return NextResponse.json({ error: 'name, bioType et complexity sont requis' }, { status: 400 })
   }
 
-  // Check unique ID
-  const existing = await prisma.movement.findUnique({ where: { id: id.trim() } })
-  if (existing) {
-    return NextResponse.json({ error: `L'ID "${id.trim()}" existe déjà` }, { status: 409 })
+  const data = {
+    name: name.trim(),
+    bioType: bioType.trim(),
+    complexity: complexity.trim(),
+    equipment: equipment?.trim() || null,
+    description: description?.trim() || null,
+    imageUrl: imageUrl?.trim() || null,
+    videoUrl: videoUrl?.trim() || null,
   }
 
-  const movement = await prisma.movement.create({
-    data: {
-      id: id.trim(),
-      name: name.trim(),
-      bioType: bioType.trim(),
-      complexity: complexity.trim(),
-      equipment: equipment?.trim() || null,
-      description: description?.trim() || null,
-      imageUrl: imageUrl?.trim() || null,
-      videoUrl: videoUrl?.trim() || null,
-    },
-  })
-  return NextResponse.json(movement, { status: 201 })
+  // L'ID est toujours généré côté serveur (voir lib/movement-id.ts), jamais saisi
+  // depuis le formulaire. Une poignée de tentatives absorbe la course rare où deux
+  // créations concurrentes calculeraient le même "prochain" ID.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const id = await nextMovementId()
+    try {
+      const movement = await prisma.movement.create({ data: { id, ...data } })
+      return NextResponse.json(movement, { status: 201 })
+    } catch (e) {
+      const isUniqueClash = e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002'
+      if (!isUniqueClash || attempt === 4) throw e
+    }
+  }
+  return NextResponse.json({ error: 'Impossible de générer un ID unique, réessaie' }, { status: 500 })
 }

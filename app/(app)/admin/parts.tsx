@@ -47,7 +47,7 @@ export function NewMovementModal({
 }: {
   onSave: (m: Movement) => void; onClose: () => void
 }) {
-  const [form, setForm] = useState({ id: '', name: '', bioType: BIO_TYPES[0], complexity: COMPLEXITIES[0], equipment: '', description: '', videoUrl: '' })
+  const [form, setForm] = useState({ name: '', bioType: BIO_TYPES[0], complexity: COMPLEXITIES[0], equipment: '', description: '', videoUrl: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -55,7 +55,7 @@ export function NewMovementModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.id.trim() || !form.name.trim()) { setError('ID et Nom sont obligatoires'); return }
+    if (!form.name.trim()) { setError('Le nom est obligatoire'); return }
     setSaving(true)
     const res = await fetch('/api/movements', {
       method: 'POST',
@@ -88,16 +88,10 @@ export function NewMovementModal({
           <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14, marginBottom: 14 }}>
-          <div>
-            <label style={labelStyle}>ID *</label>
-            <input value={form.id} onChange={e => set('id', e.target.value)} placeholder="ex: 99.1" required style={fieldStyle} />
-            <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 3 }}>Format : numéro.variante</div>
-          </div>
-          <div>
-            <label style={labelStyle}>NOM *</label>
-            <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="ex: Bulgarian Split Squat" required style={fieldStyle} />
-          </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>NOM *</label>
+          <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="ex: Bulgarian Split Squat" required autoFocus style={fieldStyle} />
+          <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 3 }}>L&apos;ID est généré automatiquement</div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
@@ -145,6 +139,82 @@ export function NewMovementModal({
           </button>
         </div>
       </form>
+    </div>
+  )
+}
+
+// ─── Résultat d'import ────────────────────────────────────────────────────────
+export interface ImportErrorDetail {
+  line: number
+  name: string
+  id: string
+  type: string
+  typeLabel: string
+  message: string
+}
+export interface ImportResult {
+  imported: number
+  errorCount: number
+  errors: ImportErrorDetail[]
+}
+
+const ERROR_TYPE_COLORS: Record<string, string> = {
+  doublon_fichier: 'var(--orange)',
+  doublon_existant: 'var(--red)',
+  id_non_conforme: 'var(--red)',
+  champs_manquants: 'var(--text-muted)',
+  erreur_bdd: 'var(--red)',
+}
+
+export function ImportResultModal({ result, onClose }: { result: ImportResult; onClose: () => void }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div onClick={onClose} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.5)' }} />
+      <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 760, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', boxShadow: 'var(--elev-3)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px 16px' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Résultat de l&apos;import</h2>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+              <span style={{ color: 'var(--cypress-light, #86A06B)', fontWeight: 600 }}>{result.imported} importé{result.imported !== 1 ? 's' : ''}</span>
+              {result.errorCount > 0 && <> · <span style={{ color: 'var(--red)', fontWeight: 600 }}>{result.errorCount} erreur{result.errorCount !== 1 ? 's' : ''}</span></>}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
+        </div>
+
+        {result.errors.length > 0 ? (
+          <div style={{ overflowY: 'auto', padding: '0 24px 20px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: 'var(--text-dim)', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '6px 8px', fontWeight: 600 }}>Ligne</th>
+                  <th style={{ padding: '6px 8px', fontWeight: 600 }}>Mouvement</th>
+                  <th style={{ padding: '6px 8px', fontWeight: 600 }}>ID</th>
+                  <th style={{ padding: '6px 8px', fontWeight: 600 }}>Erreur</th>
+                  <th style={{ padding: '6px 8px', fontWeight: 600 }}>Détail</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.errors.map((e, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '7px 8px', color: 'var(--text-dim)' }}>{e.line}</td>
+                    <td style={{ padding: '7px 8px' }}>{e.name}</td>
+                    <td style={{ padding: '7px 8px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>{e.id || '—'}</td>
+                    <td style={{ padding: '7px 8px' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: ERROR_TYPE_COLORS[e.type] || 'var(--text-muted)', background: `${ERROR_TYPE_COLORS[e.type] || 'var(--text-muted)'}18` }}>
+                        {e.typeLabel}
+                      </span>
+                    </td>
+                    <td style={{ padding: '7px 8px', color: 'var(--text-muted)' }}>{e.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div style={{ padding: '0 24px 24px', color: 'var(--text-muted)', fontSize: 13 }}>Aucune erreur — tout a été importé proprement.</div>
+        )}
+      </div>
     </div>
   )
 }

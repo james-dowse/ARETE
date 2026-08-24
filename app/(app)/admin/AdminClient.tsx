@@ -4,8 +4,8 @@ import { useToast } from '@/components/Toast'
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, Upload, Download, CheckSquare, Copy, BarChart2 } from 'lucide-react'
 import {
-  Movement, UsageWorkout, SortKey, SortDir,
-  EditableCell, NewMovementModal, DeleteConfirm, SortTh,
+  Movement, UsageWorkout, SortKey, SortDir, ImportResult,
+  EditableCell, NewMovementModal, DeleteConfirm, SortTh, ImportResultModal,
   AttributesTab, DuplicatesTab, WorkoutsAdminTab, StatsTab,
 } from './parts'
 
@@ -34,6 +34,7 @@ export default function AdminClient({
   const toast = useToast()
   const [importing, setImporting] = useState(false)
   const importRef = useRef<HTMLInputElement>(null)
+  const [importResult, setImportResult] = useState<ImportResult | null>(null)
 
   // ── Usage panel ──
   const [usagePanel, setUsagePanel] = useState<{ id: string; name: string; workouts: UsageWorkout[] } | null>(null)
@@ -187,12 +188,18 @@ export default function AdminClient({
     form.append('file', file)
     try {
       const res = await fetch('/api/movements/import', { method: 'POST', body: form })
-      const data = await res.json()
+      const data: ImportResult & { error?: string } = await res.json()
       if (!res.ok) { toast(`Erreur : ${data.error}`, 'error'); return }
       const freshRes = await fetch('/api/movements')
       const freshData = await freshRes.json()
       if (Array.isArray(freshData)) setMovements(freshData)
-      toast(`Import terminé — ${data.imported} ajoutés/mis à jour, ${data.skipped} ignorés`)
+      setImportResult(data)
+      toast(
+        data.errorCount > 0
+          ? `Import terminé — ${data.imported} importés, ${data.errorCount} erreur${data.errorCount > 1 ? 's' : ''}`
+          : `Import terminé — ${data.imported} mouvement${data.imported !== 1 ? 's' : ''} importé${data.imported !== 1 ? 's' : ''} ✓`,
+        data.errorCount > 0 ? 'error' : undefined,
+      )
     } finally {
       setImporting(false)
       if (importRef.current) importRef.current.value = ''
@@ -548,6 +555,7 @@ export default function AdminClient({
 
         {/* Modals */}
         {showNew && <NewMovementModal onSave={handleCreated} onClose={() => setShowNew(false)} />}
+        {importResult && <ImportResultModal result={importResult} onClose={() => setImportResult(null)} />}
         {deletingId && (
           <DeleteConfirm
             movement={movements.find(m => m.id === deletingId)!}
