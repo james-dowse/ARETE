@@ -50,6 +50,16 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [pendingAdds, setPendingAdds] = useState<{ tempId: string; blockId: string | null; orig: WorkoutMovement; es: EditState }[]>([])
   const [removedWmIds, setRemovedWmIds] = useState<Set<string>>(new Set())
   const [removedBlockIds, setRemovedBlockIds] = useState<Set<string>>(new Set())
+  // Blocs ajoutés en édition, pas encore persistés — même logique différée que
+  // pendingAdds pour les mouvements. Un mouvement ajouté dans un bloc pending
+  // référence ce tempId comme blockId ; handleSave le remappe vers le vrai ID
+  // une fois le bloc créé côté serveur.
+  interface PendingBlock { tempId: string; bioType: string; instructions: string; superset: boolean; restAfter: number | null }
+  const [pendingBlocks, setPendingBlocks] = useState<PendingBlock[]>([])
+  const handleAddBlock = () => {
+    const tempId = `new-block-${Math.random().toString(36).slice(2)}`
+    setPendingBlocks(prev => [...prev, { tempId, bioType: '', instructions: '', superset: false, restAfter: null }])
+  }
   const [collapsedViewBlocks, setCollapsedViewBlocks] = useState<Record<string, boolean>>({})
   const toggleViewBlock = (id: string) => setCollapsedViewBlocks(prev => ({ ...prev, [id]: !prev[id] }))
   const [editTags, setEditTags] = useState<string[]>(() => initial.tags ? initial.tags.split(',').map(t => t.trim()).filter(Boolean) : [])
@@ -146,7 +156,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const isDirtyImagePosition = editMode && !isDirtyImage && imagePosition !== (initial.imagePosition ?? null)
   const isDirtyTags = editMode && editTags.join(',') !== (initial.tags ?? '')
   const isDirtyOrder = editMode && originals.some(o => (movementOrder[o.id] ?? o.order) !== o.order)
-  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyName || isDirtyDescription || isDirtyImage || isDirtyImagePosition || isDirtyTags || isDirtyOrder || removedWmIds.size > 0 || removedBlockIds.size > 0
+  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyName || isDirtyDescription || isDirtyImage || isDirtyImagePosition || isDirtyTags || isDirtyOrder || removedWmIds.size > 0 || removedBlockIds.size > 0 || pendingBlocks.length > 0
 
   const pendingCount = editMode
     ? editStates.filter((es, i) => {
@@ -161,6 +171,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       + removedWmIds.size
       + removedBlockIds.size
       + pendingAdds.length
+      + pendingBlocks.length
     : 0
 
   const handleEnterEdit = () => {
@@ -177,7 +188,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
-    setRemovedWmIds(new Set()); setRemovedBlockIds(new Set()); setPendingAdds([])
+    setRemovedWmIds(new Set()); setRemovedBlockIds(new Set()); setPendingAdds([]); setPendingBlocks([])
     const initOrder: Record<string, number> = {}
     initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
     setMovementOrder(initOrder)
@@ -198,7 +209,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
-    setRemovedWmIds(new Set()); setRemovedBlockIds(new Set()); setPendingAdds([])
+    setRemovedWmIds(new Set()); setRemovedBlockIds(new Set()); setPendingAdds([]); setPendingBlocks([])
     const initOrder: Record<string, number> = {}
     initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
     setMovementOrder(initOrder)
@@ -213,6 +224,25 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
 
   const handleSave = async () => {
     setSaving(true)
+
+    // Les blocs en attente doivent exister côté serveur AVANT les mouvements qui
+    // les référencent : cette étape est donc séquentielle, avant le Promise.all
+    // qui gère le reste (indépendant entre les entrées).
+    const blockIdMap: Record<string, string> = {}
+    if (pendingBlocks.length > 0) {
+      const created = await Promise.all(pendingBlocks.map(pb =>
+        fetch(`/api/workouts/${initial.id}/blocks`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bioType: pb.bioType || null, instructions: pb.instructions || null, superset: pb.superset, restAfter: pb.restAfter }),
+        }).then(r => r.ok ? r.json() : null).catch(() => null)
+      ))
+      if (created.some(c => !c)) {
+        setSaving(false)
+        toast('Un bloc n\'a pas pu être créé — réessaie.', 'error')
+        return
+      }
+      pendingBlocks.forEach((pb, i) => { blockIdMap[pb.tempId] = created[i].id })
+    }
 
     const changedMovements = editStates.filter((es, i) => {
       const orig = originals[i]
@@ -265,12 +295,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       ...[...removedBlockIds].map(blockId =>
         fetch(`/api/workouts/${initial.id}/blocks/${blockId}`, { method: 'DELETE' }).catch(() => null)
       ),
-      ...pendingAdds.map(p =>
-        fetch(`/api/workouts/${initial.id}/movements`, {
+      ...pendingAdds.map(p => {
+        const blockId = p.blockId !== null ? (blockIdMap[p.blockId] ?? p.blockId) : null
+        return fetch(`/api/workouts/${initial.id}/movements`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ movementId: p.es.movementId, blockId: p.blockId, sets: p.es.sets, reps: p.es.reps, duration: p.es.duration, rest: p.es.rest }),
+          body: JSON.stringify({ movementId: p.es.movementId, blockId, sets: p.es.sets, reps: p.es.reps, duration: p.es.duration, rest: p.es.rest }),
         }).catch(() => null)
-      ),
+      }),
     ])
 
     const failed = results.filter(r => !r || !r.ok).length
@@ -280,6 +311,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       return
     }
     setPendingAdds([])
+    setPendingBlocks([])
     setEditMode(false)
     toast('Modifications sauvegardées ✓')
     router.refresh()
@@ -659,6 +691,54 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
             <button onClick={() => setAddingToBlockId('__flat__')}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', background: 'none', border: '1px dashed var(--border)', borderRadius: 10, color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
               <Plus size={13} /> Ajouter un mouvement
+            </button>
+          )}
+
+          {/* Blocs ajoutés en édition, pas encore persistés */}
+          {editMode && pendingBlocks.map((pb, pbi) => {
+            const fakeBlock: WorkoutBlock = { id: pb.tempId, order: 0, bioType: '', instructions: '', superset: false, restAfter: null }
+            const blockAdds = pendingAdds.filter(p => p.blockId === pb.tempId)
+            return (
+              <div key={pb.tempId}>
+                <BlockHeaderEdit
+                  block={fakeBlock} index={initial.blocks.filter(b => !removedBlockIds.has(b.id)).length + pbi}
+                  title={pb.bioType}
+                  onTitleChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, bioType: v } : x))}
+                  instructions={pb.instructions}
+                  onChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, instructions: v } : x))}
+                  restAfter={pb.restAfter}
+                  onRestAfterChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, restAfter: v } : x))}
+                  superset={pb.superset}
+                  canSuperset={blockAdds.length > 1}
+                  onToggleSuperset={() => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, superset: !x.superset } : x))}
+                  isDirty={false}
+                  onRemove={() => {
+                    setPendingBlocks(prev => prev.filter(x => x.tempId !== pb.tempId))
+                    setPendingAdds(prev => prev.filter(p => p.blockId !== pb.tempId))
+                  }}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {blockAdds.map((p, pos) => (
+                    <MovementRowEdit key={p.tempId} es={p.es} original={p.orig} index={-1} displayNumber={pos + 1} allMovementIds={allMovementIds} onMovementClick={setSelectedMovementId}
+                      onUpdate={(_, patch) => setPendingAdds(prev => prev.map(x => x.tempId === p.tempId ? { ...x, es: { ...x.es, ...patch } } : x))}
+                      onRevert={() => setPendingAdds(prev => prev.map(x => x.tempId === p.tempId ? { ...x, es: toEditState(x.orig) } : x))}
+                      onRemove={() => setPendingAdds(prev => prev.filter(x => x.tempId !== p.tempId))}
+                      isDragging={false} onDragStart={() => {}} onDragOver={() => {}} onDrop={() => {}} onDragEnd={() => {}}
+                    />
+                  ))}
+                  <button onClick={() => setAddingToBlockId(pb.tempId)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', background: 'none', border: '1px dashed var(--border)', borderRadius: 10, color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    <Plus size={13} /> Ajouter un mouvement
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+
+          {editMode && (
+            <button onClick={handleAddBlock}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', marginTop: 4, background: 'var(--bg-elevated)', border: '1px dashed var(--text-dim)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+              <Plus size={13} /> Ajouter un bloc
             </button>
           )}
         </div>

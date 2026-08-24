@@ -130,11 +130,14 @@ export function ImageEditZone({ url, position, onUrlChange, onPositionChange }: 
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            style={{ position: 'relative', marginTop: 8, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none' }}>
+            style={{ position: 'relative', marginTop: 8, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none' }}>
+            {/* Même maxHeight que WorkoutImage (fiche figée) : sans ça, le cadre de
+                repositionnement recadre différemment de l'affichage final, et
+                l'ajustement ne se voit correctement qu'après sauvegarde. */}
             <img src={url} alt="" draggable={false}
               onError={() => setError("Impossible de charger cette image — vérifie l'URL")}
               onLoad={() => setError('')}
-              style={{ width: '100%', maxHeight: 220, objectFit: 'cover', objectPosition, display: 'block', pointerEvents: 'none' }} />
+              style={{ width: '100%', maxHeight: 320, objectFit: 'cover', objectPosition, display: 'block', pointerEvents: 'none' }} />
             {position && (
               <button onPointerDown={e => e.stopPropagation()} onClick={() => onPositionChange(null)}
                 style={{ position: 'absolute', bottom: 8, right: 8, padding: '5px 10px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#111', backdropFilter: 'blur(4px)' }}>
@@ -348,7 +351,7 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
           />
           <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>sec entre séries</span>
           <div style={{ display: 'flex', gap: 3 }}>
-            {[15, 30, 45, 60, 90].map(s => (
+            {[15, 30, 45, 60, 90, 120].map(s => (
               <button key={s} onClick={() => onUpdate(index, { rest: s })}
                 style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: es.rest === s ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${es.rest === s ? 'var(--dirty-border)' : 'var(--border)'}`, color: es.rest === s ? 'var(--dirty-text)' : 'var(--text-dim)', cursor: 'pointer' }}>
                 {s}
