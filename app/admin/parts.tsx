@@ -517,7 +517,7 @@ export function DifficultyTiersSection({ complexities }: { complexities: Attribu
                   const active = t.complexities.includes(c)
                   return (
                     <button key={c} onClick={() => toggleCx(i, c)}
-                      style={{ padding: '5px 13px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? 'var(--gold)' : 'var(--border)'}`, background: active ? 'var(--gold-ghost)' : 'var(--bg-elevated)', color: active ? 'var(--gold)' : 'var(--text-muted)', fontWeight: active ? 700 : 400 }}>
+                      style={{ padding: '5px 13px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? 'var(--crimson)' : 'var(--border)'}`, background: active ? 'var(--crimson-ghost)' : 'var(--bg-elevated)', color: active ? 'var(--crimson-bright)' : 'var(--text-muted)', fontWeight: active ? 700 : 400 }}>
                       {c}
                     </button>
                   )

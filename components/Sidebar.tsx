@@ -19,8 +19,10 @@ const allNav = [
   { href: '/admin/users', label: 'Utilisateurs',  icon: Users,           admin: true, sub: true },
 ]
 
-const EXPANDED_WIDTH = 224
-const COLLAPSED_WIDTH = 56
+const EXPANDED_WIDTH = 184
+const COLLAPSED_WIDTH = 52
+// Sous ce seuil, la sidebar se replie automatiquement pour laisser la place au contenu.
+const AUTO_COLLAPSE_BELOW = 1024
 
 interface SearchResult {
   workouts: { id: string; name: string; duration?: number | null; movements: { movement: { bioType: string } }[] }[]
@@ -47,10 +49,17 @@ export default function Sidebar() {
 
   const nav = allNav.filter(item => !item.admin || isAdmin)
 
-  // Replié par défaut sur mobile
+  // Replié par défaut sous le seuil, et suit le redimensionnement de fenêtre —
+  // sauf si l'utilisateur a lui-même choisi un état (on ne le contredit plus ensuite).
+  const userToggledRef = useRef(false)
   useEffect(() => {
-    const mobile = window.innerWidth < 768
-    if (mobile) setCollapsed(true)
+    const apply = () => {
+      if (userToggledRef.current) return
+      setCollapsed(window.innerWidth < AUTO_COLLAPSE_BELOW)
+    }
+    apply()
+    window.addEventListener('resize', apply)
+    return () => window.removeEventListener('resize', apply)
   }, [])
 
   // Persist theme
@@ -134,23 +143,22 @@ export default function Sidebar() {
     }}>
 
       {/* ── Brand ── */}
-      <div style={{ padding: collapsed ? '28px 0 24px' : '28px 20px 24px', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', transition: 'padding 0.22s', flexShrink: 0 }}>
-        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 12 }}>
-          <Image src="/logo.svg" alt="ARETE" width={32} height={32} style={{ flexShrink: 0, opacity: 0.9 }} />
+      <div style={{ padding: collapsed ? '22px 0 18px' : '22px 16px 18px', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', transition: 'padding 0.22s', flexShrink: 0 }}>
+        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 10 }}>
+          <Image src="/logo.svg" alt="ARETE" width={26} height={26} style={{ flexShrink: 0, opacity: 0.9 }} />
           <div style={{ overflow: 'hidden', width: collapsed ? 0 : 'auto', opacity: collapsed ? 0 : 1, transition: 'opacity 0.15s, width 0.22s', whiteSpace: 'nowrap' }}>
-            <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: '0.22em', color: 'var(--gold)', lineHeight: 1 }}>ARETE</div>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.22)', letterSpacing: '0.20em', marginTop: 4, textTransform: 'uppercase' }}>Protocol</div>
+            <div style={{ fontWeight: 800, fontSize: 13, letterSpacing: '0.18em', color: 'var(--gold)', lineHeight: 1 }}>ARETE</div>
           </div>
         </Link>
       </div>
 
       {/* ── Séparateur ── */}
-      <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(200,165,95,0.15) 0%, transparent 80%)', margin: collapsed ? '0 8px' : '0 20px', transition: 'margin 0.22s', flexShrink: 0 }} />
+      <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(200,165,95,0.15) 0%, transparent 80%)', margin: collapsed ? '0 8px' : '0 16px', transition: 'margin 0.22s', flexShrink: 0 }} />
 
       {/* ── Main nav — hauteur naturelle (pas flex:1) ── */}
-      <nav style={{ display: 'flex', flexDirection: 'column', padding: collapsed ? '20px 8px 0' : '20px 12px 0', transition: 'padding 0.22s' }}>
+      <nav style={{ display: 'flex', flexDirection: 'column', padding: collapsed ? '16px 6px 0' : '16px 8px 0', transition: 'padding 0.22s' }}>
         {!collapsed && (
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.14em', padding: '0 10px', marginBottom: 10, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', padding: '0 8px', marginBottom: 8, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
             Navigation
           </div>
         )}
@@ -166,24 +174,24 @@ export default function Sidebar() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: collapsed ? 'center' : 'flex-start',
-                gap: collapsed ? 0 : 10,
-                padding: collapsed ? '10px 0' : sub ? '6px 10px 6px 26px' : '8px 10px',
+                gap: collapsed ? 0 : 8,
+                padding: collapsed ? '9px 0' : sub ? '5px 8px 5px 22px' : '7px 8px',
                 borderRadius: 'var(--r-sm)',
-                marginBottom: 2,
+                marginBottom: 1,
                 textDecoration: 'none',
                 background: active ? 'var(--sidebar-active-bg)' : 'transparent',
                 boxShadow: active ? 'inset 0 0 0 1px var(--gold-border)' : 'none',
                 color: active ? 'var(--sidebar-text-active)' : sub ? 'rgba(255,255,255,0.38)' : 'var(--sidebar-text)',
                 fontWeight: active ? 600 : 400,
-                fontSize: sub ? 14 : 15,
+                fontSize: sub ? 12.5 : 13,
                 letterSpacing: active ? '0.01em' : 0,
                 transition: 'color 0.12s, background 0.12s, padding 0.22s, box-shadow 0.15s',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
               }}
             >
-              <Icon size={collapsed ? 18 : sub ? 12 : 14} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
-              <span style={{ overflow: 'hidden', maxWidth: collapsed ? 0 : 200, opacity: collapsed ? 0 : 1, transition: 'max-width 0.22s, opacity 0.15s' }}>
+              <Icon size={collapsed ? 17 : sub ? 11 : 13} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', maxWidth: collapsed ? 0 : 160, opacity: collapsed ? 0 : 1, transition: 'max-width 0.22s, opacity 0.15s' }}>
                 {label}
               </span>
             </Link>
@@ -192,42 +200,42 @@ export default function Sidebar() {
       </nav>
 
       {/* ── Recherche ── */}
-      <div style={{ padding: collapsed ? '8px 8px 0' : '8px 12px 0', flexShrink: 0 }}>
+      <div style={{ padding: collapsed ? '6px 6px 0' : '6px 8px 0', flexShrink: 0 }}>
         <button
           onClick={openSearch}
           title="Recherche globale (Ctrl+K)"
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 'var(--r-sm)', padding: collapsed ? '8px' : '7px 10px', cursor: 'pointer',
+            gap: 7, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 'var(--r-sm)', padding: collapsed ? '7px' : '6px 8px', cursor: 'pointer',
             color: 'rgba(255,255,255,0.35)', transition: 'color 0.15s, background 0.15s, border-color 0.15s',
           }}
           onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(200,165,95,0.4)' }}
           onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
         >
-          <Search size={14} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 12, flex: 1, textAlign: 'left', maxWidth: collapsed ? 0 : 120, opacity: collapsed ? 0 : 1, overflow: 'hidden', whiteSpace: 'nowrap', transition: 'max-width 0.22s, opacity 0.15s' }}>
+          <Search size={13} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 11, flex: 1, textAlign: 'left', maxWidth: collapsed ? 0 : 100, opacity: collapsed ? 0 : 1, overflow: 'hidden', whiteSpace: 'nowrap', transition: 'max-width 0.22s, opacity 0.15s' }}>
             Rechercher…
           </span>
-          {!collapsed && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', whiteSpace: 'nowrap', letterSpacing: '0.04em' }}>Ctrl K</span>}
+          {!collapsed && <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', whiteSpace: 'nowrap', letterSpacing: '0.04em' }}>Ctrl K</span>}
         </button>
       </div>
 
       {/* ── Bouton toggle — collé sous les liens ── */}
-      <div style={{ padding: collapsed ? '10px 8px' : '10px 12px', flexShrink: 0 }}>
+      <div style={{ padding: collapsed ? '8px 6px' : '8px 8px', flexShrink: 0 }}>
         <button
-          onClick={() => setCollapsed(c => !c)}
+          onClick={() => { userToggledRef.current = true; setCollapsed(c => !c) }}
           title={collapsed ? 'Déplier le menu' : 'Replier le menu'}
           style={{
             width: '100%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 8,
+            gap: 7,
             background: 'rgba(200,165,95,0.08)',
             border: '1px solid rgba(200,165,95,0.22)',
             borderRadius: 'var(--r-sm)',
-            padding: '9px',
+            padding: '7px',
             cursor: 'pointer',
             color: 'rgba(200,165,95,0.7)',
             transition: 'color 0.15s, background 0.15s, border-color 0.15s',
@@ -246,36 +254,36 @@ export default function Sidebar() {
             b.style.color = 'rgba(200,165,95,0.7)'
           }}
         >
-          {collapsed ? <ChevronRight size={16} strokeWidth={2.5} /> : <ChevronLeft size={16} strokeWidth={2.5} />}
-          <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.04em', maxWidth: collapsed ? 0 : 80, opacity: collapsed ? 0 : 1, transition: 'max-width 0.22s, opacity 0.15s', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          {collapsed ? <ChevronRight size={15} strokeWidth={2.5} /> : <ChevronLeft size={15} strokeWidth={2.5} />}
+          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', maxWidth: collapsed ? 0 : 70, opacity: collapsed ? 0 : 1, transition: 'max-width 0.22s, opacity 0.15s', overflow: 'hidden', whiteSpace: 'nowrap' }}>
             Replier
           </span>
         </button>
       </div>
 
       {/* ── Footer — poussé en bas ── */}
-      <div style={{ marginTop: 'auto', padding: collapsed ? '16px 8px' : '16px 12px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ marginTop: 'auto', padding: collapsed ? '12px 6px' : '12px 8px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {/* Dark/light toggle */}
         <button
           onClick={toggleTheme}
           title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: 8, background: 'rgba(200,165,95,0.06)', border: '1px solid rgba(200,165,95,0.15)',
-            borderRadius: 'var(--r-sm)', padding: collapsed ? '8px' : '8px 12px', cursor: 'pointer',
+            gap: 7, background: 'rgba(200,165,95,0.06)', border: '1px solid rgba(200,165,95,0.15)',
+            borderRadius: 'var(--r-sm)', padding: collapsed ? '7px' : '7px 8px', cursor: 'pointer',
             color: 'rgba(255,255,255,0.45)', transition: 'color 0.15s, background 0.15s',
           }}
           onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.background = 'rgba(200,165,95,0.12)' }}
           onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; e.currentTarget.style.background = 'rgba(200,165,95,0.06)' }}
         >
-          {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-          <span style={{ fontSize: 12, maxWidth: collapsed ? 0 : 100, opacity: collapsed ? 0 : 1, overflow: 'hidden', whiteSpace: 'nowrap', transition: 'max-width 0.22s, opacity 0.15s' }}>
+          {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+          <span style={{ fontSize: 11, maxWidth: collapsed ? 0 : 90, opacity: collapsed ? 0 : 1, overflow: 'hidden', whiteSpace: 'nowrap', transition: 'max-width 0.22s, opacity 0.15s' }}>
             {theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
           </span>
         </button>
 
         {!collapsed && (
-          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.10)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 0 0' }}>
+          <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.10)', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '2px 0 0' }}>
             © 2026 ARETE
           </div>
         )}

@@ -137,16 +137,15 @@ export default async function DashboardPage() {
   const monthMinutes = monthSessions.reduce((sum, s) => sum + (s.workout?.duration || 0), 0)
   const monthHours = Math.round(monthMinutes / 60)
 
-  // Séance(s) prévue(s) aujourd'hui (planner) + nombre de séances cette semaine
+  // Séance(s) prévue(s) cette semaine (planner) + nombre de séances déjà faites
   const { dayIdx, weekStartCandidates, weekBegin } = parisWeekInfo()
-  const [todayPlan, weekSessionCount] = user
+  const [weekPlan, weekSessionCount] = user
     ? await Promise.all([
         prisma.weekPlan.findFirst({
           where: { userId: user.id, weekStart: { in: weekStartCandidates } },
           include: {
             entries: {
-              where: { dayOfWeek: dayIdx },
-              orderBy: { order: 'asc' },
+              orderBy: [{ dayOfWeek: 'asc' }, { order: 'asc' }],
               include: { workout: { select: { id: true, name: true, duration: true, movements: { select: { id: true, movement: { select: { bioType: true } } } } } } },
             },
           },
@@ -154,8 +153,16 @@ export default async function DashboardPage() {
         prisma.workoutSession.count({ where: { userId: user.id, doneAt: { gte: weekBegin } } }).catch(() => 0),
       ])
     : [null, 0]
-  const todayEntries = todayPlan?.entries ?? []
+  const weekEntries = weekPlan?.entries ?? []
+  const todayEntries = weekEntries.filter(e => e.dayOfWeek === dayIdx)
   const heroEntry = todayEntries[0]
+
+  // « Prochaines séances » : le reste d'aujourd'hui, puis les jours suivants de la semaine —
+  // jamais le passé (dayOfWeek < dayIdx).
+  const DAY_LABELS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+  const upcomingEntries = weekEntries
+    .filter(e => e.dayOfWeek >= dayIdx && e.id !== heroEntry?.id)
+    .slice(0, 4)
 
   const maxBio = Math.max(...bioStats.map(s => s._count), 1)
 
@@ -177,8 +184,7 @@ export default async function DashboardPage() {
         {/* ── Hero : séance du jour ────────────────────────────────── */}
         <div className="hero-today" style={{
           position: 'relative',
-          background: 'linear-gradient(115deg, #0A0908 0%, #1a0708 55%, #9E1316 160%)',
-          borderBottom: '1px solid var(--gold-border)',
+          background: 'radial-gradient(120% 100% at 10% -10%, rgba(201,165,53,0.16), transparent 55%), radial-gradient(100% 95% at 95% 118%, rgba(180,85,45,0.42), transparent 62%), linear-gradient(150deg, #2A231B 0%, #1D1813 62%, #17130F 100%)',
           padding: '28px 32px 32px 32px',
           marginBottom: 32,
           overflow: 'hidden',
@@ -187,15 +193,20 @@ export default async function DashboardPage() {
           justifyContent: 'flex-end',
           minHeight: 380,
         }}>
-          {/* losanges décoratifs */}
-          <div style={{ position: 'absolute', top: -80, right: -60, width: 480, height: 480, border: '1px solid rgba(200,165,95,0.10)', transform: 'rotate(45deg)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', top: -40, right: -20, width: 400, height: 400, border: '1px solid rgba(200,165,95,0.07)', transform: 'rotate(45deg)', pointerEvents: 'none' }} />
+          {/* logo en filigrane */}
+          <svg style={{ position: 'absolute', right: -78, bottom: -104, pointerEvents: 'none' }} width="392" height="392" viewBox="0 0 100 100" fill="none" opacity={0.075}>
+            <circle cx="50" cy="50" r="40" stroke="#C9A535" strokeWidth="4.5" />
+            <line x1="50" y1="14" x2="19" y2="74" stroke="#C9A535" strokeWidth="4.5" strokeLinecap="round" />
+            <line x1="50" y1="14" x2="81" y2="74" stroke="#C9A535" strokeWidth="4.5" strokeLinecap="round" />
+          </svg>
+          {/* fondu vers le fond de page */}
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 90, background: 'linear-gradient(180deg, rgba(23,19,15,0) 0%, rgba(23,19,15,0.85) 100%)', pointerEvents: 'none' }} />
 
           {/* ligne du haut : date + salutation / ring */}
           <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#BBB093' }}>{dateStr}</span>
-              <span className="display" style={{ fontSize: 26, fontWeight: 600, color: '#EFEAD9', textTransform: 'none', letterSpacing: 'normal' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(240,235,225,0.45)' }}>{dateStr}</span>
+              <span style={{ fontSize: 26, fontWeight: 700, color: '#F0EBE1' }}>
                 {greeting}{displayName && <span style={{ color: 'var(--gold)' }}> {displayName}</span>}
               </span>
             </div>
@@ -203,14 +214,14 @@ export default async function DashboardPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{ position: 'relative', width: 76, height: 76, flexShrink: 0 }}>
                   <svg width="76" height="76" viewBox="0 0 92 92">
-                    <circle cx="46" cy="46" r="40" fill="none" stroke="rgba(223,216,194,0.12)" strokeWidth="5" />
+                    <circle cx="46" cy="46" r="40" fill="none" stroke="rgba(240,235,225,0.13)" strokeWidth="5" />
                     <circle cx="46" cy="46" r="40" fill="none" stroke="var(--gold)" strokeWidth="5" strokeLinecap="round" strokeDasharray={ringDash} transform="rotate(-90 46 46)" />
                   </svg>
                   <div style={{ position: 'absolute', top: 0, left: 0, width: 76, height: 76, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <span className="display tnum" style={{ fontSize: 22, color: '#EFEAD9', lineHeight: 1 }}>
-                      {weekSessionCount}<span style={{ color: '#8A8270', fontSize: 14 }}>/{WEEK_GOAL}</span>
+                    <span className="display tnum" style={{ fontSize: 22, color: '#F0EBE1', lineHeight: 1 }}>
+                      {weekSessionCount}<span style={{ color: 'rgba(240,235,225,0.40)', fontSize: 14 }}>/{WEEK_GOAL}</span>
                     </span>
-                    <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#BBB093' }}>semaine</span>
+                    <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(240,235,225,0.45)' }}>semaine</span>
                   </div>
                 </div>
                 <Link href="/profile" title="Mon profil" style={{ textDecoration: 'none', flexShrink: 0 }}>
@@ -218,7 +229,7 @@ export default async function DashboardPage() {
                     width: 44, height: 44, borderRadius: '50%',
                     overflow: 'hidden',
                     background: 'var(--bg-elevated)',
-                    border: '2px solid var(--border)',
+                    border: '2px solid var(--gold-border)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 16, fontWeight: 700, color: 'var(--gold)',
                     cursor: 'pointer',
@@ -237,13 +248,13 @@ export default async function DashboardPage() {
           {/* corps : eyebrow + titre + meta + CTA */}
           <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 28, height: 2, background: 'var(--crimson-bright)' }} />
-              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--red)' }}>
-                {heroEntry ? 'Séance du jour · Planifiée' : 'Aucune séance planifiée'}
+              <div style={{ width: 24, height: 2, background: '#D2794A' }} />
+              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#D2794A' }}>
+                {heroEntry ? 'Séance du jour' : 'Aucune séance planifiée'}
               </span>
             </div>
 
-            <h1 className="display hero-title" style={{ margin: 0, fontSize: 60, color: '#EFEAD9' }}>
+            <h1 className="display hero-title" style={{ margin: 0, fontSize: 38, color: '#F0EBE1', textTransform: 'uppercase' }}>
               {heroEntry ? heroEntry.workout.name : 'Forge ta séance'}
             </h1>
 
@@ -251,16 +262,16 @@ export default async function DashboardPage() {
               {heroEntry && (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#BBB093" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#DFD8C2' }}>{heroEntry.workout.duration ? `${heroEntry.workout.duration} min` : '—'}</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(240,235,225,0.60)" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(240,235,225,0.78)' }}>{heroEntry.workout.duration ? `${heroEntry.workout.duration} min` : '—'}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#BBB093" strokeWidth="2" strokeLinecap="round"><path d="M4 9 v6 M20 9 v6 M7 7 v10 M17 7 v10 M7 12 h10" /></svg>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#DFD8C2' }}>{heroEntry.workout.movements.length} mouvements</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(240,235,225,0.60)" strokeWidth="2" strokeLinecap="round"><path d="M4 9 v6 M20 9 v6 M7 7 v10 M17 7 v10 M7 12 h10" /></svg>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(240,235,225,0.78)' }}>{heroEntry.workout.movements.length} mouvements</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     {heroBioTypes.map(bt => (
-                      <span key={bt} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 10px', border: `1px solid ${BIO_TYPE_COLORS[bt] || 'rgba(200,165,95,0.4)'}` , color: BIO_TYPE_COLORS[bt] || 'var(--gold)' }}>
+                      <span key={bt} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 10px', border: `1px solid ${BIO_TYPE_COLORS[bt] || 'rgba(201,165,53,0.4)'}` , color: BIO_TYPE_COLORS[bt] || 'var(--gold)' }}>
                         {bt}
                       </span>
                     ))}
@@ -268,23 +279,84 @@ export default async function DashboardPage() {
                 </>
               )}
               <div style={{ flexGrow: 1 }} />
-              <Link href={heroEntry ? `/workouts/${heroEntry.workout.id}/active` : '/generator'} style={{ textDecoration: 'none' }}>
-                <div className="cta-crimson" style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  background: 'var(--crimson)',
-                  padding: '16px 36px',
-                  cursor: 'pointer',
-                  boxShadow: '0 8px 32px rgba(158,19,22,0.4)',
-                }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#F1EAD8"><polygon points="6 4 20 12 6 20 6 4" /></svg>
-                  <span className="display" style={{ fontSize: 20, color: '#F1EAD8' }}>
-                    {heroEntry ? 'Au combat' : 'Forger une séance'}
-                  </span>
+              {heroEntry ? (
+                <Link href={`/workouts/${heroEntry.workout.id}/active`} style={{ textDecoration: 'none' }}>
+                  <div className="cta-crimson" style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    background: 'var(--crimson)',
+                    padding: '16px 36px',
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 32px rgba(180,85,45,0.4)',
+                  }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#F8F4EC"><polygon points="6 4 20 12 6 20 6 4" /></svg>
+                    <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#F8F4EC' }}>
+                      Démarrer
+                    </span>
+                  </div>
+                </Link>
+              ) : (
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <Link href="/library" style={{ textDecoration: 'none' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      border: '1px solid rgba(240,235,225,0.30)',
+                      padding: '15px 28px',
+                      cursor: 'pointer',
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(240,235,225,0.80)" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="21" y2="21" /></svg>
+                      <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(240,235,225,0.85)' }}>
+                        Explorer
+                      </span>
+                    </div>
+                  </Link>
+                  <Link href="/generator" style={{ textDecoration: 'none' }}>
+                    <div className="cta-crimson" style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      background: 'var(--crimson)',
+                      padding: '16px 36px',
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 32px rgba(180,85,45,0.4)',
+                    }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="#F8F4EC"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+                      <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#F8F4EC' }}>
+                        Forger
+                      </span>
+                    </div>
+                  </Link>
                 </div>
-              </Link>
+              )}
             </div>
           </div>
         </div>
+
+        {/* ── Prochaines séances (seulement si quelque chose est planifié) ── */}
+        {heroEntry && upcomingEntries.length > 0 && (
+          <div style={{ marginBottom: 32 }}>
+            <p style={SECTION_LABEL_GOLD}>Prochaines séances</p>
+            <div style={{ display: 'flex', flexDirection: 'column', marginTop: 12, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              {upcomingEntries.map((entry, i) => (
+                <Link key={entry.id} href={`/workouts/${entry.workout.id}`} style={{ textDecoration: 'none' }}>
+                  <div className="workout-row" style={{
+                    display: 'flex', alignItems: 'center', gap: 16,
+                    padding: '14px 20px',
+                    borderTop: i > 0 ? '1px solid var(--border)' : 'none',
+                    cursor: 'pointer',
+                  }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gold)', width: 76, flexShrink: 0 }}>
+                      {entry.dayOfWeek === dayIdx ? "Aujourd'hui" : DAY_LABELS[entry.dayOfWeek]}
+                    </span>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', flexGrow: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {entry.workout.name}
+                    </span>
+                    {entry.workout.duration && (
+                      <span style={{ fontSize: 12, color: 'var(--text-dim)', flexShrink: 0 }}>{entry.workout.duration} min</span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── Stats ────────────────────────────────────────────── */}
         <div className="r-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, marginBottom: 40, background: 'var(--border)' }}>
@@ -431,7 +503,7 @@ export default async function DashboardPage() {
         .avatar-btn:hover { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(200,165,95,0.18) !important; }
         @media (max-width: 720px) {
           .hero-today { min-height: 460px; padding: 24px 20px 28px 20px !important; }
-          .hero-title { font-size: 48px !important; }
+          .hero-title { font-size: 30px !important; }
           .r-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
           .r-grid-2 { grid-template-columns: 1fr !important; }
         }

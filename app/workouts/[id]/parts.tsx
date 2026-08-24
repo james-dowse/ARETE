@@ -447,9 +447,9 @@ export function BlockHeaderEdit({ block, index, title, onTitleChange, instructio
             style={{
               flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '2px 9px', borderRadius: 20, cursor: 'pointer',
               fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-              border: `1px solid ${superset ? 'var(--gold)' : 'var(--border)'}`,
-              background: superset ? 'var(--gold-ghost)' : 'transparent',
-              color: superset ? 'var(--gold)' : 'var(--text-dim)',
+              border: `1px solid ${superset ? 'var(--crimson)' : 'var(--border)'}`,
+              background: superset ? 'var(--crimson-ghost)' : 'transparent',
+              color: superset ? 'var(--crimson-bright)' : 'var(--text-dim)',
             }}>
             ⚡ Superset
           </button>
@@ -572,9 +572,9 @@ export function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: str
             <button
               key={i}
               onClick={() => setSelectedDay(i)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 9, border: `1px solid ${selectedDay === i ? 'var(--gold)' : i === todayIdx ? 'var(--gold-border)' : 'var(--border)'}`, background: selectedDay === i ? 'var(--gold-ghost)' : 'var(--bg-elevated)', cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 9, border: `1px solid ${selectedDay === i ? 'var(--crimson)' : i === todayIdx ? 'var(--gold-border)' : 'var(--border)'}`, background: selectedDay === i ? 'var(--crimson-ghost)' : 'var(--bg-elevated)', cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s' }}
             >
-              <span style={{ fontWeight: 600, fontSize: 14, color: selectedDay === i ? 'var(--gold)' : 'var(--text-primary)', flex: 1 }}>{day}</span>
+              <span style={{ fontWeight: 600, fontSize: 14, color: selectedDay === i ? 'var(--crimson-bright)' : 'var(--text-primary)', flex: 1 }}>{day}</span>
               {i === todayIdx && <span style={{ fontSize: 10, color: 'var(--gold)', fontWeight: 600 }}>Aujourd'hui</span>}
             </button>
           ))}

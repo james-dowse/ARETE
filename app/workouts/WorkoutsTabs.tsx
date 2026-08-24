@@ -74,9 +74,9 @@ function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: string; on
               key={i}
               onClick={() => setSelected(i)}
               style={{
-                padding: '10px 4px', borderRadius: 10, border: `2px solid ${selected === i ? 'var(--gold)' : i === todayIdx ? 'rgba(200,165,95,0.3)' : 'var(--border)'}`,
-                background: selected === i ? 'rgba(200,165,95,0.15)' : 'var(--bg-elevated)',
-                color: selected === i ? 'var(--gold)' : i === todayIdx ? 'rgba(200,165,95,0.8)' : 'var(--text-muted)',
+                padding: '10px 4px', borderRadius: 10, border: `2px solid ${selected === i ? 'var(--crimson)' : i === todayIdx ? 'rgba(200,165,95,0.3)' : 'var(--border)'}`,
+                background: selected === i ? 'var(--crimson-ghost)' : 'var(--bg-elevated)',
+                color: selected === i ? 'var(--crimson-bright)' : i === todayIdx ? 'rgba(200,165,95,0.8)' : 'var(--text-muted)',
                 fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
               }}
             >{day}</button>
@@ -577,9 +577,9 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
               onClick={() => setActiveTag(activeTag === tag ? null : tag)}
               style={{
                 padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                background: activeTag === tag ? 'rgba(200,165,95,0.18)' : 'var(--bg-card)',
-                color: activeTag === tag ? 'var(--gold)' : 'var(--text-muted)',
-                border: `1px solid ${activeTag === tag ? 'var(--gold-border)' : 'var(--border)'}`,
+                background: activeTag === tag ? 'var(--crimson-ghost)' : 'var(--bg-card)',
+                color: activeTag === tag ? 'var(--crimson-bright)' : 'var(--text-muted)',
+                border: `1px solid ${activeTag === tag ? 'var(--crimson-border)' : 'var(--border)'}`,
                 transition: 'all 0.15s',
               }}
             >#{tag}</button>

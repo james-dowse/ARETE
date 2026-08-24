@@ -318,7 +318,7 @@ export default function AdminClient({
                 value={stagedBioType}
                 onChange={e => setStagedBioType(e.target.value)}
                 disabled={bulkWorking}
-                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedBioType ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 7, color: stagedBioType ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedBioType ? 'var(--crimson)' : 'var(--border)'}`, borderRadius: 7, color: stagedBioType ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
               >
                 <option value="">Changer…</option>
                 {BIO_TYPES.map(bt => <option key={bt} value={bt}>{BIO_TYPE_ICONS[bt]} {bt}</option>)}
@@ -332,7 +332,7 @@ export default function AdminClient({
                 value={stagedComplexity}
                 onChange={e => setStagedComplexity(e.target.value)}
                 disabled={bulkWorking}
-                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedComplexity ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 7, color: stagedComplexity ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedComplexity ? 'var(--crimson)' : 'var(--border)'}`, borderRadius: 7, color: stagedComplexity ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
               >
                 <option value="">Changer…</option>
                 {COMPLEXITIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -346,7 +346,7 @@ export default function AdminClient({
                 value={stagedEquipment}
                 onChange={e => setStagedEquipment(e.target.value)}
                 disabled={bulkWorking}
-                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedEquipment ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 7, color: stagedEquipment ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+                style={{ padding: '4px 8px', background: 'var(--bg-elevated)', border: `1px solid ${stagedEquipment ? 'var(--crimson)' : 'var(--border)'}`, borderRadius: 7, color: stagedEquipment ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
               >
                 <option value="">Changer…</option>
                 <option value="__clear__">— Effacer —</option>
@@ -480,7 +480,7 @@ export default function AdminClient({
                           <button
                             onClick={() => openUsagePanel(m)}
                             title="Voir les séances"
-                            style={{ fontSize: 12, fontWeight: 700, color: usagePanel?.id === m.id ? 'var(--gold)' : 'var(--blue)', background: usagePanel?.id === m.id ? 'rgba(200,165,95,0.12)' : 'rgba(96,165,250,0.08)', border: `1px solid ${usagePanel?.id === m.id ? 'rgba(200,165,95,0.3)' : 'rgba(96,165,250,0.2)'}`, borderRadius: 6, padding: '2px 9px', cursor: 'pointer', transition: 'all 0.15s' }}
+                            style={{ fontSize: 12, fontWeight: 700, color: usagePanel?.id === m.id ? 'var(--crimson-bright)' : 'var(--blue)', background: usagePanel?.id === m.id ? 'var(--crimson-ghost)' : 'rgba(96,165,250,0.08)', border: `1px solid ${usagePanel?.id === m.id ? 'var(--crimson-border)' : 'rgba(96,165,250,0.2)'}`, borderRadius: 6, padding: '2px 9px', cursor: 'pointer', transition: 'all 0.15s' }}
                           >
                             {usage}
                           </button>

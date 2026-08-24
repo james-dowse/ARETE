@@ -1,90 +1,91 @@
 @import "tailwindcss";
 
 :root {
-  /* ══ SPARTE — palette martiale (eggradients "Spartan colors") ══
-     Midnight #000 · Crimson #9E1316 · Gold Ochre #C8A55F
-     Beaver #9D8C71 · Sage #BBB093 · Spartan Blue #7A8898
-     crimson = l'effort · ocre = l'armure · sauge = la sagesse      */
+  /* ══ BASALTE — palette minérale chaude ══
+     Basalte #17130F · Or #C9A535 · Terracotta #B4552D · Mousse #86A06B
+     or = marque et progression · terracotta = l'action, le maintenant · mousse = l'accompli */
 
-  /* ── Canvas — midnight, à peine réchauffé ─────────────────────── */
-  --bg-primary:   #0A0908;
-  --bg-card:      #161311;   /* cartes — plaque opaque, posée à plat */
-  --bg-card-solid: #161311;
-  --bg-elevated:  #201C18;   /* modales, inputs, dropdowns */
-  --border:       #322B23;   /* beaver assombri */
-  --border-plus:  #463D31;
+  /* ── Canvas — basalte réchauffé ────────────────────────────────── */
+  --bg-primary:   #17130F;
+  --bg-card:      #1D1914;   /* cartes — plaque opaque, posée à plat */
+  --bg-card-solid: #1D1914;
+  --bg-elevated:  #241F19;   /* modales, inputs, dropdowns */
+  --border:       rgba(240,235,225,0.10);
+  --border-plus:  rgba(240,235,225,0.16);
   --glass-border: rgba(255,255,255,0.07);  /* rétro-compat (verre supprimé) */
   --glass-blur-sm: 0px;
   --glass-blur-lg: 0px;
   --shadow-sm:    0 0 0 1px rgba(0,0,0,0.5);
   --shadow-md:    0 8px 32px rgba(0,0,0,0.6);
 
-  /* ── Gold Ochre — l'armure : structure, titres, cadres ────────── */
-  --gold:         #C8A55F;
-  --gold-bright:  #D6B56E;
-  --gold-dim:     #B99850;
-  --gold-ghost:   rgba(200,165,95,0.10);
-  --gold-border:  rgba(200,165,95,0.28);
+  /* ── Or — la marque : structure, titres, progression ──────────── */
+  --gold:         #C9A535;
+  --gold-bright:  #D9B856;
+  --gold-dim:     #B08F26;
+  --gold-ghost:   rgba(201,165,53,0.10);
+  --gold-border:  rgba(201,165,53,0.30);
 
-  /* ── Crimson — la cape : l'effort, l'action, le sang ──────────── */
-  --crimson:        #9E1316;
-  --crimson-bright: #B81B1F;
-  --crimson-ghost:  rgba(158,19,22,0.14);
-  --crimson-border: rgba(184,27,31,0.40);
+  /* ── Terracotta — l'action, l'effort en cours ──────────────────── */
+  --crimson:        #B4552D;
+  --crimson-bright: #C96538;
+  --crimson-ghost:  rgba(180,85,45,0.14);
+  --crimson-border: rgba(201,101,56,0.40);
 
-  /* ── Parchemin sauge — le registre « maintenant » ─────────────── */
-  --ivory:        #DFD8C2;   /* sage éclairci vers parchemin */
-  --ivory-card:   #E9E2CC;
-  --ink:          #12100C;   /* encre — texte sur or, crimson clair et parchemin */
-  --ink-muted:    rgba(18,16,12,0.62);
-  --ink-dim:      rgba(18,16,12,0.38);
+  /* ── Parchemin — le registre « maintenant » ────────────────────── */
+  --ivory:        #EFE8D8;
+  --ivory-card:   #F5F1E8;
+  --ink:          #17130F;   /* encre — texte sur or, terracotta clair et parchemin */
+  --ink-muted:    rgba(23,19,15,0.62);
+  --ink-dim:      rgba(23,19,15,0.38);
 
-  /* ── Sage & beaver — tempérance (rétro-compat cyprès) ─────────── */
-  --cypress:       #6B6650;  /* sage assombri */
-  --cypress-deep:  #12110D;
-  --cypress-light: #BBB093;  /* Sage — états accomplis, sagesse */
-  --cypress-ghost: rgba(187,176,147,0.14);
+  /* ── Mousse — tempérance, accompli (rétro-compat cyprès) ───────── */
+  --cypress:       #5F7A4E;
+  --cypress-deep:  #14120D;
+  --cypress-light: #86A06B;  /* Mousse — états accomplis */
+  --cypress-ghost: rgba(134,160,107,0.14);
 
   /* ── Rétro-compat ────────────────────────────────────────────── */
-  --accent:       var(--gold);
-  --accent-dim:   var(--gold-ghost);
-  --on-accent:    var(--ink);
+  /* Accent de sélection — surbrillances, onglets actifs, filtres cochés.
+     Distinct de l'or, réservé à la marque et à la progression (logo, anneau, série). */
+  --accent:       var(--crimson);
+  --accent-dim:   var(--crimson-ghost);
+  --on-accent:    #F8F4EC;
 
   /* ── Sidebar width (mis à jour par JS au toggle) ─────────────── */
-  --sidebar-w: 224px;
+  --sidebar-w: 184px;
   --sidebar-gap: 12px;
 
-  /* ── Sidebar — midnight pur, pastille crimson ─────────────────── */
-  --sidebar-bg:           #050505;
-  --sidebar-border:       rgba(200,165,95,0.16);
-  --sidebar-text:         rgba(223,216,194,0.60);
-  --sidebar-text-hover:   rgba(223,216,194,0.95);
-  --sidebar-text-active:  #F1EAD8;
+  /* ── Sidebar — basalte profond, pastille terracotta ────────────── */
+  --sidebar-bg:           #1D1914;
+  --sidebar-border:       rgba(201,165,53,0.16);
+  --sidebar-text:         rgba(240,235,225,0.58);
+  --sidebar-text-hover:   rgba(240,235,225,0.95);
+  --sidebar-text-active:  #F8F4EC;
   --sidebar-active-bg:    var(--crimson);
 
   /* ── Texte ───────────────────────────────────────────────────── */
-  --text-primary: #EFEAD9;   /* parchemin clair */
-  --text-muted:   #BBB093;   /* Sage — secondaire */
-  --text-dim:     #8A8270;   /* beaver éclairci — tertiaire */
+  --text-primary: #F0EBE1;   /* parchemin clair */
+  --text-muted:   rgba(240,235,225,0.55);
+  --text-dim:     rgba(240,235,225,0.40);
 
   /* ── Dirty / warning ─────────────────────────────────────────── */
-  --dirty:        rgba(200,169,81,0.10);
-  --dirty-border: rgba(200,169,81,0.30);
-  --dirty-text:   #C8A951;
+  --dirty:        rgba(201,165,53,0.10);
+  --dirty-border: rgba(201,165,53,0.30);
+  --dirty-text:   #D9B856;
 
-  /* ── Status — recalés sur la palette spartiate ─────────────────── */
-  --red:    #C94B44;             /* crimson éclairci pour rester lisible */
+  /* ── Status — recalés sur la palette basalte ─────────────────── */
+  --red:    #C96538;             /* terracotta éclairci pour rester lisible */
   --red-ghost:    var(--crimson-ghost);
-  --green:  var(--cypress-light); /* Sage — accompli */
+  --green:  var(--cypress-light); /* Mousse — accompli */
   --green-ghost:  var(--cypress-ghost);
-  --blue:   #8FA0B3;             /* Spartan Blue éclairci — stratégie, mode durée */
+  --blue:   #8FA0B3;
   --blue-ghost:   rgba(122,136,152,0.16);
-  --orange: #C8A55F;             /* rabattu sur l'ocre */
-  --orange-ghost: rgba(200,165,95,0.14);
-  --purple: #9D8C71;             /* beaver */
+  --orange: #C9A535;             /* rabattu sur l'or */
+  --orange-ghost: rgba(201,165,53,0.14);
+  --purple: #9D8C71;
   --teal:   #7A8898;
 
-  /* ── Radius — resserrés, esprit gravure ─────────────────────── */
+  /* ── Radius ────────────────────────────────────────────────── */
   --r-xs:   5px;    /* badges, chips, micro-boutons */
   --r-sm:   8px;    /* boutons, inputs */
   --r-md:   12px;   /* cartes, rows */
@@ -112,40 +113,40 @@
 
 /* ── Light mode — inversion : fond ivoire, sidebar cyprès, or inchangé ── */
 html[data-theme="light"] {
-  --bg-primary:   #F1EAD8;
-  --bg-card:      #F7F2E4;
-  --bg-card-solid: #F7F2E4;
-  --bg-elevated:  #EBE3CE;
-  --border:       #D9CFB6;
-  --border-plus:  #C6BA9D;
+  --bg-primary:   #EFE8D8;
+  --bg-card:      #F5F1E8;
+  --bg-card-solid: #F5F1E8;
+  --bg-elevated:  #E9E1CD;
+  --border:       #DDD3BC;
+  --border-plus:  #CBBFA3;
   --glass-border: rgba(255,255,255,0.6);
-  --shadow-sm:    0 0 0 1px rgba(14,12,8,0.08);
-  --shadow-md:    0 8px 32px rgba(14,12,8,0.12);
+  --shadow-sm:    0 0 0 1px rgba(23,19,15,0.08);
+  --shadow-md:    0 8px 32px rgba(23,19,15,0.12);
 
   /* Ivoire ↔ sombre inversés : les panneaux « maintenant » deviennent sombres */
-  --ivory:        #191611;
-  --ivory-card:   #1E1A13;
-  --ink:          #F1EAD8;
-  --ink-muted:    rgba(241,234,216,0.65);
-  --ink-dim:      rgba(241,234,216,0.40);
+  --ivory:        #1D1914;
+  --ivory-card:   #221D17;
+  --ink:          #F0EBE1;
+  --ink-muted:    rgba(240,235,225,0.65);
+  --ink-dim:      rgba(240,235,225,0.40);
 
-  --cypress-light: #2E5A42;
-  --cypress-ghost: rgba(34,56,44,0.12);
+  --cypress-light: #4A6339;
+  --cypress-ghost: rgba(74,99,57,0.12);
 
-  --sidebar-bg:           #2E1013;
-  --sidebar-border:       rgba(200,165,95,0.20);
-  --sidebar-text:         rgba(223,216,194,0.62);
-  --sidebar-text-hover:   rgba(223,216,194,0.95);
-  --sidebar-text-active:  #F1EAD8;
+  --sidebar-bg:           #221D17;
+  --sidebar-border:       rgba(201,165,53,0.20);
+  --sidebar-text:         rgba(240,235,225,0.62);
+  --sidebar-text-hover:   rgba(240,235,225,0.95);
+  --sidebar-text-active:  #F8F4EC;
   --sidebar-active-bg:    var(--crimson);
 
-  --text-primary: #1A1610;
-  --text-muted:   #423B29;
-  --text-dim:     #675E48;
+  --text-primary: #1F1B14;
+  --text-muted:   #55503F;
+  --text-dim:     #7A7359;
 
-  --dirty:        rgba(200,169,81,0.14);
-  --dirty-border: rgba(200,169,81,0.40);
-  --dirty-text:   #8A6F2A;
+  --dirty:        rgba(201,165,53,0.14);
+  --dirty-border: rgba(201,165,53,0.40);
+  --dirty-text:   #8A6F14;
 
   /* Status — assombris pour fond clair */
   --red:    #C24B38;
@@ -187,6 +188,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-size: 16px;
   line-height: 1.6;
+}
+
+/* ── Retour à la ligne « intelligent » sur les enchaînements de phrases ──
+   Évite les veuves/orphelines et les mauvaises coupures en fin de ligne,
+   sur tout texte courant (descriptions, notices, phrases d'aide). */
+p, .text-flow {
+  text-wrap: pretty;
 }
 
 /* ── Inputs & selects (dark) ──────────────────────────────────── */
@@ -311,15 +319,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   color: var(--text-dim);
 }
 
-/* ── Display condensé — Barlow Condensed : titres et grands chiffres ── */
+/* ── Display serif — Newsreader : titres et grands chiffres ────── */
 .display,
 h1,
 .r-stat-num {
-  font-family: var(--font-display), 'Arial Narrow', sans-serif;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
-  line-height: 0.92;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 0.98;
 }
 
 /* ── Skeleton loading ───────────────────────────────────────────── */

@@ -155,7 +155,7 @@ export default function GeneratorPage() {
         <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-muted)' }}>
           Puiser dans toutes les catégories
         </span>
-        <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2, lineHeight: 1.35 }}>
+        <span className="text-flow" style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2, lineHeight: 1.35 }}>
           Y compris les moins fournies à ce niveau ({peuFournies.join(', ')}) — la séance sera complétée par d&rsquo;autres types.
         </span>
       </span>
@@ -652,14 +652,14 @@ export default function GeneratorPage() {
                   <button key={key} onClick={() => setGenMode(key)} style={{
                     padding: '14px 10px', textAlign: 'center', cursor: 'pointer',
                     borderRadius: 'var(--r-md)',
-                    border: `1px solid ${active ? 'var(--crimson-border)' : 'var(--border)'}`,
+                    border: `1px solid ${active ? 'var(--crimson)' : 'var(--border)'}`,
                     background: active ? 'var(--crimson)' : 'var(--bg-card)',
                     boxShadow: active ? 'var(--elev-2)' : 'none',
                     transition: 'all 0.15s',
                   }}>
                     <div style={{ fontSize: 20, marginBottom: 6, filter: active ? 'none' : 'grayscale(0.6)' }}>{icon}</div>
-                    <div className="display" style={{ fontWeight: 700, fontSize: 14, color: active ? '#F1EAD8' : 'var(--text-primary)' }}>{title}</div>
-                    <div style={{ fontSize: 10.5, color: active ? 'rgba(241,234,216,0.75)' : 'var(--text-dim)', marginTop: 3, lineHeight: 1.3 }}>{sub}</div>
+                    <div className="display" style={{ fontWeight: 700, fontSize: 14, color: active ? '#F8F4EC' : 'var(--text-primary)' }}>{title}</div>
+                    <div style={{ fontSize: 10.5, color: active ? 'rgba(248,244,236,0.75)' : 'var(--text-dim)', marginTop: 3, lineHeight: 1.3 }}>{sub}</div>
                   </button>
                 )
               })}
@@ -668,7 +668,7 @@ export default function GeneratorPage() {
             {/* ── Voie 1 : au hasard ── */}
             {genMode === 'random' && (
             <div className="card" style={{ padding: '18px 20px', marginBottom: 24 }}>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+              <div className="text-flow" style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
                 Structure, mouvements et durée (20-60 min) tirés au sort. Choisis juste l&apos;intensité.
               </div>
               <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
@@ -677,12 +677,12 @@ export default function GeneratorPage() {
                   return (
                     <button key={key} onClick={() => setRandomDifficulty(key)} style={{
                       flex: 1, padding: '10px 6px', borderRadius: 'var(--r-sm)',
-                      border: `1px solid ${active ? 'var(--gold)' : 'var(--border-plus)'}`,
-                      background: active ? 'var(--gold-ghost)' : 'var(--bg-elevated)',
+                      border: `1px solid ${active ? 'var(--crimson)' : 'var(--border-plus)'}`,
+                      background: active ? 'var(--crimson-ghost)' : 'var(--bg-elevated)',
                       cursor: 'pointer', textAlign: 'center',
                       transition: 'border-color 0.12s, background 0.12s',
                     }}>
-                      <div className="display" style={{ fontWeight: 700, fontSize: 13, color: active ? 'var(--gold)' : 'var(--text-muted)' }}>{label}</div>
+                      <div className="display" style={{ fontWeight: 700, fontSize: 13, color: active ? 'var(--crimson-bright)' : 'var(--text-muted)' }}>{label}</div>
                       <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{sub}</div>
                     </button>
                   )
@@ -702,11 +702,11 @@ export default function GeneratorPage() {
             {/* ── Voie 2 : au temps — la durée est l'input de base ── */}
             {genMode === 'time' && (
             <div className="card" style={{ padding: '18px 20px', marginBottom: 24 }}>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
+              <div className="text-flow" style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
                 Dis combien de temps tu as : l&rsquo;atelier dimensionne blocs et mouvements pour tenir exactement dedans.
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
-                <span className="display tnum" style={{ fontSize: 56, fontWeight: 600, color: 'var(--gold)', lineHeight: 1 }}>{timeTarget}</span>
+                <span className="display tnum" style={{ fontSize: 56, fontWeight: 600, color: 'var(--crimson-bright)', lineHeight: 1 }}>{timeTarget}</span>
                 <span style={{ fontSize: 15, color: 'var(--text-muted)' }}>minutes</span>
               </div>
               <input
@@ -718,9 +718,9 @@ export default function GeneratorPage() {
                 {[20, 30, 45, 60].map(m => (
                   <button key={m} onClick={() => setTimeTarget(m)} style={{
                     padding: '5px 14px', borderRadius: 'var(--r-full)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                    border: `1px solid ${timeTarget === m ? 'var(--gold)' : 'var(--border)'}`,
-                    background: timeTarget === m ? 'var(--gold-ghost)' : 'transparent',
-                    color: timeTarget === m ? 'var(--gold)' : 'var(--text-dim)',
+                    border: `1px solid ${timeTarget === m ? 'var(--crimson)' : 'var(--border)'}`,
+                    background: timeTarget === m ? 'var(--crimson-ghost)' : 'transparent',
+                    color: timeTarget === m ? 'var(--crimson-bright)' : 'var(--text-dim)',
                   }} className="tnum">
                     {m}&apos;
                   </button>
@@ -732,11 +732,11 @@ export default function GeneratorPage() {
                   return (
                     <button key={key} onClick={() => setRandomDifficulty(key)} style={{
                       flex: 1, padding: '8px 6px', borderRadius: 'var(--r-sm)',
-                      border: `1px solid ${active ? 'var(--gold)' : 'var(--border-plus)'}`,
-                      background: active ? 'var(--gold-ghost)' : 'var(--bg-elevated)',
+                      border: `1px solid ${active ? 'var(--crimson)' : 'var(--border-plus)'}`,
+                      background: active ? 'var(--crimson-ghost)' : 'var(--bg-elevated)',
                       cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.12s, background 0.12s',
                     }}>
-                      <div className="display" style={{ fontWeight: 700, fontSize: 13, color: active ? 'var(--gold)' : 'var(--text-muted)' }}>{label}</div>
+                      <div className="display" style={{ fontWeight: 700, fontSize: 13, color: active ? 'var(--crimson-bright)' : 'var(--text-muted)' }}>{label}</div>
                     </button>
                   )
                 })}
@@ -1010,11 +1010,11 @@ export default function GeneratorPage() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 7,
                   padding: '7px 13px',
-                  background: videoOnly ? 'rgba(200,165,95,0.10)' : 'var(--bg-card)',
-                  border: `1px solid ${videoOnly ? 'rgba(200,165,95,0.55)' : 'var(--border)'}`,
+                  background: videoOnly ? 'var(--crimson-ghost)' : 'var(--bg-card)',
+                  border: `1px solid ${videoOnly ? 'var(--crimson-border)' : 'var(--border)'}`,
                   borderRadius: 8, cursor: 'pointer',
                   fontSize: 12, fontWeight: videoOnly ? 700 : 500,
-                  color: videoOnly ? 'var(--gold)' : 'var(--text-muted)',
+                  color: videoOnly ? 'var(--crimson-bright)' : 'var(--text-muted)',
                   transition: 'all 0.15s',
                 }}
               >
@@ -1160,7 +1160,7 @@ export default function GeneratorPage() {
                             <button
                               onClick={() => toggleResultSuperset(bi)}
                               title={block.superset ? 'Désactiver superset' : 'Activer superset pour ce bloc'}
-                              style={{ flexShrink: 0, background: block.superset ? 'rgba(200,165,95,0.15)' : 'none', border: block.superset ? '1px solid rgba(200,165,95,0.4)' : '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: '2px 8px', color: block.superset ? 'var(--gold)' : 'var(--text-dim)', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}
+                              style={{ flexShrink: 0, background: block.superset ? 'var(--crimson-ghost)' : 'none', border: block.superset ? '1px solid var(--crimson-border)' : '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: '2px 8px', color: block.superset ? 'var(--crimson-bright)' : 'var(--text-dim)', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}
                             >
                               <Zap size={11} /> Superset
                             </button>

@@ -1,19 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Barlow, Barlow_Condensed } from "next/font/google";
+import { Karla, Newsreader } from "next/font/google";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import AttributesSync from "@/components/AttributesSync";
 import { ToastProvider } from "@/components/Toast";
 import "./globals.css";
 
-const inter = Barlow({
+const inter = Karla({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
   variable: "--font-inter",
   display: "swap",
 });
 
-// Display condensé — titres et CTA, direction « Spartiate »
-const fraunces = Barlow_Condensed({
+// Display serif — titres et grands chiffres, direction « Basalte »
+const fraunces = Newsreader({
   subsets: ["latin"],
   weight: ["500", "600", "700", "800"],
   variable: "--font-display",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0A0908",
+  themeColor: "#17130F",
   viewportFit: "cover",
 };
 

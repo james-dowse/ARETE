@@ -378,7 +378,7 @@ export default function ActivePage() {
     <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Header ── */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#12100C', borderBottom: '1px solid var(--border)', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
         <button onClick={() => router.push(`/workouts/${id}`)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 0, display: 'flex', lineHeight: 1 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -450,7 +450,7 @@ export default function ActivePage() {
         <div style={{ display: 'flex', gap: 4, marginLeft: 4 }}>
           {REST_OPTIONS.map(s => (
             <button key={s} onClick={() => setDefaultRest(s)}
-              style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${defaultRest === s ? 'var(--gold)' : 'rgba(255,255,255,0.1)'}`, background: defaultRest === s ? 'rgba(200,165,95,0.15)' : 'transparent', color: defaultRest === s ? 'var(--gold)' : 'rgba(255,255,255,0.4)', transition: 'all 0.15s' }}>
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${defaultRest === s ? 'var(--crimson)' : 'rgba(255,255,255,0.1)'}`, background: defaultRest === s ? 'var(--crimson-ghost)' : 'transparent', color: defaultRest === s ? 'var(--crimson-bright)' : 'rgba(255,255,255,0.4)', transition: 'all 0.15s' }}>
               {s}s
             </button>
           ))}
@@ -479,7 +479,7 @@ export default function ActivePage() {
                   </div>
                   {movs.length > 1 && block?.id && (
                     <button onClick={() => toggleSuperset(block.id)}
-                      style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: `1px solid ${isSuperset ? 'var(--gold)' : 'rgba(255,255,255,0.15)'}`, background: isSuperset ? 'rgba(200,165,95,0.15)' : 'transparent', color: isSuperset ? 'var(--gold)' : 'rgba(255,255,255,0.3)', transition: 'all 0.15s', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: `1px solid ${isSuperset ? 'var(--crimson)' : 'rgba(255,255,255,0.15)'}`, background: isSuperset ? 'var(--crimson-ghost)' : 'transparent', color: isSuperset ? 'var(--crimson-bright)' : 'rgba(255,255,255,0.3)', transition: 'all 0.15s', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                       ⚡ Superset
                     </button>
                   )}
@@ -669,7 +669,7 @@ export default function ActivePage() {
       )}
 
       {/* ── Bottom bar ── */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#12100C', borderTop: '1px solid var(--border)', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'center' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--bg-elevated)', borderTop: '1px solid var(--border)', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'center' }}>
         {showFinish ? (
           <>
             <input value={note} onChange={e => setNote(e.target.value)} placeholder="Note optionnelle…"
