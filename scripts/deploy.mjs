@@ -40,6 +40,14 @@ function sh(cmd, { capture = true } = {}) {
   })
 }
 
+// La CLI Vercel écrit ses tableaux sur stderr : il faut fusionner les deux flux
+// pour lire son résultat. On ne le fait pas pour git, dont stderr porte des
+// avertissements (fins de ligne CRLF…) qui pollueraient les valeurs lues.
+function shAll(cmd) {
+  const r = spawnSync(cmd, { cwd: ROOT, shell: true, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+  return `${r.stdout ?? ''}\n${r.stderr ?? ''}`
+}
+
 function run(cmd, label) {
   const r = spawnSync(cmd, { cwd: ROOT, shell: true, stdio: 'inherit' })
   if (r.status !== 0) die(`${label} a échoué.`, 'Corrige les erreurs ci-dessus, puis relance ce script.')
@@ -107,6 +115,13 @@ if (dirty.length === 0 && pending.length === 0) {
   }
 }
 
+// Vérifié ici, et pas au moment du commit : inutile d'attendre la fin d'un
+// build de plusieurs dizaines de secondes pour signaler un argument manquant.
+if (dirty.length > 0 && !message && !checkOnly) {
+  die('Des fichiers sont à committer mais aucun message n\'a été fourni.',
+      'Usage :  npm run deploy -- "décris le changement"')
+}
+
 // ── 2. Barrière qualité ──────────────────────────────────────────────────────
 step('Barrière qualité (types, tests, build)')
 run('npx tsc --noEmit', 'Types')
@@ -122,10 +137,6 @@ if (checkOnly) {
 step('Commit')
 
 if (dirty.length > 0) {
-  if (!message) {
-    die('Des fichiers sont modifiés mais aucun message de commit n\'a été fourni.',
-        'Usage : node scripts/deploy.mjs "décris le changement"')
-  }
   sh('git add -A -- ":!design-variant"')
 
   const staged = sh('git diff --cached --name-only').trim()
@@ -133,7 +144,8 @@ if (dirty.length > 0) {
   say(`${C.d}${staged.split('\n').map(f => '  ' + f).join('\n')}${C.x}`)
 
   const body = `${message}\n\nCo-Authored-By: Claude <noreply@anthropic.com>`
-  spawnSync('git', ['commit', '-m', body], { cwd: ROOT, stdio: 'inherit' })
+  const c = spawnSync('git', ['commit', '-m', body], { cwd: ROOT, stdio: 'inherit' })
+  if (c.status !== 0) die('Le commit a échoué.', 'Regarde le message de git ci-dessus.')
   ok('commit créé')
 } else {
   warn('Aucune modification à committer — on déploie le HEAD actuel.')
@@ -150,8 +162,7 @@ step('Build Vercel')
 say(`${C.d}Peut prendre 1 à 3 minutes. Le script attend et vérifie.${C.x}`)
 
 function newestProdDeployment() {
-  let out
-  try { out = sh(`npx vercel ls ${VERCEL_PROJECT}`) } catch (e) { return null }
+  const out = shAll(`npx vercel ls ${VERCEL_PROJECT}`)
   for (const line of out.split('\n')) {
     const m = line.match(/(https:\/\/\S+)\s+●\s+(\w+)\s+(\w+)/)
     if (m && m[3] === 'Production') return { url: m[1], status: m[2] }
@@ -170,7 +181,7 @@ while (Date.now() < deadline) {
   if (d.status === 'Ready')  { deployment = d; ok(`build terminé : ${d.url}`); break }
   if (d.status === 'Error')  {
     console.error(`\n${C.r}✗ Le build Vercel a échoué.${C.x}\n`)
-    try { say(sh(`npx vercel inspect --logs ${d.url}`).split('\n').slice(-40).join('\n')) } catch { /* best effort */ }
+    say(shAll(`npx vercel inspect --logs ${d.url}`).split('\n').slice(-40).join('\n'))
     die('Déploiement en échec.',
         'Les logs ci-dessus donnent la cause. La production continue de servir\n' +
         'la version précédente : rien n\'est cassé côté utilisateur.')
@@ -190,9 +201,9 @@ if (!deployment) {
 // « Ready » créé après le push.
 step('Vérification de la production')
 
-let inspect
-try { inspect = sh(`npx vercel inspect ${PROD_ALIAS}`) } catch {
-  die('Impossible d\'inspecter l\'alias de production.', `Essaie : npx vercel inspect ${PROD_ALIAS}`)
+const inspect = shAll(`npx vercel inspect ${PROD_ALIAS}`)
+if (!/status/.test(inspect)) {
+  die('Impossible d\'inspecter l\'alias de production.', `Essaie à la main : npx vercel inspect ${PROD_ALIAS}`)
 }
 
 const status  = inspect.match(/status\s+●?\s*(\w+)/)?.[1]
