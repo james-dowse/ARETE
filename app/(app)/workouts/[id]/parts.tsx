@@ -214,12 +214,16 @@ export function MovementRowView({ wm, index, onMovementClick, lastPerf }: { wm: 
 }
 
 // ─── Edit Row ─────────────────────────────────────────────────────────────────
-export function MovementRowEdit({ es, original, index, displayNumber, allMovementIds, onUpdate, onRevert, onMovementClick, onRemove, onDragStart, onDragOver, onDrop, onDragEnd, isDragging }: {
+export function MovementRowEdit({ es, original, index, displayNumber, allMovementIds, onUpdate, onRevert, onMovementClick, onRemove, onDragStart, onDragOver, onDrop, onDragEnd, isDragging, supersetRole = 'none' }: {
   es: EditState; original: WorkoutMovement; index: number; displayNumber: number; allMovementIds: string[]
   onUpdate: (idx: number, patch: Partial<EditState>) => void; onRevert: (idx: number) => void
   onMovementClick: (id: string) => void; onRemove: () => void
   onDragStart: () => void; onDragOver: () => void; onDrop: () => void; onDragEnd: () => void
   isDragging: boolean
+  // 'none' : mouvement hors superset. 'linked' : dans un bloc superset mais pas le
+  // dernier — s'enchaîne sans repos, le champ est donc verrouillé à 0. 'last' :
+  // dernier du bloc — son repos sépare la fin d'un tour du début du suivant.
+  supersetRole?: 'none' | 'linked' | 'last'
 }) {
   const [loadingRandom, setLoadingRandom] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
@@ -297,7 +301,12 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-            <span style={{ fontSize: 11, color: isDirtySets ? 'var(--dirty-text)' : 'var(--text-muted)', width: 46, flexShrink: 0, fontWeight: isDirtySets ? 600 : 400 }}>Séries</span>
+            <span
+              title={supersetRole !== 'none' ? 'Superset : même nombre de séries pour tout le bloc' : undefined}
+              style={{ fontSize: 11, color: isDirtySets ? 'var(--dirty-text)' : 'var(--text-muted)', width: 46, flexShrink: 0, fontWeight: isDirtySets ? 600 : 400 }}
+            >
+              Séries{supersetRole !== 'none' ? ' ⚡' : ''}
+            </span>
             <Stepper value={es.sets} min={1} max={10} onChange={v => onUpdate(index, { sets: v })} highlight={isDirtySets} />
           </div>
           <span style={{ fontSize: 14, color: 'var(--text-dim)', fontWeight: 700 }}>×</span>
@@ -342,22 +351,33 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
           <span style={{ fontSize: 11, color: isDirtyRest ? 'var(--dirty-text)' : 'var(--text-muted)', width: 46, flexShrink: 0, fontWeight: isDirtyRest ? 600 : 400 }}>Repos</span>
-          <input
-            type="number" min={0} max={600} step={5}
-            value={es.rest ?? ''}
-            placeholder="0"
-            onChange={e => onUpdate(index, { rest: e.target.value === '' ? null : Number(e.target.value) })}
-            style={{ width: 56, background: isDirtyRest ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyRest ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '4px 8px', color: isDirtyRest ? 'var(--dirty-text)' : 'var(--text-primary)', fontSize: 13, fontWeight: 700, outline: 'none', textAlign: 'center' }}
-          />
-          <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>sec entre séries</span>
-          <div style={{ display: 'flex', gap: 3 }}>
-            {[15, 30, 45, 60, 90, 120].map(s => (
-              <button key={s} onClick={() => onUpdate(index, { rest: s })}
-                style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: es.rest === s ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${es.rest === s ? 'var(--dirty-border)' : 'var(--border)'}`, color: es.rest === s ? 'var(--dirty-text)' : 'var(--text-dim)', cursor: 'pointer' }}>
-                {s}
-              </button>
-            ))}
-          </div>
+          {supersetRole === 'linked' ? (
+            <span title="Superset : les mouvements s'enchaînent sans repos — seul le dernier du bloc en a un, avant le tour suivant."
+              style={{ fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic' }}>
+              0s — enchaîné (superset)
+            </span>
+          ) : (
+            <>
+              <input
+                type="number" min={0} max={600} step={5}
+                value={es.rest ?? ''}
+                placeholder="0"
+                onChange={e => onUpdate(index, { rest: e.target.value === '' ? null : Number(e.target.value) })}
+                style={{ width: 56, background: isDirtyRest ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyRest ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '4px 8px', color: isDirtyRest ? 'var(--dirty-text)' : 'var(--text-primary)', fontSize: 13, fontWeight: 700, outline: 'none', textAlign: 'center' }}
+              />
+              <span style={{ fontSize: 11, color: 'var(--text-dim)' }} title={supersetRole === 'last' ? 'Repos entre la fin de ce tour et le début du suivant' : undefined}>
+                {supersetRole === 'last' ? 'sec avant le tour suivant' : 'sec entre séries'}
+              </span>
+              <div style={{ display: 'flex', gap: 3 }}>
+                {[15, 30, 45, 60, 90, 120].map(s => (
+                  <button key={s} onClick={() => onUpdate(index, { rest: s })}
+                    style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: es.rest === s ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${es.rest === s ? 'var(--dirty-border)' : 'var(--border)'}`, color: es.rest === s ? 'var(--dirty-text)' : 'var(--text-dim)', cursor: 'pointer' }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
       {showPicker && (
@@ -439,7 +459,10 @@ export function BlockHeaderEdit({ block, index, title, onTitleChange, instructio
         <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1, flexShrink: 0 }}>BLOC {index + 1}</span>
         <input
           value={title}
-          onChange={e => onTitleChange(e.target.value)}
+          // La casse réelle doit suivre l'affichage : sans ceci, `textTransform:
+          // uppercase` montre des majuscules pendant la saisie mais la valeur
+          // stockée reste en minuscules, ce qui ressort ailleurs dans l'app.
+          onChange={e => onTitleChange(e.target.value.toUpperCase())}
           placeholder="Nom du bloc (ex. ECHAUFFEMENT)"
           style={{
             flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase',
