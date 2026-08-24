@@ -50,6 +50,22 @@ export function NewMovementModal({
   const [form, setForm] = useState({ name: '', bioType: BIO_TYPES[0], complexity: COMPLEXITIES[0], equipment: '', description: '', videoUrl: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // Prévisualisation du prochain ID : purement informatif (pour copie manuelle
+  // vers Excel notamment), le serveur recalcule la vraie valeur à la création.
+  const [previewId, setPreviewId] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/movements/next-id').then(r => r.json()).then(d => setPreviewId(d.id)).catch(() => {})
+  }, [])
+
+  const copyId = () => {
+    if (!previewId) return
+    navigator.clipboard.writeText(previewId).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1200)
+    })
+  }
 
   const set = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setError('') }
 
@@ -88,10 +104,25 @@ export function NewMovementModal({
           <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
         </div>
 
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>NOM *</label>
-          <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="ex: Bulgarian Split Squat" required autoFocus style={fieldStyle} />
-          <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 3 }}>L&apos;ID est généré automatiquement</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14, marginBottom: 14 }}>
+          <div>
+            <label style={labelStyle}>ID</label>
+            <button
+              type="button"
+              onClick={copyId}
+              disabled={!previewId}
+              title="Copier l'ID"
+              style={{ ...fieldStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, fontFamily: 'monospace', fontWeight: 700, color: previewId ? 'var(--accent)' : 'var(--text-dim)', cursor: previewId ? 'pointer' : 'default', textAlign: 'left' }}
+            >
+              {previewId ?? '…'}
+              {previewId && <Copy size={13} color={copied ? 'var(--cypress-light, #86A06B)' : 'var(--text-dim)'} />}
+            </button>
+            <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 3 }}>{copied ? 'Copié ✓' : 'Auto-généré'}</div>
+          </div>
+          <div>
+            <label style={labelStyle}>NOM *</label>
+            <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="ex: Bulgarian Split Squat" required autoFocus style={fieldStyle} />
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
