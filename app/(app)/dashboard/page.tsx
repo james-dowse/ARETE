@@ -71,22 +71,32 @@ function computeStreak(doneAtDates: Date[]): number {
   return streak
 }
 
-// Libellés de section — capitales réservées au seul cadre héros (séance du jour) ;
-// partout ailleurs dans la page, casse normale pour rester lisible sans crier.
+// ── Échelle typographique de la page d'accueil ──────────────────────────────
+// Trois niveaux seulement, pour que la page se lise d'un coup d'œil :
+//   1. le titre héros (serif, casse naturelle)
+//   2. les libellés de section (casse normale)
+//   3. les micro-libellés en capitales (date, eyebrow, badges, CTA)
+// Les micro-libellés partageaient auparavant six interlettrages différents
+// (0.02 → 0.18em) : tout est ramené ici à une seule valeur.
 const SECTION_LABEL: React.CSSProperties = {
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
-  letterSpacing: '0.02em',
+  letterSpacing: '0.01em',
   color: 'var(--text-muted)',
   margin: 0,
 }
 
 const SECTION_LABEL_GOLD: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 700,
-  letterSpacing: '0.02em',
+  ...SECTION_LABEL,
   color: 'var(--gold-dim)',
-  margin: 0,
+}
+
+// Capitales : interlettrage unique, indispensable pour rester lisible en petit.
+const MICRO: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase',
 }
 
 export default async function DashboardPage() {
@@ -200,9 +210,9 @@ export default async function DashboardPage() {
           {/* ligne du haut : date + salutation / ring */}
           <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(240,235,225,0.45)' }}>{dateStr}</span>
-              <span style={{ fontSize: 26, fontWeight: 700, color: '#F0EBE1' }}>
-                {greeting}{displayName && <span style={{ color: 'var(--gold)' }}> {displayName}</span>}
+              <span style={{ ...MICRO, color: 'rgba(240,235,225,0.45)' }}>{dateStr}</span>
+              <span style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em', color: 'rgba(240,235,225,0.92)' }}>
+                {greeting}{displayName && <span style={{ color: 'var(--gold)', fontWeight: 700 }}> {displayName}</span>}
               </span>
             </div>
             {user && (
@@ -216,7 +226,7 @@ export default async function DashboardPage() {
                     <span className="display tnum" style={{ fontSize: 22, color: '#F0EBE1', lineHeight: 1 }}>
                       {weekSessionCount}<span style={{ color: 'rgba(240,235,225,0.40)', fontSize: 14 }}>/{WEEK_GOAL}</span>
                     </span>
-                    <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(240,235,225,0.45)' }}>semaine</span>
+                    <span style={{ ...MICRO, fontSize: 8, color: 'rgba(240,235,225,0.45)' }}>semaine</span>
                   </div>
                 </div>
                 <Link href="/profile" title="Mon profil" style={{ textDecoration: 'none', flexShrink: 0 }}>
@@ -244,12 +254,16 @@ export default async function DashboardPage() {
           <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 24, height: 2, background: '#D2794A' }} />
-              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#D2794A' }}>
+              <span style={{ ...MICRO, color: '#D2794A' }}>
                 {heroEntry ? 'Séance du jour' : 'Aucune séance planifiée'}
               </span>
             </div>
 
-            <h1 className="display hero-title" style={{ margin: 0, fontSize: 38, color: '#F0EBE1', textTransform: 'uppercase' }}>
+            {/* Casse naturelle : le serif Newsreader est dessiné pour la lecture,
+                pas pour les capitales — forcer l'uppercase avec un letter-spacing
+                négatif faisait se télescoper les lettres et jurait avec le reste
+                de la page. Les noms de séance se lisent aussi mieux tels quels. */}
+            <h1 className="display hero-title" style={{ margin: 0, fontSize: 40, lineHeight: 1.05, letterSpacing: '-0.015em', color: '#F0EBE1' }}>
               {heroEntry ? heroEntry.workout.name : 'Forge ta séance'}
             </h1>
 
@@ -266,7 +280,7 @@ export default async function DashboardPage() {
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     {heroBioTypes.map(bt => (
-                      <span key={bt} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 10px', border: `1px solid ${BIO_TYPE_COLORS[bt] || 'rgba(201,165,53,0.4)'}` , color: BIO_TYPE_COLORS[bt] || 'var(--gold)' }}>
+                      <span key={bt} style={{ ...MICRO, fontSize: 10, padding: '3px 10px', border: `1px solid ${BIO_TYPE_COLORS[bt] || 'rgba(201,165,53,0.4)'}`, color: BIO_TYPE_COLORS[bt] || 'var(--gold)' }}>
                         {bt}
                       </span>
                     ))}
@@ -284,7 +298,7 @@ export default async function DashboardPage() {
                     boxShadow: '0 8px 32px rgba(180,85,45,0.4)',
                   }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="#F8F4EC"><polygon points="6 4 20 12 6 20 6 4" /></svg>
-                    <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#F8F4EC' }}>
+                    <span style={{ ...MICRO, fontSize: 13, color: '#F8F4EC' }}>
                       Démarrer
                     </span>
                   </div>
@@ -299,7 +313,7 @@ export default async function DashboardPage() {
                       cursor: 'pointer',
                     }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(240,235,225,0.80)" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="21" y2="21" /></svg>
-                      <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(240,235,225,0.85)' }}>
+                      <span style={{ ...MICRO, fontSize: 13, color: 'rgba(240,235,225,0.85)' }}>
                         Explorer
                       </span>
                     </div>
@@ -313,7 +327,7 @@ export default async function DashboardPage() {
                       boxShadow: '0 8px 32px rgba(180,85,45,0.4)',
                     }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="#F8F4EC"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
-                      <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#F8F4EC' }}>
+                      <span style={{ ...MICRO, fontSize: 13, color: '#F8F4EC' }}>
                         Forger
                       </span>
                     </div>
@@ -337,10 +351,10 @@ export default async function DashboardPage() {
                     borderTop: i > 0 ? '1px solid var(--border)' : 'none',
                     cursor: 'pointer',
                   }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.02em', color: 'var(--gold)', width: 76, flexShrink: 0 }}>
+                    <span style={{ ...MICRO, fontSize: 10, color: 'var(--gold)', width: 82, flexShrink: 0 }}>
                       {entry.dayOfWeek === dayIdx ? "Aujourd'hui" : DAY_LABELS[entry.dayOfWeek]}
                     </span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', flexGrow: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', flexGrow: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {entry.workout.name}
                     </span>
                     {entry.workout.duration && (
@@ -383,7 +397,7 @@ export default async function DashboardPage() {
           {/* Campagnes récentes */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <p style={SECTION_LABEL_GOLD}>Campagnes récentes</p>
+              <p style={SECTION_LABEL_GOLD}>Dernières séances</p>
               {recentSessions.length > 0 && (
                 <Link href="/workouts" style={{ fontSize: 13, color: 'var(--gold-dim)', textDecoration: 'none', letterSpacing: '0.02em', fontWeight: 600 }}>
                   Tout voir →
@@ -415,7 +429,7 @@ export default async function DashboardPage() {
                             {doneStr}{s.workout.duration ? ` · ${s.workout.duration} min` : ''}
                           </div>
                         </div>
-                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.02em', padding: '2px 9px', border: '1px solid rgba(187,176,147,0.4)', color: 'var(--cypress-light)', flexShrink: 0 }}>
+                        <span style={{ ...MICRO, fontSize: 10, padding: '2px 9px', border: '1px solid rgba(187,176,147,0.4)', color: 'var(--cypress-light)', flexShrink: 0 }}>
                           Accomplie
                         </span>
                       </div>
@@ -425,7 +439,7 @@ export default async function DashboardPage() {
               </div>
             ) : (
               <div style={{ padding: '32px 20px', textAlign: 'center', border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Aucune campagne encore menée</span>
+                <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Aucune séance accomplie pour l&apos;instant</span>
               </div>
             )}
 
@@ -445,9 +459,9 @@ export default async function DashboardPage() {
             </Link>
           </div>
 
-          {/* L'arsenal */}
+          {/* Répartition de la bibliothèque de mouvements */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <p style={SECTION_LABEL_GOLD}>L'arsenal</p>
+            <p style={SECTION_LABEL_GOLD}>Mouvements par type</p>
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '24px 28px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {bioStats.sort((a, b) => b._count - a._count).map(stat => {
@@ -478,11 +492,11 @@ export default async function DashboardPage() {
         {/* ── État vide ─────────────────────────────────────────── */}
         {workoutCount === 0 && (
           <div style={{ padding: '80px 0', textAlign: 'center' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.02em', color: 'var(--text-dim)', marginBottom: 24 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.01em', color: 'var(--text-dim)', marginBottom: 24 }}>
               Aucune séance encore
             </div>
             <Link href="/generator" style={{ textDecoration: 'none' }}>
-              <button style={{ padding: '12px 32px', background: 'var(--crimson)', color: '#F1EAD8', border: 'none', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
+              <button style={{ ...MICRO, fontSize: 12, padding: '12px 32px', background: 'var(--crimson)', color: '#F1EAD8', border: 'none', cursor: 'pointer' }}>
                 Commencer
               </button>
             </Link>
