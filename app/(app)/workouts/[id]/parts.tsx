@@ -405,10 +405,10 @@ export function BlockHeaderView({ block, index, movements, collapsed, onToggle }
         onClick={onToggle}
         style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: (!collapsed && block.instructions) ? 8 : 0, cursor: 'pointer', userSelect: 'none' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1 }}>BLOC {index + 1}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1 }}>BLOC {index + 1}</span>
           {block.bioType && (
-            <span style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${color}14`, color, border: `1px solid ${color}30`, fontWeight: 600 }}>
+            <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.2, color }}>
               {BIO_TYPE_ICONS[block.bioType]} {block.bioType}
             </span>
           )}
@@ -434,7 +434,7 @@ export function BlockHeaderView({ block, index, movements, collapsed, onToggle }
           </div>
           <div
             className="rich-content"
-            style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-muted)' }}
+            style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-muted)' }}
             dangerouslySetInnerHTML={{ __html: block.instructions }}
           />
         </div>
@@ -463,8 +463,8 @@ export function BlockHeaderEdit({ block, index, title, onTitleChange, instructio
           onChange={e => onTitleChange(e.target.value.toUpperCase())}
           placeholder="Nom du bloc (ex. ECHAUFFEMENT)"
           style={{
-            flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase',
-            padding: '4px 9px', borderRadius: 20, outline: 'none',
+            flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, letterSpacing: 0.2, textTransform: 'uppercase',
+            padding: '6px 12px', borderRadius: 10, outline: 'none',
             background: isTitleDirty ? 'var(--dirty)' : 'var(--bg-elevated)',
             border: `1px solid ${isTitleDirty ? 'var(--dirty-border)' : 'var(--border)'}`,
             color: isTitleDirty ? 'var(--dirty-text)' : 'var(--text-primary)',

@@ -495,6 +495,36 @@ h1,
 .rich-editor li, .rich-content li { margin: 1px 0; }
 .rich-editor p,  .rich-content p  { margin: 2px 0; }
 
+.rich-editor a, .rich-content a {
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+.rich-editor a:hover, .rich-content a:hover { opacity: 0.8; }
+
+/* Vidéo incrustée dans une description ou des instructions de bloc — largeur
+   pleine, ratio 16:9 pour les iframes (YouTube, Instagram…), cliquable pour
+   lancer la lecture (pas d'autoplay dans ce contexte de lecture passive). */
+.rich-video-embed { margin: 8px 0; }
+.rich-video-embed video { border-radius: 10px; max-height: 360px; }
+.rich-video-embed-ratio {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  padding-top: 56.25%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+.rich-video-embed-ratio iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
 /* ── Nav link hover (injected by Sidebar) ───────────────────────── */
 .nav-link { transition: color 0.12s, background 0.12s; }
 .nav-link:hover:not(.nav-active) {
