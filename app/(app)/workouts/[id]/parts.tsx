@@ -444,15 +444,13 @@ export function BlockHeaderView({ block, index, movements, collapsed, onToggle }
 }
 
 // ─── Block Header (edit) ──────────────────────────────────────────────────────
-export function BlockHeaderEdit({ block, index, title, onTitleChange, instructions, onChange, restAfter, onRestAfterChange, superset, canSuperset, onToggleSuperset, isDirty, onRemove }: {
+export function BlockHeaderEdit({ block, index, title, onTitleChange, instructions, onChange, superset, canSuperset, onToggleSuperset, isDirty, onRemove }: {
   block: WorkoutBlock; index: number
   title: string; onTitleChange: (v: string) => void
   instructions: string; onChange: (v: string) => void
-  restAfter: number | null; onRestAfterChange: (v: number | null) => void
   superset: boolean; canSuperset: boolean; onToggleSuperset: () => void; isDirty: boolean; onRemove: () => void
 }) {
   const isTitleDirty = title !== (block.bioType ?? '')
-  const isRestDirty = restAfter !== (block.restAfter ?? null)
   return (
     <div style={{ marginTop: index === 0 ? 0 : 14, marginBottom: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -507,17 +505,29 @@ export function BlockHeaderEdit({ block, index, title, onTitleChange, instructio
           highlight={isDirty}
         />
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 11, color: isRestDirty ? 'var(--dirty-text)' : 'var(--text-muted)', fontWeight: isRestDirty ? 600 : 400 }}>⏸ Repos après ce bloc</span>
-        <input
-          type="number" min={0} max={600} step={5}
-          value={restAfter ?? ''}
-          placeholder="0"
-          onChange={e => onRestAfterChange(e.target.value === '' ? null : Number(e.target.value))}
-          style={{ width: 60, background: isRestDirty ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isRestDirty ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '4px 8px', color: isRestDirty ? 'var(--dirty-text)' : 'var(--text-primary)', fontSize: 13, fontWeight: 700, outline: 'none', textAlign: 'center' }}
-        />
-        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>sec</span>
-      </div>
+    </div>
+  )
+}
+
+// ─── Repos après ce bloc (édition) ─────────────────────────────────────────────
+// Rendu séparément, sous le bloc auquel il se rapporte (entre ce bloc et le
+// suivant) plutôt qu'en haut avec le titre/instructions — pour matcher l'endroit
+// où ce repos s'affiche réellement en mode lecture (le séparateur inter-blocs).
+export function BlockRestAfterEdit({ block, restAfter, onRestAfterChange }: {
+  block: WorkoutBlock; restAfter: number | null; onRestAfterChange: (v: number | null) => void
+}) {
+  const isRestDirty = restAfter !== (block.restAfter ?? null)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, padding: '8px 10px', background: 'var(--bg-elevated)', borderRadius: 10, border: `1px solid ${isRestDirty ? 'var(--dirty-border)' : 'var(--border)'}` }}>
+      <span style={{ fontSize: 11, color: isRestDirty ? 'var(--dirty-text)' : 'var(--text-muted)', fontWeight: isRestDirty ? 600 : 400 }}>⏸ Repos après ce bloc</span>
+      <input
+        type="number" min={0} max={600} step={5}
+        value={restAfter ?? ''}
+        placeholder="0"
+        onChange={e => onRestAfterChange(e.target.value === '' ? null : Number(e.target.value))}
+        style={{ width: 60, background: isRestDirty ? 'var(--dirty)' : 'var(--bg-card)', border: `1px solid ${isRestDirty ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '4px 8px', color: isRestDirty ? 'var(--dirty-text)' : 'var(--text-primary)', fontSize: 13, fontWeight: 700, outline: 'none', textAlign: 'center' }}
+      />
+      <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>sec avant le bloc suivant</span>
     </div>
   )
 }

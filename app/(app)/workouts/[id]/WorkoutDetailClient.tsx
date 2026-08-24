@@ -15,7 +15,7 @@ import {
 import {
   Workout, WorkoutMovement, WorkoutBlock, Movement, EditState, LastPerf,
   WorkoutImage, ImageEditZone, MovementRowView, MovementRowEdit,
-  BlockHeaderView, BlockHeaderEdit, EditBar, AddToWeekModal, Stat,
+  BlockHeaderView, BlockHeaderEdit, BlockRestAfterEdit, EditBar, AddToWeekModal, Stat,
   toEditState, stripHtml, fmtMin, fmtSec,
 } from './parts'
 
@@ -720,8 +720,6 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                       onTitleChange={v => setBlockTitle(prev => ({ ...prev, [block.id]: v }))}
                       instructions={blockInstructions[block.id] ?? ''}
                       onChange={v => setBlockInstructions(prev => ({ ...prev, [block.id]: v }))}
-                      restAfter={blockRestAfter[block.id] ?? null}
-                      onRestAfterChange={v => setBlockRestAfter(prev => ({ ...prev, [block.id]: v }))}
                       superset={blockSuperset[block.id] ?? false}
                       canSuperset={blockMovements.length > 1}
                       onToggleSuperset={() => handleToggleSuperset(block.id, false)}
@@ -766,6 +764,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', background: 'none', border: '1px dashed var(--border)', borderRadius: 10, color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                           <Plus size={13} /> Ajouter un mouvement
                         </button>
+                      )}
+                      {editMode && (
+                        <BlockRestAfterEdit
+                          block={block}
+                          restAfter={blockRestAfter[block.id] ?? null}
+                          onRestAfterChange={v => setBlockRestAfter(prev => ({ ...prev, [block.id]: v }))}
+                        />
                       )}
                     </div>
                   )}
@@ -829,8 +834,6 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                   onTitleChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, bioType: v } : x))}
                   instructions={pb.instructions}
                   onChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, instructions: v } : x))}
-                  restAfter={pb.restAfter}
-                  onRestAfterChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, restAfter: v } : x))}
                   superset={pb.superset}
                   canSuperset={blockAdds.length > 1}
                   onToggleSuperset={() => handleToggleSuperset(pb.tempId, true)}
@@ -854,6 +857,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', background: 'none', border: '1px dashed var(--border)', borderRadius: 10, color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                     <Plus size={13} /> Ajouter un mouvement
                   </button>
+                  <BlockRestAfterEdit
+                    block={fakeBlock}
+                    restAfter={pb.restAfter}
+                    onRestAfterChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, restAfter: v } : x))}
+                  />
                 </div>
               </div>
             )
