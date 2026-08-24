@@ -1,5 +1,11 @@
 # Rapprocher la base — procédure d'exécution
 
+> ✅ **Déjà effectuée le 24 août 2026.** Base et serveur sont désormais en
+> Irlande (`eu-west-1` / `dub1`) : la latence est passée de ~260 ms à quelques
+> millisecondes par requête. Ce document reste valable comme procédure de
+> référence si un déplacement futur devient nécessaire, et comme mode d'emploi
+> du retour arrière (dernière section).
+
 > **Pour l'agent qui exécute :** suis les étapes dans l'ordre. Chaque étape dit
 > quoi lancer et quoi vérifier. **Si une vérification échoue, arrête-toi et
 > signale-le** — ne tente pas de contourner. Rien n'est cassé en cas d'arrêt :

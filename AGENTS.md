@@ -18,17 +18,23 @@ Serveur de dev local : `arete-dev`, port **3050**. Le dossier `ARETE-redesign-pr
 
 # Performance
 
-La base Turso est à **Tokyo** et les fonctions Vercel à **Washington** : chaque
-lecture en base coûte ~260 ms, payés plusieurs fois par écran. C'est de loin le
-premier facteur de lenteur de l'application, avant toute optimisation de code.
+Base Turso et fonctions Vercel sont **co-localisées en Irlande** (`eu-west-1` /
+`dub1`, épinglé dans `vercel.json`). Un aller-retour base coûte quelques
+millisecondes. **Ne pas déplacer l'un sans l'autre** : c'est leur écart
+géographique qui rendait l'application lente (~260 ms par requête quand la base
+était à Tokyo et le serveur à Washington).
 
-La procédure de correction est prête et scriptée : [MIGRATION-DB.md](MIGRATION-DB.md).
 Mesurer l'état courant à tout moment :
 
 ```bash
 node scripts/perf/benchmark.mjs
 ```
 
-Avant d'ajouter une requête sur un rendu serveur, regrouper les requêtes
-indépendantes dans un même `Promise.all` : les enchaîner multiplie cette
-latence d'autant.
+Deux réflexes qui comptent plus que le reste :
+
+- Regrouper les requêtes indépendantes dans un même `Promise.all`. Les enchaîner
+  multiplie la latence d'autant — c'était le défaut du tableau de bord.
+- Ne pas relire à chaque requête des données quasi statiques (référentiels) :
+  voir `lib/attributes-cache.ts`.
+
+Historique et procédure de bascule : [MIGRATION-DB.md](MIGRATION-DB.md).
