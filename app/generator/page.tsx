@@ -628,7 +628,7 @@ export default function GeneratorPage() {
 
   return (
     <AppShell>
-      <div style={{ maxWidth: 1060 }}>
+      <div style={{ maxWidth: 1320, margin: '0 auto', width: '100%' }}>
         <div style={{ marginBottom: 24 }}>
           <h1 className="r-h1" style={{ fontSize: 44, fontWeight: 600, margin: 0, letterSpacing: '-0.015em' }}>Générateur</h1>
           <p style={{ color: 'var(--text-muted)', marginTop: 8, fontSize: 16 }}>Trois façons de composer ta séance.</p>

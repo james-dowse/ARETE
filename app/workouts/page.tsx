@@ -11,7 +11,7 @@ export default async function WorkoutsPage() {
 
   return (
     <AppShell>
-      <div style={{ maxWidth: 800 }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
           <div>
             <h1 style={{ fontSize: 40, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>Mes séances</h1>

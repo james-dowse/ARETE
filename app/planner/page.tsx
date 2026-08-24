@@ -74,7 +74,7 @@ export default function PlannerPage() {
 
   return (
     <AppShell>
-      <div style={{ maxWidth: 1100 }}>
+      <div style={{ maxWidth: 1320, margin: '0 auto', width: '100%' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
           <div>

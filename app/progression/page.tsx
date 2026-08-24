@@ -81,7 +81,7 @@ export default async function ProgressionPage() {
 
   return (
     <AppShell>
-      <div style={{ maxWidth: 960 }}>
+      <div style={{ maxWidth: 1160, margin: '0 auto', width: '100%' }}>
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontSize: 40, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>Progression</h1>
           <p style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: 15 }}>

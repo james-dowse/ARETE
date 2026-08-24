@@ -177,7 +177,7 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <div style={{ maxWidth: 1040 }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%' }}>
 
         <ResumeSessionBanner />
 

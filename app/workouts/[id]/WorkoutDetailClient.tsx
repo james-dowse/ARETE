@@ -354,7 +354,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
 
   return (
     <AppShell>
-      <div style={{ maxWidth: 700, paddingBottom: isDirty ? 100 : 32 }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', width: '100%', paddingBottom: isDirty ? 100 : 32 }}>
         <Link href={backTo ?? '/workouts'} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', textDecoration: 'none', fontSize: 13, marginBottom: 24 }}>
           <ArrowLeft size={14} /> {backTo === '/admin' ? 'Retour à l\'administration' : 'Retour aux séances'}
         </Link>
@@ -362,8 +362,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         <ResumeSessionBanner workoutId={initial.id} />
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ marginBottom: 22 }}>
+          <div style={{ minWidth: 0, marginBottom: 14 }}>
             {editMode ? (
               <input
                 value={editName}
@@ -372,7 +372,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                 style={{ fontSize: 26, fontWeight: 800, background: isDirtyName ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyName ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '4px 10px', color: isDirtyName ? 'var(--dirty-text)' : 'var(--text-primary)', outline: 'none', width: '100%', maxWidth: 480 }}
               />
             ) : (
-              <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>{initial.name}</h1>
+              <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, wordBreak: 'break-word' }}>{initial.name}</h1>
             )}
             <div style={{ display: 'flex', gap: 14, marginTop: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
@@ -381,7 +381,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
               {initial.duration && <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-muted)' }}><Clock size={12} /> {initial.duration} min</span>}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {!editMode ? (
               <>
                 <button onClick={() => router.push(`/workouts/${initial.id}/active`)}
@@ -427,7 +427,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 18 }}>
+        <div className="r-detail-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, marginBottom: 18 }}>
           <Stat value={initial.movements.length} label="Mouvements" color="var(--accent)" />
           <Stat value={bioTypes.length} label="Types" color="var(--blue)" />
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>

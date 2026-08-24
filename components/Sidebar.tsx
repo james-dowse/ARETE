@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
 import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon, Calendar, Search, X, TrendingUp } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useRef, useCallback } from 'react'
@@ -52,7 +52,7 @@ export default function Sidebar() {
   // Replié par défaut sous le seuil, et suit le redimensionnement de fenêtre —
   // sauf si l'utilisateur a lui-même choisi un état (on ne le contredit plus ensuite).
   const userToggledRef = useRef(false)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const apply = () => {
       if (userToggledRef.current) return
       setCollapsed(window.innerWidth < AUTO_COLLAPSE_BELOW)
@@ -60,6 +60,18 @@ export default function Sidebar() {
     apply()
     window.addEventListener('resize', apply)
     return () => window.removeEventListener('resize', apply)
+  }, [])
+
+  // La transition CSS de largeur reste désactivée jusqu'au premier rendu complet :
+  // sur Chromium, animer `width`/`margin-left` (calc(var(--sidebar-w))) alors que la
+  // variable CSS vient d'être posée en JS avant la peinture initiale laisse parfois
+  // la boîte peinte à l'ancienne largeur alors que le style annonce la nouvelle —
+  // un vrai bug de rendu, reproductible sur mobile. On n'anime qu'à partir des
+  // interactions qui suivent, jamais sur la décision de repli automatique au chargement.
+  const [readyForTransition, setReadyForTransition] = useState(false)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setReadyForTransition(true))
+    return () => cancelAnimationFrame(id)
   }, [])
 
   // Persist theme
@@ -114,8 +126,9 @@ export default function Sidebar() {
     localStorage.setItem('arete-theme', next)
   }
 
-  // Met à jour la CSS variable utilisée par AppShell pour le margin-left
-  useEffect(() => {
+  // Met à jour la CSS variable utilisée par AppShell pour le margin-left —
+  // avant peinture aussi, pour rester synchrone avec la largeur réelle de la sidebar.
+  useLayoutEffect(() => {
     const w = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH
     document.documentElement.style.setProperty('--sidebar-w', `${w}px`)
   }, [collapsed])
@@ -136,7 +149,7 @@ export default function Sidebar() {
       display: 'flex',
       flexDirection: 'column',
       flexShrink: 0,
-      transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
+      transition: readyForTransition ? 'width 0.22s cubic-bezier(0.4,0,0.2,1)' : 'none',
       overflow: 'hidden',
       boxShadow: 'var(--elev-2)',
       zIndex: 50,

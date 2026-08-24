@@ -68,7 +68,7 @@ export default function ProfileClient() {
   if (notLoggedIn) {
     return (
       <AppShell>
-        <div style={{ maxWidth: 560, textAlign: 'center', paddingTop: 64 }}>
+        <div style={{ maxWidth: 560, margin: '0 auto', width: '100%', textAlign: 'center', paddingTop: 64 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Connexion requise</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 15 }}>
@@ -88,7 +88,7 @@ export default function ProfileClient() {
   if (!profile) {
     return (
       <AppShell>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 560 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 560, margin: '0 auto', width: '100%' }}>
           {[1, 2].map(i => <div key={i} style={{ height: 140, background: 'var(--bg-card)', borderRadius: 14, opacity: 0.5 }} />)}
         </div>
       </AppShell>
@@ -104,7 +104,7 @@ export default function ProfileClient() {
 
   return (
     <AppShell>
-      <div style={{ maxWidth: 560 }}>
+      <div style={{ maxWidth: 560, margin: '0 auto', width: '100%' }}>
         <div style={{ marginBottom: 32 }}>
           <h1 className="r-h1" style={{ fontSize: 32, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>Mon profil</h1>
           <p style={{ color: 'var(--text-muted)', marginTop: 8, fontSize: 15 }}>Informations personnelles</p>

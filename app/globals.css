@@ -532,6 +532,9 @@ h1,
   /* Stat block — padding réduit */
   .r-stat-cell { padding: 18px 18px !important; }
   .r-stat-num  { font-size: 36px !important; }
+
+  /* Détail de séance — stats en 2 colonnes plutôt que 4 écrasées */
+  .r-detail-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 }
 
 @media (max-width: 480px) {

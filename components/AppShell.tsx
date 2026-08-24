@@ -11,7 +11,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         padding: 'clamp(20px, 3vw, 36px) clamp(16px, 3.5vw, 40px)',
         minHeight: '100vh',
         minWidth: 0,
-        transition: 'margin-left 0.22s cubic-bezier(0.4,0,0.2,1)',
+        // Pas de transition ici : animer margin-left via calc(var(--sidebar-w)) juste
+        // après que la sidebar pose cette variable en JS expose un vrai bug de rendu
+        // Chromium (boîte peinte à l'ancienne largeur malgré un style à jour). La
+        // sidebar elle-même reste animée ; le contenu suit instantanément, ce qui
+        // reste net visuellement.
       }}>
         {children}
       </main>
