@@ -201,6 +201,7 @@ function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: string; on
 // ── Modale de partage ────────────────────────────────────────────────────────
 function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => void }) {
   const [email, setEmail] = useState('')
+  const [message, setMessage] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -215,7 +216,7 @@ function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => voi
       const res = await fetch(`/api/workouts/${workout.id}/share`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: email.trim(), message: message.trim() || undefined }),
       })
       const data = await res.json()
       if (!res.ok) { setErrorMsg(data.error || 'Erreur'); setStatus('error') }
@@ -270,6 +271,14 @@ function ShareModal({ workout, onClose }: { workout: Workout; onClose: () => voi
                 {status === 'sending' ? '…' : 'Envoyer'}
               </button>
             </div>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              placeholder="Ajouter un message personnalisé (optionnel)…"
+              rows={2}
+              maxLength={500}
+              style={{ width: '100%', marginTop: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+            />
             {status === 'error' && (
               <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--red)' }}>
                 <AlertCircle size={13} />{errorMsg}

@@ -13,7 +13,7 @@ export async function POST(
   }
 
   const { id: workoutId } = await params
-  const { email } = await req.json()
+  const { email, message } = await req.json()
 
   if (!email?.trim()) {
     return NextResponse.json({ error: 'Email requis' }, { status: 400 })
@@ -75,7 +75,7 @@ export async function POST(
 
   // Envoyer l'email
   try {
-    await sendWorkoutShareEmail(recipient.email, sender.email, workout.name, share.token)
+    await sendWorkoutShareEmail(recipient.email, sender.email, workout.name, share.token, message?.trim() || undefined)
   } catch (err) {
     console.error('[share email]', err)
     // On ne bloque pas si l'email échoue — le partage est créé

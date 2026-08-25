@@ -150,11 +150,15 @@ export async function sendRelayEmail(ownerEmail: string, recipientEmail: string,
   return data
 }
 
-export async function sendWorkoutShareEmail(toEmail: string, fromEmail: string, workoutName: string, token: string) {
+export async function sendWorkoutShareEmail(toEmail: string, fromEmail: string, workoutName: string, token: string, message?: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3040'
   const acceptUrl = `${appUrl}/api/share/accept?token=${token}`
   const from = process.env.RESEND_FROM || 'ARETE <onboarding@resend.dev>'
   const fromName = fromEmail.split('@')[0]
+  const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  const messageBlock = message
+    ? `<div style="background:rgba(201,165,53,0.06);border-left:3px solid #C9A535;border-radius:6px;padding:14px 18px;margin-bottom:28px;font-size:14px;color:rgba(255,255,255,0.75);line-height:1.6;font-style:italic;">"${escapeHtml(message)}"</div>`
+    : ''
 
   const { data, error } = await resend.emails.send({
     from,
@@ -178,6 +182,7 @@ export async function sendWorkoutShareEmail(toEmail: string, fromEmail: string, 
             <div style="font-size:12px;font-weight:700;letter-spacing:1px;color:#C9A535;margin-bottom:6px;">WORKOUT</div>
             <div style="font-size:18px;font-weight:700;color:#fff;">${workoutName}</div>
           </div>
+          ${messageBlock}
           <a href="${acceptUrl}" style="display:inline-block;background:#C9A535;color:#000;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;text-decoration:none;">Voir le workout</a>
         </td></tr>
       </table>
