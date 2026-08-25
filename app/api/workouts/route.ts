@@ -20,6 +20,7 @@ const WORKOUT_SELECT = {
   imagePosition: true,
   tags: true,
   userId: true,
+  public: true,
   user: { select: { id: true, email: true } },
   blocks: { select: { id: true, superset: true, restAfter: true, order: true, bioType: true }, orderBy: { order: 'asc' } },
   movements: {
@@ -90,9 +91,9 @@ export async function GET(req: NextRequest) {
     // Workouts d'autres utilisateurs identifiés — jamais les siens, jamais les anonymes
     const tagPart = tagFilter ? { tags: { contains: tagFilter } } : {}
     if (!currentUserId) {
-      where = { userId: { not: null }, ...tagPart }
+      where = { userId: { not: null }, public: true, ...tagPart }
     } else {
-      where = { userId: { not: null }, NOT: { userId: currentUserId }, ...tagPart }
+      where = { userId: { not: null }, NOT: { userId: currentUserId }, public: true, ...tagPart }
     }
   }
 

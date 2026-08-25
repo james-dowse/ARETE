@@ -25,6 +25,7 @@ interface Workout {
   imagePosition?: string | null
   movements: WorkoutMovementItem[]
   blocks?: (DurationBlock & { order?: number; bioType?: string | null })[]
+  public?: boolean
   user?: WorkoutUser | null
   isSaved?: boolean
   isFavorite?: boolean
@@ -437,6 +438,11 @@ function WorkoutCard({
           {w.tags && w.tags.split(',').map(t => t.trim()).filter(Boolean).map(tag => (
             <span key={tag} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'var(--gold-ghost)', color: 'var(--gold)', border: '1px solid var(--gold-border)' }}>#{tag}</span>
           ))}
+          {context === 'mine' && (
+            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: w.public ? 'var(--green-ghost)' : 'var(--bg-elevated)', color: w.public ? 'var(--green)' : 'var(--text-dim)', border: `1px solid ${w.public ? 'var(--green)' : 'var(--border)'}40` }}>
+              {w.public ? 'Publié' : 'Privé'}
+            </span>
+          )}
         </div>
       </Link>
 

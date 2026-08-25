@@ -32,6 +32,7 @@ model Workout {
   userId      String?
   blockRest   Int?
   tags        String?
+  public      Boolean           @default(false)
   movements   WorkoutMovement[]
   blocks      WorkoutBlock[]
   shares      WorkoutShare[]

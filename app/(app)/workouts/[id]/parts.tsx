@@ -32,6 +32,8 @@ export interface Workout {
   notes?: string | null; description?: string | null; imageUrl?: string | null; imagePosition?: string | null
   blockRest?: number | null
   tags?: string | null
+  public?: boolean
+  userId?: string | null
   movements: WorkoutMovement[]
   blocks: WorkoutBlock[]
 }

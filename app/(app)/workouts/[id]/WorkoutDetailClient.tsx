@@ -65,6 +65,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const toggleViewBlock = (id: string) => setCollapsedViewBlocks(prev => ({ ...prev, [id]: !prev[id] }))
   const [editTags, setEditTags] = useState<string[]>(() => initial.tags ? initial.tags.split(',').map(t => t.trim()).filter(Boolean) : [])
   const [tagInput, setTagInput] = useState('')
+  const [editPublic, setEditPublic] = useState(!!initial.public)
   const [movementOrder, setMovementOrder] = useState<Record<string, number>>({})
   const [draggedWmId, setDraggedWmId] = useState<string | null>(null)
   // Ordre des blocs (édition) — même mécanique que movementOrder pour les
@@ -252,9 +253,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const isDirtyImage = editMode && imageUrl !== (initial.imageUrl ?? null)
   const isDirtyImagePosition = editMode && !isDirtyImage && imagePosition !== (initial.imagePosition ?? null)
   const isDirtyTags = editMode && editTags.join(',') !== (initial.tags ?? '')
+  const isDirtyPublic = editMode && editPublic !== !!initial.public
   const isDirtyOrder = editMode && originals.some(o => (movementOrder[o.id] ?? o.order) !== o.order)
   const isDirtyBlockOrder = editMode && initial.blocks.some(b => (blockOrder[b.id] ?? b.order) !== b.order)
-  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyName || isDirtyDescription || isDirtyImage || isDirtyImagePosition || isDirtyTags || isDirtyOrder || isDirtyBlockOrder || removedWmIds.size > 0 || removedBlockIds.size > 0 || pendingBlocks.length > 0
+  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyName || isDirtyDescription || isDirtyImage || isDirtyImagePosition || isDirtyTags || isDirtyPublic || isDirtyOrder || isDirtyBlockOrder || removedWmIds.size > 0 || removedBlockIds.size > 0 || pendingBlocks.length > 0
 
   const pendingCount = editMode
     ? editStates.filter((es, i) => {
@@ -287,6 +289,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
+    setEditPublic(!!initial.public)
     setRemovedWmIds(new Set()); setRemovedBlockIds(new Set()); setPendingAdds([]); setPendingBlocks([])
     const initOrder: Record<string, number> = {}
     initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
@@ -311,6 +314,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
+    setEditPublic(!!initial.public)
     setRemovedWmIds(new Set()); setRemovedBlockIds(new Set()); setPendingAdds([]); setPendingBlocks([])
     const initOrder: Record<string, number> = {}
     initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
@@ -423,13 +427,14 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
           }),
         }).catch(() => null)
       ),
-      ...((isDirtyName || isDirtyDescription || isDirtyTags || isDirtyImage || isDirtyImagePosition) ? [
+      ...((isDirtyName || isDirtyDescription || isDirtyTags || isDirtyPublic || isDirtyImage || isDirtyImagePosition) ? [
         fetch(`/api/workouts/${initial.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...(isDirtyName ? { name: editName.trim() } : {}),
             ...(isDirtyDescription ? { description: editDescription } : {}),
             ...(isDirtyTags ? { tags: editTags.join(',') || null } : {}),
+            ...(isDirtyPublic ? { public: editPublic } : {}),
             ...(isDirtyImage ? { imageUrl } : {}),
             ...(isDirtyImagePosition ? { imagePosition } : {}),
           }),
@@ -746,6 +751,40 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                   #{tag}
                 </span>
               ))}
+            </div>
+          )
+        )}
+
+        {/* ── PUBLICATION ── */}
+        {editMode ? (
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+              <input
+                type="checkbox"
+                checked={editPublic}
+                onChange={e => {
+                  const checked = e.target.checked
+                  if (checked) {
+                    const missing: string[] = []
+                    if (!stripHtml(editDescription)) missing.push('description')
+                    if (initial.blocks.some(b => !stripHtml(blockInstructions[b.id] ?? ''))) missing.push('instructions de bloc')
+                    if (editName.trim().startsWith('Séance')) missing.push('titre personnalisé')
+                    if (missing.length > 0 && !confirm(`Ce workout semble incomplet (${missing.join(', ')}). Publier quand même sur la Communauté ?`)) {
+                      return
+                    }
+                  }
+                  setEditPublic(checked)
+                }}
+                style={{ width: 16, height: 16, accentColor: 'var(--gold)' }}
+              />
+              Publier sur la Communauté
+              {isDirtyPublic && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 20, background: 'var(--dirty)', fontWeight: 600 }}>modifié</span>}
+            </label>
+          </div>
+        ) : (
+          initial.userId && (
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 16 }}>
+              {initial.public ? 'Publié sur la Communauté' : 'Privé (non publié sur la Communauté)'}
             </div>
           )
         )}

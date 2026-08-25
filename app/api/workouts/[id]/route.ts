@@ -30,6 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('name' in body && typeof body.name === 'string' && body.name.trim()) data.name = body.name.trim()
   if ('notes' in body) data.notes = body.notes || null
   if ('tags' in body) data.tags = body.tags || null
+  if ('public' in body) data.public = !!body.public
   if ('imagePosition' in body) data.imagePosition = body.imagePosition || null
   if ('imageUrl' in body) {
     const raw = typeof body.imageUrl === 'string' ? body.imageUrl.trim() : ''
