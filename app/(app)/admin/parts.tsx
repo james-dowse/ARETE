@@ -186,6 +186,8 @@ export interface ImportErrorDetail {
 export interface ImportResult {
   imported: number
   createdIds?: string[] // permet d'annuler l'import (POST /api/movements/import/undo)
+  updated?: number
+  updatedIds?: string[] // reconnus par ID ou par nom, mis à jour en place — non annulables
   errorCount: number
   errors: ImportErrorDetail[]
   at?: string // horodatage ISO, ajouté côté client pour l'historique local
@@ -194,7 +196,6 @@ export interface ImportResult {
 
 const ERROR_TYPE_COLORS: Record<string, string> = {
   doublon_fichier: 'var(--orange)',
-  doublon_existant: 'var(--red)',
   id_non_conforme: 'var(--red)',
   champs_manquants: 'var(--text-muted)',
   erreur_bdd: 'var(--red)',
@@ -229,9 +230,15 @@ export function ImportResultModal({
               ) : (
                 <span style={{ color: 'var(--cypress-light, #86A06B)', fontWeight: 600 }}>{result.imported} importé{result.imported !== 1 ? 's' : ''}</span>
               )}
+              {!!result.updated && <> · <span style={{ color: 'var(--gold)', fontWeight: 600 }}>{result.updated} mis à jour</span></>}
               {result.errorCount > 0 && <> · <span style={{ color: 'var(--red)', fontWeight: 600 }}>{result.errorCount} erreur{result.errorCount !== 1 ? 's' : ''}</span></>}
               {result.at && <> · {new Date(result.at).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</>}
             </div>
+            {!!result.updated && !result.undone && (
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
+                Mouvements reconnus par ID ou par nom et mis à jour en place — non annulables.
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             {canUndo && (

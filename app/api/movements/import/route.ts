@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { MOVEMENT_ID_PATTERN, nextMovementIds } from '@/lib/movement-id'
+import { normalizeMovementName } from '@/lib/normalize'
 import * as XLSX from 'xlsx'
 
-type ErrorType = 'champs_manquants' | 'id_non_conforme' | 'doublon_fichier' | 'doublon_existant' | 'erreur_bdd'
+type ErrorType = 'champs_manquants' | 'id_non_conforme' | 'doublon_fichier' | 'erreur_bdd'
 
 interface ImportError {
   line: number      // ligne dans le fichier (2 = première ligne de données, après l'en-tête)
@@ -17,7 +18,6 @@ const ERROR_LABELS: Record<ErrorType, string> = {
   champs_manquants: 'Champs manquants',
   id_non_conforme: 'ID non conforme',
   doublon_fichier: 'Doublon dans le fichier',
-  doublon_existant: 'ID déjà utilisé',
   erreur_bdd: 'Erreur base de données',
 }
 
@@ -31,15 +31,24 @@ export async function POST(req: NextRequest) {
   const ws = wb.Sheets[wb.SheetNames[0]]
   const rows = XLSX.utils.sheet_to_json(ws) as Record<string, unknown>[]
 
-  const existingIds = new Set((await prisma.movement.findMany({ select: { id: true } })).map(m => m.id))
+  const existingMovements = await prisma.movement.findMany({ select: { id: true, name: true } })
+  const existingIds = new Set(existingMovements.map(m => m.id))
+  // Reconnaissance par nom (fallback quand la ligne n'a pas d'ID exploitable) :
+  // même logique de normalisation que l'onglet "Doublons" de l'admin.
+  const idByNormalizedName = new Map(existingMovements.map(m => [normalizeMovementName(m.name), m.id]))
   const errors: ImportError[] = []
 
   // ── Passe 1 : validation, sans toucher la base ──────────────────────────────
-  // Un ID manquant dans le fichier n'est pas une erreur : il sera généré. Un ID
-  // présent mais mal formé, ou déjà pris (dans la base ou ailleurs dans le même
-  // fichier), est en revanche rejeté explicitement — plus de doublon silencieux.
+  // Un ID manquant dans le fichier n'est pas une erreur : il sera généré (ou
+  // l'existant sera mis à jour si le nom matche). Un ID présent mais mal formé,
+  // ou déjà pris ailleurs dans le même fichier, est rejeté explicitement.
+  // Un ID qui matche un mouvement existant — ou, à défaut d'ID, un nom qui
+  // matche (normalisé) — met à jour ce mouvement au lieu d'en créer un
+  // doublon : l'ID fait foi s'il est présent et valide, le nom sert de repli.
   const seenInFile = new Set<string>()
-  const toCreate: { line: number; id: string | null; name: string; bioType: string; complexity: string; equipment: string | null; description: string | null; videoUrl: string | null }[] = []
+  type Row = { line: number; id: string | null; name: string; bioType: string; complexity: string; equipment: string | null; description: string | null; videoUrl: string | null }
+  const toCreate: Row[] = []
+  const toUpdate: Row[] = []
 
   rows.forEach((row, i) => {
     const line = i + 2
@@ -57,8 +66,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (!rawId) {
-      // Pas d'ID dans le fichier : sera généré en passe 2.
-      toCreate.push({ line, id: null, name, bioType, complexity, equipment, description, videoUrl })
+      const matchedId = idByNormalizedName.get(normalizeMovementName(name))
+      if (matchedId && !seenInFile.has(matchedId)) {
+        seenInFile.add(matchedId)
+        toUpdate.push({ line, id: matchedId, name, bioType, complexity, equipment, description, videoUrl })
+      } else {
+        // Pas de match par nom (ou déjà traité plus haut dans ce fichier) : sera généré en passe 2.
+        toCreate.push({ line, id: null, name, bioType, complexity, equipment, description, videoUrl })
+      }
       return
     }
 
@@ -72,13 +87,12 @@ export async function POST(req: NextRequest) {
       return
     }
 
-    if (existingIds.has(rawId)) {
-      errors.push({ line, name, id: rawId, type: 'doublon_existant', message: `ID "${rawId}" existe déjà dans la bibliothèque` })
-      return
-    }
-
     seenInFile.add(rawId)
-    toCreate.push({ line, id: rawId, name, bioType, complexity, equipment, description, videoUrl })
+    if (existingIds.has(rawId)) {
+      toUpdate.push({ line, id: rawId, name, bioType, complexity, equipment, description, videoUrl })
+    } else {
+      toCreate.push({ line, id: rawId, name, bioType, complexity, equipment, description, videoUrl })
+    }
   })
 
   // ── Passe 2 : génération des ID manquants ───────────────────────────────────
@@ -103,9 +117,35 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Mise à jour des mouvements reconnus par ID ou par nom : seuls les champs
+  // non vides de la ligne écrasent l'existant (une cellule vide ne doit pas
+  // effacer une donnée déjà saisie, ex. imageUrl qui n'est de toute façon
+  // jamais présent dans le fichier importé).
+  const updatedIds: string[] = []
+  for (const r of toUpdate) {
+    try {
+      await prisma.movement.update({
+        where: { id: r.id! },
+        data: {
+          name: r.name,
+          bioType: r.bioType,
+          complexity: r.complexity,
+          ...(r.equipment !== null ? { equipment: r.equipment } : {}),
+          ...(r.description !== null ? { description: r.description } : {}),
+          ...(r.videoUrl !== null ? { videoUrl: r.videoUrl } : {}),
+        },
+      })
+      updatedIds.push(r.id!)
+    } catch (e) {
+      errors.push({ line: r.line, name: r.name, id: r.id!, type: 'erreur_bdd', message: e instanceof Error ? e.message : String(e) })
+    }
+  }
+
   return NextResponse.json({
     imported: createdIds.length,
     createdIds, // permet d'annuler l'import (voir /api/movements/import/undo)
+    updated: updatedIds.length,
+    updatedIds, // non annulables — reconnus par ID ou par nom et mis à jour en place
     errorCount: errors.length,
     errors: errors.map(e => ({ ...e, typeLabel: ERROR_LABELS[e.type] })),
   })

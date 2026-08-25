@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { isAdmin } from '@/lib/admin'
+import { normalizeMovementName } from '@/lib/normalize'
 
 export async function GET() {
   const user = await getCurrentUser()
@@ -10,19 +11,10 @@ export async function GET() {
 
   const movements = await prisma.movement.findMany({ select: { id: true, name: true, bioType: true }, orderBy: { name: 'asc' } })
 
-  // Normalize name for comparison
-  function normalize(s: string) {
-    return s.toLowerCase()
-      .normalize('NFD').replace(/\p{Diacritic}/gu, '')
-      .replace(/[^a-z0-9]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-  }
-
   // Group by normalized name — find groups with > 1 member
   const groups = new Map<string, typeof movements>()
   for (const m of movements) {
-    const key = normalize(m.name)
+    const key = normalizeMovementName(m.name)
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(m)
   }
