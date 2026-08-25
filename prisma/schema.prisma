@@ -114,6 +114,23 @@ model InvitedUser {
   favoriteWorkouts FavoriteWorkout[]
   weekPlans        WeekPlan[]
   workoutSessions  WorkoutSession[]
+  following        Follow[]           @relation("Follower")
+  followers        Follow[]           @relation("Followed")
+}
+
+// Abonnement à un profil (pas à un workout précis) — sert uniquement à
+// notifier par email les nouveaux workouts publiés par la personne suivie.
+// Volontairement privé : pas de compteur d'abonnés public, pas de flux.
+model Follow {
+  id            String      @id @default(cuid())
+  followerId    String
+  followedId    String
+  notifyByEmail Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  follower      InvitedUser @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followed      InvitedUser @relation("Followed", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followedId])
 }
 
 model WeekPlan {

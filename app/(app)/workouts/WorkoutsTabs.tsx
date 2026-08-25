@@ -394,7 +394,10 @@ function WorkoutCard({
                   {context !== 'mine' && w.user && (
                     <>
                       <span>·</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span
+                        onClick={e => { e.preventDefault(); e.stopPropagation(); router.push(`/users/${w.user!.id}`) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+                      >
                         <CreatorBadge user={w.user} size={16} />
                         {creatorName(w.user)}
                       </span>

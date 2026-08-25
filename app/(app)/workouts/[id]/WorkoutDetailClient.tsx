@@ -588,10 +588,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
               </span>
               {initial.duration && <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-muted)' }}><Clock size={12} /> {initial.duration} min</span>}
               {initial.user && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)' }}>
+                <Link href={`/users/${initial.user.id}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', textDecoration: 'none' }}>
                   <CreatorBadge user={initial.user} size={20} />
                   {creatorName(initial.user)}
-                </span>
+                </Link>
               )}
             </div>
           </div>

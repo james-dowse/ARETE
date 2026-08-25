@@ -1,14 +1,14 @@
 interface CreatorUser {
   firstName?: string | null
   lastName?: string | null
-  email: string
+  email?: string
   avatarUrl?: string | null
 }
 
 export function creatorName(user: CreatorUser | null | undefined): string {
   if (!user) return ''
   const full = [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
-  return full || user.email.split('@')[0]
+  return full || user.email?.split('@')[0] || ''
 }
 
 // Filigrane casque spartiate — même technique que le watermark SVG bas-opacité
