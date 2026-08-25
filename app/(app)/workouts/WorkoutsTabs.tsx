@@ -27,6 +27,7 @@ interface Workout {
   movements: WorkoutMovementItem[]
   blocks?: (DurationBlock & { order?: number; bioType?: string | null })[]
   public?: boolean
+  _count?: { savedBy: number }
   user?: WorkoutUser | null
   isSaved?: boolean
   isFavorite?: boolean
@@ -329,7 +330,11 @@ function WorkoutCard({
 
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation()
-    if (!confirm('Supprimer cette séance ?')) return
+    const savedCount = w._count?.savedBy ?? 0
+    const msg = savedCount > 0
+      ? `Supprimer cette séance ? ${savedCount} utilisateur${savedCount > 1 ? 's ont' : ' a'} sauvegardé ce workout et perdra${savedCount > 1 ? 'ont' : ''} l'accès.`
+      : 'Supprimer cette séance ?'
+    if (!confirm(msg)) return
     setDeleting(true)
     await fetch(`/api/workouts/${w.id}`, { method: 'DELETE' })
     setDeleting(false)

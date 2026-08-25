@@ -22,6 +22,7 @@ const WORKOUT_SELECT = {
   userId: true,
   public: true,
   user: { select: { id: true, email: true, firstName: true, lastName: true, avatarUrl: true } },
+  _count: { select: { savedBy: true } },
   blocks: { select: { id: true, superset: true, restAfter: true, order: true, bioType: true }, orderBy: { order: 'asc' } },
   movements: {
     orderBy: { order: 'asc' },

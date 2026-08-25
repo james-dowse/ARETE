@@ -14,6 +14,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       },
       template: true,
       user: { select: { id: true, email: true, firstName: true, lastName: true, avatarUrl: true } },
+      _count: { select: { savedBy: true } },
     },
   })
   if (!workout) return NextResponse.json({ error: 'Not found' }, { status: 404 })

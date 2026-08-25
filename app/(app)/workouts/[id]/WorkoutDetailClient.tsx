@@ -481,7 +481,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   }
 
   const handleDelete = async () => {
-    if (!confirm('Supprimer définitivement cette séance ?')) return
+    const savedCount = initial._count?.savedBy ?? 0
+    const msg = savedCount > 0
+      ? `Supprimer définitivement cette séance ? ${savedCount} utilisateur${savedCount > 1 ? 's ont' : ' a'} sauvegardé ce workout et perdra${savedCount > 1 ? 'ont' : ''} l'accès.`
+      : 'Supprimer définitivement cette séance ?'
+    if (!confirm(msg)) return
     setDeleting(true)
     const res = await fetch(`/api/workouts/${initial.id}`, { method: 'DELETE' }).catch(() => null)
     if (!res || !res.ok) {
