@@ -378,9 +378,9 @@ function WorkoutCard({
           </div>
         </div>
 
-        <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
+        <div style={{ marginTop: 12, display: 'flex', gap: 6 }}>
           {previewColumns.map((col, ci) => (
-            <div key={ci} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, paddingLeft: 10, borderLeft: '2px solid var(--border)' }}>
+            <div key={ci} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
               {col.label && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.3, color: 'var(--text-dim)', textTransform: 'uppercase' }}>{col.label}</div>}
               {col.movements.map((m, mi) => (
                 <div key={mi} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
@@ -392,7 +392,7 @@ function WorkoutCard({
             </div>
           ))}
           {hiddenBlocksCount > 0 && (
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, paddingLeft: 10, borderLeft: '2px solid var(--border)' }}>
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-dim)' }}>+{hiddenBlocksCount} blocs</span>
             </div>
           )}
