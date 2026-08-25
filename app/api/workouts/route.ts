@@ -13,6 +13,7 @@ import { getCurrentUserId } from '@/lib/session'
 const WORKOUT_SELECT = {
   id: true,
   name: true,
+  description: true,
   createdAt: true,
   duration: true,
   imageUrl: true,
@@ -20,7 +21,7 @@ const WORKOUT_SELECT = {
   tags: true,
   userId: true,
   user: { select: { id: true, email: true } },
-  blocks: { select: { id: true, superset: true, restAfter: true, order: true, instructions: true }, orderBy: { order: 'asc' } },
+  blocks: { select: { id: true, superset: true, restAfter: true, order: true, bioType: true }, orderBy: { order: 'asc' } },
   movements: {
     orderBy: { order: 'asc' },
     select: {

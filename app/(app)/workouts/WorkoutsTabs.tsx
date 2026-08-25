@@ -16,12 +16,13 @@ interface WorkoutMovementItem {
 interface Workout {
   id: string
   name: string
+  description?: string | null
   createdAt: string
   duration?: number | null
   imageUrl?: string | null
   imagePosition?: string | null
   movements: WorkoutMovementItem[]
-  blocks?: (DurationBlock & { order?: number; instructions?: string | null })[]
+  blocks?: (DurationBlock & { order?: number; bioType?: string | null })[]
   user?: WorkoutUser | null
   isSaved?: boolean
   isFavorite?: boolean
@@ -58,11 +59,13 @@ const estimatedMinutes = (w: Workout): number => estimateWorkoutMinutes(toDurati
 const CARD_PREVIEW_MAX_COLUMNS = 4
 const CARD_PREVIEW_MAX_ROWS_PER_COLUMN = 5
 
-// Titre de bloc = HTML riche (RichEditor) : on n'en garde que le texte, tronqué court.
-function blockTitle(instructions: string | null | undefined, fallback: string): string {
-  const text = (instructions ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-  if (!text) return fallback
-  return text.length > 28 ? `${text.slice(0, 28)}…` : text
+const stripHtml = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+
+// Le "titre" d'un bloc est stocké dans son champ bioType (texte libre saisi en
+// édition) ; à défaut on retombe sur "Bloc N".
+function blockTitle(bioType: string | null | undefined, fallback: string): string {
+  const text = (bioType ?? '').trim()
+  return text || fallback
 }
 
 interface PreviewColumn {
@@ -90,7 +93,7 @@ function buildCardPreview(w: Workout): { columns: PreviewColumn[]; hiddenBlocksC
     const mvs = byBlock.get(b.id) ?? []
     if (mvs.length === 0) return
     allColumns.push({
-      label: blockTitle(b.instructions, `Bloc ${i + 1}`),
+      label: blockTitle(b.bioType, `Bloc ${i + 1}`),
       movements: mvs.slice(0, CARD_PREVIEW_MAX_ROWS_PER_COLUMN).map(m => ({ name: m.movement.name, bioType: m.movement.bioType })),
       hiddenInColumn: Math.max(0, mvs.length - CARD_PREVIEW_MAX_ROWS_PER_COLUMN),
     })
@@ -360,6 +363,9 @@ function WorkoutCard({
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{w.name}</div>
                   {isFavorite && <Star size={12} fill="var(--gold)" color="var(--gold)" style={{ flexShrink: 0 }} />}
                 </div>
+                {w.description && stripHtml(w.description) && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stripHtml(w.description)}</div>
+                )}
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   {new Date(w.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
                   {w.duration ? ` · ${w.duration} min cible` : ''}
