@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
 import { estimateWorkoutMinutes, type DurationBlock } from '@/lib/duration'
 import { stripHtmlMultiline } from '@/lib/html'
-import DifficultyImageTint from '@/components/DifficultyImageTint'
+import DifficultyImageTint, { DIFFICULTY_TINT_IMG_FILTER } from '@/components/DifficultyImageTint'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
 import { useToast } from '@/components/Toast'
 import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search, ArrowUpDown } from 'lucide-react'
@@ -370,7 +370,7 @@ function WorkoutCard({
           <div style={{ position: 'relative', width: 90, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {w.imageUrl ? (
               <>
-                <img src={w.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block' }} />
+                <img src={w.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block', filter: difficulty ? DIFFICULTY_TINT_IMG_FILTER : undefined }} />
                 <DifficultyImageTint difficulty={difficulty} />
               </>
             ) : (

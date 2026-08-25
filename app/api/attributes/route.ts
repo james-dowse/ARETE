@@ -23,10 +23,10 @@ const DEFAULTS = {
     { value: 'Boxing',     icon: '🥊', color: '#9E7AC4', tempo: 1.2 },
   ],
   complexity: [
-    { value: 'Easy',     icon: null, color: '#6BAE7C' },
-    { value: 'Common',   icon: null, color: '#7CA8D4' },
-    { value: 'Hard',     icon: null, color: '#D4884A' },
-    { value: 'Advanced', icon: null, color: '#C47878' },
+    { value: 'Easy',     icon: null, color: '#5CB85C' },
+    { value: 'Common',   icon: null, color: '#D9A62E' },
+    { value: 'Hard',     icon: null, color: '#C0392B' },
+    { value: 'Advanced', icon: null, color: '#2A2620' },
   ],
   equipment: [
     { value: 'Barre force',    icon: '🏋️', color: null },

@@ -60,10 +60,10 @@ export const BIO_TYPE_TEMPO: Record<string, number> = {
 }
 
 export const COMPLEXITY_COLORS: Record<string, string> = {
-  'Easy':     '#6BAE7C',  // vert sauge
-  'Common':   '#7CA8D4',  // bleu acier
-  'Hard':     '#D4884A',  // orange terracotta
-  'Advanced': '#C47878',  // rouge brique
+  'Easy':     '#5CB85C',  // vert
+  'Common':   '#D9A62E',  // jaune
+  'Hard':     '#C0392B',  // rouge
+  'Advanced': '#2A2620',  // noir (charbon, pour rester lisible en badge/filtre)
 }
 
 // Difficulté globale d'un workout : majorité des mouvements, sauf si le niveau
