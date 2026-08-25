@@ -141,7 +141,7 @@ export default function Sidebar() {
 
   return (
     <>
-    <aside style={{
+    <aside className="app-sidebar-desktop" style={{
       position: 'fixed',
       top: 'var(--sidebar-gap)',
       left: 'var(--sidebar-gap)',

@@ -551,6 +551,25 @@ h1,
     padding: 20px 14px !important;
   }
 
+  /* Sidebar rail (52-184px) illisible/inutilisable au pouce sur mobile —
+     remplacée par une barre d'onglets en bas (voir MobileTabBar.tsx). */
+  .app-sidebar-desktop { display: none !important; }
+  .app-shell-main {
+    margin-left: 0 !important;
+    /* Laisse la place à la barre d'onglets fixe en bas + son safe-area iOS. */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+  }
+  .mobile-tab-bar { display: flex !important; }
+
+  /* Aperçu en colonnes des cartouches WOD (WorkoutsTabs.tsx) : 4 colonnes
+     côte à côte deviennent illisibles sous ~400px de large chacune — on
+     empile les blocs verticalement à la place, mêmes données. */
+  .wod-preview-row {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .wod-preview-col { flex: none !important; }
+
   /* Grilles → colonne unique */
   .r-grid-3 { grid-template-columns: 1fr !important; }
   .r-grid-2 { grid-template-columns: 1fr !important; }

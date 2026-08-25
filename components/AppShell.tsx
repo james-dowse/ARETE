@@ -1,6 +1,7 @@
 'use client'
 import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
+import MobileTabBar from './MobileTabBar'
 
 // Routes plein écran : séance en cours et vue impression n'affichent pas la
 // sidebar. Comme AppShell est désormais monté par le layout partagé, c'est ici
@@ -14,7 +15,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', width: '100%', minHeight: '100vh', background: 'var(--bg-primary)' }}>
       <Sidebar />
-      <main className="main-grid" style={{
+      <main className="main-grid app-shell-main" style={{
         flex: 1,
         marginLeft: 'calc(var(--sidebar-w, 184px) + var(--sidebar-gap, 12px) * 2)',
         overflowY: 'auto',
@@ -29,6 +30,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }}>
         {children}
       </main>
+      <MobileTabBar />
     </div>
   )
 }
