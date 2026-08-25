@@ -1,6 +1,7 @@
 'use client'
 import RichEditor from '@/components/RichEditor'
 import LibraryPicker from '@/components/LibraryPicker'
+import DifficultyImageTint from '@/components/DifficultyImageTint'
 import {
   BIO_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS,
   COMPLEXITY_COLORS, EQUIPMENT_ICONS, FAILURE_REPS,
@@ -46,10 +47,11 @@ export function toDurationMovement(wm: WorkoutMovement): DurationMovement {
 }
 
 // ─── Image zone (view) ────────────────────────────────────────────────────────
-export function WorkoutImage({ src, position }: { src: string; position?: string | null }) {
+export function WorkoutImage({ src, position, difficulty }: { src: string; position?: string | null; difficulty?: string | null }) {
   return (
-    <div style={{ marginBottom: 22, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+    <div style={{ position: 'relative', marginBottom: 22, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
       <img src={src} alt="" style={{ width: '100%', maxHeight: 320, objectFit: 'cover', objectPosition: position || '50% 50%', display: 'block' }} />
+      <DifficultyImageTint difficulty={difficulty ?? null} />
     </div>
   )
 }

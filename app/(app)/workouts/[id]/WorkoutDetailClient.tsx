@@ -667,7 +667,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
             onPositionChange={setImagePosition}
           />
         ) : (
-          initial.imageUrl && <WorkoutImage src={initial.imageUrl} position={initial.imagePosition} />
+          initial.imageUrl && <WorkoutImage src={initial.imageUrl} position={initial.imagePosition} difficulty={difficulty} />
         )}
 
         {/* ── DESCRIPTION ── */}
