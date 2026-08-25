@@ -21,7 +21,7 @@ interface Workout {
   imageUrl?: string | null
   imagePosition?: string | null
   movements: WorkoutMovementItem[]
-  blocks?: (DurationBlock & { order?: number })[]
+  blocks?: (DurationBlock & { order?: number; instructions?: string | null })[]
   user?: WorkoutUser | null
   isSaved?: boolean
   isFavorite?: boolean
@@ -58,6 +58,13 @@ const estimatedMinutes = (w: Workout): number => estimateWorkoutMinutes(toDurati
 const CARD_PREVIEW_MAX_COLUMNS = 4
 const CARD_PREVIEW_MAX_ROWS_PER_COLUMN = 5
 
+// Titre de bloc = HTML riche (RichEditor) : on n'en garde que le texte, tronqué court.
+function blockTitle(instructions: string | null | undefined, fallback: string): string {
+  const text = (instructions ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!text) return fallback
+  return text.length > 28 ? `${text.slice(0, 28)}…` : text
+}
+
 interface PreviewColumn {
   label: string | null
   movements: { name: string; bioType: string }[]
@@ -83,7 +90,7 @@ function buildCardPreview(w: Workout): { columns: PreviewColumn[]; hiddenBlocksC
     const mvs = byBlock.get(b.id) ?? []
     if (mvs.length === 0) return
     allColumns.push({
-      label: `Bloc ${i + 1}`,
+      label: blockTitle(b.instructions, `Bloc ${i + 1}`),
       movements: mvs.slice(0, CARD_PREVIEW_MAX_ROWS_PER_COLUMN).map(m => ({ name: m.movement.name, bioType: m.movement.bioType })),
       hiddenInColumn: Math.max(0, mvs.length - CARD_PREVIEW_MAX_ROWS_PER_COLUMN),
     })
@@ -378,10 +385,10 @@ function WorkoutCard({
           </div>
         </div>
 
-        <div style={{ marginTop: 12, display: 'flex', gap: 6 }}>
+        <div style={{ marginTop: 12, display: 'flex', gap: 3 }}>
           {previewColumns.map((col, ci) => (
             <div key={ci} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {col.label && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.3, color: 'var(--text-dim)', textTransform: 'uppercase' }}>{col.label}</div>}
+              {col.label && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.3, color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{col.label}</div>}
               {col.movements.map((m, mi) => (
                 <div key={mi} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                   <span style={{ width: 4, height: 4, borderRadius: '50%', background: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)', flexShrink: 0 }} />
