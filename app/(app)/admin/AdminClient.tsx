@@ -22,6 +22,7 @@ export default function AdminClient({
   const [bioFilter, setBioFilter] = useState('')
   const [complexityFilter, setComplexityFilter] = useState('')
   const [equipmentFilter, setEquipmentFilter] = useState('')
+  const [noVideoFilter, setNoVideoFilter] = useState(false)
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'name', dir: 'asc' })
 
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -93,11 +94,12 @@ export default function AdminClient({
     if (bioFilter) list = list.filter(m => m.bioType === bioFilter)
     if (complexityFilter) list = list.filter(m => m.complexity === complexityFilter)
     if (equipmentFilter) list = list.filter(m => m.equipment === equipmentFilter)
+    if (noVideoFilter) list = list.filter(m => !m.videoUrl)
     return [...list].sort((a: Movement, b: Movement) => {
       const va = a[sort.key] ?? ''; const vb = b[sort.key] ?? ''
       return sort.dir === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va))
     })
-  }, [movements, search, bioFilter, complexityFilter, equipmentFilter, sort])
+  }, [movements, search, bioFilter, complexityFilter, equipmentFilter, noVideoFilter, sort])
 
   const toggleSort = (key: SortKey) => {
     setSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' })
@@ -364,8 +366,13 @@ export default function AdminClient({
             <option value="">Tout équipement</option>
             {EQUIPMENT_TYPES.map(eq => <option key={eq} value={eq}>{EQUIPMENT_ICONS[eq]} {eq}</option>)}
           </select>
-          {(search || bioFilter || complexityFilter || equipmentFilter) && (
-            <button onClick={() => { setSearch(''); setBioFilter(''); setComplexityFilter(''); setEquipmentFilter('') }}
+          <button onClick={() => setNoVideoFilter(v => !v)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 9, border: `1px solid ${noVideoFilter ? 'var(--red)' : 'var(--border)'}`, background: noVideoFilter ? 'rgba(192,57,43,0.1)' : 'var(--bg-card)', color: noVideoFilter ? 'var(--red)' : 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>
+            🎬 Sans vidéo
+            <span style={{ fontWeight: 700 }}>{movements.filter(m => !m.videoUrl).length}</span>
+          </button>
+          {(search || bioFilter || complexityFilter || equipmentFilter || noVideoFilter) && (
+            <button onClick={() => { setSearch(''); setBioFilter(''); setComplexityFilter(''); setEquipmentFilter(''); setNoVideoFilter(false) }}
               style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
               <X size={12} /> Réinitialiser
             </button>
@@ -545,7 +552,7 @@ export default function AdminClient({
                           ? <EditableCell value={editBuf.videoUrl ?? ''} onChange={v => setEditBuf(b => ({ ...b, videoUrl: v }))} onKeyDown={e => handleEditKey(e, m.id)} />
                           : m.videoUrl
                             ? <a href={m.videoUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontSize: 12 }}>▶ Voir</a>
-                            : <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>—</span>}
+                            : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 20, background: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.25)', color: 'var(--red)', fontSize: 11, fontWeight: 600 }}>Sans vidéo</span>}
                       </td>
 
                       {/* Usage */}

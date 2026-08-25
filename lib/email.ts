@@ -195,6 +195,44 @@ export async function sendWorkoutShareEmail(toEmail: string, fromEmail: string, 
   return data
 }
 
+// Relance hebdo, douce et sobre — pas d'insistance, pas de streak/culpabilisation.
+// Déclenchée par app/api/cron/reminders/route.ts (cron Vercel, une fois/semaine)
+// pour les comptes sans séance loggée depuis 7 jours ou plus.
+export async function sendReminderEmail(toEmail: string, firstName: string | null, daysInactive: number) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3040'
+  const from = process.env.RESEND_FROM || 'ARETE <onboarding@resend.dev>'
+  const hello = firstName ? `${firstName}, ça` : 'Ça'
+
+  const { data, error } = await resend.emails.send({
+    from,
+    to: [toEmail],
+    subject: 'Une petite séance cette semaine ?',
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#0f0f0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f0f;padding:48px 0;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0" style="background:#1a1a1a;border-radius:16px;border:1px solid rgba(201,165,53,0.2);overflow:hidden;">
+        <tr><td style="padding:36px 40px 28px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="font-size:11px;font-weight:700;letter-spacing:4px;color:#C9A535;">ARETE</div>
+        </td></tr>
+        <tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#fff;">${hello} fait ${daysInactive} jours…</p>
+          <p style="margin:0 0 28px;font-size:15px;color:rgba(255,255,255,0.55);line-height:1.65;">Pas de pression — juste un petit rappel. Une séance rapide vaut mieux que pas de séance du tout.</p>
+          <a href="${appUrl}/generator" style="display:inline-block;background:#C9A535;color:#000;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;text-decoration:none;">Générer une séance</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`.trim(),
+  })
+  if (error) throw new Error(error.message)
+  return data
+}
+
 // Notifie un abonné qu'un profil suivi vient de publier un nouveau workout.
 export async function sendNewWorkoutEmail(toEmail: string, followedUserName: string, workoutName: string, workoutUrl: string) {
   const from = process.env.RESEND_FROM || 'ARETE <onboarding@resend.dev>'
