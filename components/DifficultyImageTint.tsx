@@ -13,7 +13,9 @@ export default function DifficultyImageTint({ difficulty }: { difficulty: string
       style={{
         position: 'absolute',
         inset: 0,
-        background: `linear-gradient(to top, ${color}55, transparent 60%)`,
+        background: color,
+        mixBlendMode: 'color',
+        opacity: 0.9,
         pointerEvents: 'none',
       }}
     />

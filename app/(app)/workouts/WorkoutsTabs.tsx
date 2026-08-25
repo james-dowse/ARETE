@@ -391,7 +391,7 @@ function WorkoutCard({
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   {new Date(w.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
                   {w.duration ? ` · ${w.duration} min cible` : ''}
-                  {context !== 'mine' && w.user && (
+                  {w.user && (
                     <>
                       <span>·</span>
                       <span
