@@ -24,7 +24,12 @@ export function invalidateAttributesCache() {
 }
 
 async function fetchAttributes(): Promise<AttributesData> {
-  const r = await fetch('/api/attributes')
+  // no-store : la réponse porte Cache-Control max-age=60 pour les lectures
+  // passives (AttributesSync), mais ce hook a son propre cache JS (_cache) qui
+  // évite déjà les requêtes redondantes. Sans no-store, un reload() juste après
+  // une modification admin pouvait recevoir la réponse HTTP encore en cache du
+  // navigateur — les 60 premières secondes, l'édition semblait ne rien changer.
+  const r = await fetch('/api/attributes', { cache: 'no-store' })
   if (!r.ok) throw new Error(`HTTP ${r.status}`)
   return r.json()
 }
