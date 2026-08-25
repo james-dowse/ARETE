@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { Mail, Trash2, RefreshCw, UserPlus, CheckCircle, Clock, Copy, Check, Link2, AlertTriangle, Pencil, X, Save, Camera } from 'lucide-react'
+import { useConfirm } from '@/components/ConfirmDialog'
 
 interface InvitedUser {
   id: string
@@ -43,6 +44,7 @@ function CopyLinkButton({ token }: { token: string }) {
 }
 
 export default function UsersClient({ adminEmail }: { adminEmail: string }) {
+  const confirm = useConfirm()
   const [users, setUsers] = useState<InvitedUser[]>([])
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
@@ -107,7 +109,7 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
   }
 
   const revoke = async (id: string, userEmail: string) => {
-    if (!confirm(`Révoquer l'accès de ${userEmail} ?`)) return
+    if (!await confirm(`Révoquer l'accès de ${userEmail} ?`, { danger: true })) return
     await fetch(`/api/invitations/${id}`, { method: 'DELETE' })
     setUsers(prev => prev.filter(u => u.id !== id))
   }

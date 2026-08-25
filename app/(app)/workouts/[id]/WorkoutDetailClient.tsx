@@ -8,6 +8,7 @@ import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
 import { useToast } from '@/components/Toast'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
 import { readableAccent } from '@/lib/color'
+import { useConfirm } from '@/components/ConfirmDialog'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -42,6 +43,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [deleting, setDeleting] = useState(false)
   const [showAddToWeek, setShowAddToWeek] = useState(false)
   const toast = useToast()
+  const confirm = useConfirm()
   const [saving, setSaving] = useState(false)
   const [sessions, setSessions] = useState<{ id: string; doneAt: string; note?: string | null }[]>([])
   const [sessionsOpen, setSessionsOpen] = useState(false)
@@ -491,7 +493,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     const msg = savedCount > 0
       ? `Supprimer définitivement cette séance ? ${savedCount} utilisateur${savedCount > 1 ? 's ont' : ' a'} sauvegardé ce workout et perdra${savedCount > 1 ? 'ont' : ''} l'accès.`
       : 'Supprimer définitivement cette séance ?'
-    if (!confirm(msg)) return
+    if (!await confirm(msg, { danger: true })) return
     setDeleting(true)
     const res = await fetch(`/api/workouts/${initial.id}`, { method: 'DELETE' }).catch(() => null)
     if (!res || !res.ok) {
@@ -798,14 +800,14 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
               <input
                 type="checkbox"
                 checked={editPublic}
-                onChange={e => {
+                onChange={async e => {
                   const checked = e.target.checked
                   if (checked) {
                     const missing: string[] = []
                     if (!stripHtml(editDescription)) missing.push('description')
                     if (initial.blocks.some(b => !stripHtml(blockInstructions[b.id] ?? ''))) missing.push('instructions de bloc')
                     if (editName.trim().startsWith('Séance')) missing.push('titre personnalisé')
-                    if (missing.length > 0 && !confirm(`Ce workout semble incomplet (${missing.join(', ')}). Publier quand même sur la Communauté ?`)) {
+                    if (missing.length > 0 && !await confirm(`Ce workout semble incomplet (${missing.join(', ')}). Publier quand même sur la Communauté ?`, { confirmLabel: 'Publier quand même' })) {
                       return
                     }
                   }

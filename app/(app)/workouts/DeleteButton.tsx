@@ -2,16 +2,18 @@
 import { useRouter } from 'next/navigation'
 import { Trash2, Copy } from 'lucide-react'
 import { useState } from 'react'
+import { useConfirm } from '@/components/ConfirmDialog'
 
 export default function WorkoutActions({ workoutId, onDelete }: { workoutId: string; onDelete?: () => void }) {
   const router = useRouter()
+  const confirm = useConfirm()
   const [deleting, setDeleting] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!confirm('Supprimer cette séance ?')) return
+    if (!await confirm('Supprimer cette séance ?', { danger: true })) return
     setDeleting(true)
     await fetch(`/api/workouts/${workoutId}`, { method: 'DELETE' })
     if (onDelete) {

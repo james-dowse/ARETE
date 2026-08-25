@@ -2,6 +2,7 @@
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
 import { useAttributes, type AttributeOption } from '@/lib/useAttributes'
 import { useToast } from '@/components/Toast'
+import { useConfirm } from '@/components/ConfirmDialog'
 import { useState, useEffect } from 'react'
 import { Plus, Search, Trash2, Pencil, X, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown, Copy } from 'lucide-react'
 
@@ -339,6 +340,7 @@ function AttributeSection({
   hasTempo?: boolean
   onReload: () => Promise<void>
 }) {
+  const confirm = useConfirm()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editBuf, setEditBuf] = useState<{ value: string; icon: string; color: string; tempo: string }>({ value: '', icon: '', color: '', tempo: '' })
   const [saving, setSaving] = useState(false)
@@ -367,7 +369,7 @@ function AttributeSection({
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer cette valeur ?')) return
+    if (!await confirm('Supprimer cette valeur ?', { danger: true })) return
     const res = await fetch(`/api/attributes/${id}`, { method: 'DELETE' })
     if (res.ok) { await onReload() } else { const d = await res.json(); setError(d.error || 'Erreur') }
   }

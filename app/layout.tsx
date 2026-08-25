@@ -3,6 +3,7 @@ import { Karla, Newsreader } from "next/font/google";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import AttributesSync from "@/components/AttributesSync";
 import { ToastProvider } from "@/components/Toast";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 import "./globals.css";
 
 const inter = Karla({
@@ -38,7 +39,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex">
         <ServiceWorkerRegister />
         <AttributesSync />
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <ConfirmProvider>{children}</ConfirmProvider>
+        </ToastProvider>
       </body>
     </html>
   );

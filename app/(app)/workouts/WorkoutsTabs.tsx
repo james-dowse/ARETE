@@ -8,6 +8,7 @@ import { stripHtmlMultiline } from '@/lib/html'
 import { readableAccent } from '@/lib/color'
 import DifficultyImageTint, { DIFFICULTY_TINT_IMG_FILTER } from '@/components/DifficultyImageTint'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
+import { useConfirm } from '@/components/ConfirmDialog'
 import { useToast } from '@/components/Toast'
 import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search, ArrowUpDown } from 'lucide-react'
 
@@ -309,6 +310,7 @@ function WorkoutCard({
   onToggleFavorite?: (fav: boolean) => void
 }) {
   const router = useRouter()
+  const confirm = useConfirm()
   const [saving, setSaving] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [isSaved, setIsSaved] = useState(w.isSaved ?? false)
@@ -336,7 +338,7 @@ function WorkoutCard({
     const msg = savedCount > 0
       ? `Supprimer cette séance ? ${savedCount} utilisateur${savedCount > 1 ? 's ont' : ' a'} sauvegardé ce workout et perdra${savedCount > 1 ? 'ont' : ''} l'accès.`
       : 'Supprimer cette séance ?'
-    if (!confirm(msg)) return
+    if (!await confirm(msg, { danger: true })) return
     setDeleting(true)
     await fetch(`/api/workouts/${w.id}`, { method: 'DELETE' })
     setDeleting(false)
