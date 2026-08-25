@@ -17,8 +17,8 @@ function blendTint(hex: string): string {
   const hsl = hexToHsl(hex)
   if (!hsl) return hex
   const [h, s] = hsl
-  const sat = s < 0.15 ? 0 : Math.min(Math.max(s, 0.3), 0.55)
-  return hslToCss(h, sat, 0.74)
+  const sat = s < 0.15 ? 0 : Math.min(Math.max(s, 0.55), 0.8)
+  return hslToCss(h, sat, 0.68)
 }
 
 export default function DifficultyImageTint({ difficulty }: { difficulty: string | null }) {
