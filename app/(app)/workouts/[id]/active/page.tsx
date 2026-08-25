@@ -608,7 +608,7 @@ export default function ActivePage() {
                             </button>
                             {exerciseTimer?.wmId === wm.id && (
                               <button onClick={() => setExerciseTimer(e => e ? { ...e, sec: 0 } : null)}
-                                style={{ padding: '10px 14px', borderRadius: 'var(--r-sm)', fontSize: 12, cursor: 'pointer', background: 'transparent', border: `1px solid ${onIvory ? 'rgba(14,12,8,0.2)' : 'rgba(99,179,237,0.2)'}`, color: timedColor }}
+                                style={{ minHeight: 44, padding: '10px 16px', borderRadius: 'var(--r-sm)', fontSize: 12, cursor: 'pointer', background: 'transparent', border: `1px solid ${onIvory ? 'rgba(14,12,8,0.2)' : 'rgba(99,179,237,0.2)'}`, color: timedColor }}
                                 title="Valider maintenant sans attendre la fin du timer">
                                 ✓ Skip
                               </button>
@@ -633,7 +633,7 @@ export default function ActivePage() {
                             </button>
                             {setsNow > 0 && !isComplete && (
                               <button onClick={() => handleUndo(wm)}
-                                style={{ padding: '10px 14px', borderRadius: 'var(--r-sm)', fontSize: 12, cursor: 'pointer', background: 'transparent', border: `1px solid ${onIvory ? 'rgba(14,12,8,0.2)' : 'rgba(255,255,255,0.1)'}`, color: onIvory ? 'var(--ink-muted)' : 'rgba(255,255,255,0.35)' }}>
+                                style={{ minWidth: 44, minHeight: 44, padding: '10px 16px', borderRadius: 'var(--r-sm)', fontSize: 14, cursor: 'pointer', background: 'transparent', border: `1px solid ${onIvory ? 'rgba(14,12,8,0.2)' : 'rgba(255,255,255,0.1)'}`, color: onIvory ? 'var(--ink-muted)' : 'rgba(255,255,255,0.35)' }}>
                                 ↩
                               </button>
                             )}
