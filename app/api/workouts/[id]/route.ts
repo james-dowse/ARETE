@@ -13,6 +13,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
         orderBy: { order: 'asc' },
       },
       template: true,
+      user: { select: { id: true, email: true, firstName: true, lastName: true, avatarUrl: true } },
     },
   })
   if (!workout) return NextResponse.json({ error: 'Not found' }, { status: 404 })

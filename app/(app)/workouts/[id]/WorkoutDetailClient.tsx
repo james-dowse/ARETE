@@ -6,6 +6,7 @@ import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
 import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
 import { useToast } from '@/components/Toast'
+import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -582,6 +583,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                 {new Date(initial.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
               {initial.duration && <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-muted)' }}><Clock size={12} /> {initial.duration} min</span>}
+              {initial.user && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)' }}>
+                  <CreatorBadge user={initial.user} size={20} />
+                  {creatorName(initial.user)}
+                </span>
+              )}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

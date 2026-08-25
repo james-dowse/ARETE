@@ -34,6 +34,7 @@ export interface Workout {
   tags?: string | null
   public?: boolean
   userId?: string | null
+  user?: { id: string; email: string; firstName?: string | null; lastName?: string | null; avatarUrl?: string | null } | null
   movements: WorkoutMovement[]
   blocks: WorkoutBlock[]
 }

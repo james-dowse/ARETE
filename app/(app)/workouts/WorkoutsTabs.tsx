@@ -6,10 +6,11 @@ import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_CO
 import { estimateWorkoutMinutes, type DurationBlock } from '@/lib/duration'
 import { stripHtmlMultiline } from '@/lib/html'
 import DifficultyImageTint from '@/components/DifficultyImageTint'
+import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
 import { useToast } from '@/components/Toast'
 import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search, ArrowUpDown } from 'lucide-react'
 
-interface WorkoutUser { id: string; email: string }
+interface WorkoutUser { id: string; email: string; firstName?: string | null; lastName?: string | null; avatarUrl?: string | null }
 interface WorkoutMovementItem {
   id: string; sets?: number | null; reps?: string | null; duration?: number | null
   rest?: number | null; blockId?: string | null; order?: number
@@ -315,7 +316,6 @@ function WorkoutCard({
   const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
   const difficulty = computeWorkoutDifficulty(w.movements.map(m => ({ complexity: m.movement.complexity })))
   const estMin = estimateWorkoutMinutes(toDurationMovements(w.movements), w.blocks)
-  const initiale = w.user?.email?.[0]?.toUpperCase() ?? '?'
   const { columns: previewColumns, hiddenBlocksCount } = buildCardPreview(w)
 
   async function handleDuplicate(e: React.MouseEvent) {
@@ -390,8 +390,8 @@ function WorkoutCard({
                     <>
                       <span>·</span>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--bg-elevated)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'var(--text-muted)' }}>{initiale}</span>
-                        {w.user.email.split('@')[0]}
+                        <CreatorBadge user={w.user} size={16} />
+                        {creatorName(w.user)}
                       </span>
                     </>
                   )}
