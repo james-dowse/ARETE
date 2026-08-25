@@ -98,7 +98,11 @@ function buildCardPreview(w: Workout): { columns: PreviewColumn[]; hiddenBlocksC
       hiddenInColumn: Math.max(0, mvs.length - CARD_PREVIEW_MAX_ROWS_PER_COLUMN),
     })
   })
-  if (flat.length > 0) {
+  // Comme la fiche détail (WorkoutDetailClient) : dès qu'il y a des blocs, les
+  // mouvements sans blockId ne sont pas affichés (résidus d'édition antérieurs
+  // à l'ajout de blocs) — sinon ils formeraient une colonne fantôme qui ne
+  // correspond à aucun bloc réel du WOD.
+  if (blocks.length === 0 && flat.length > 0) {
     allColumns.push({
       label: null,
       movements: flat.slice(0, CARD_PREVIEW_MAX_ROWS_PER_COLUMN).map(m => ({ name: m.movement.name, bioType: m.movement.bioType })),
