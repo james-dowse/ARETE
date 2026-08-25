@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
         })
       : Promise.resolve([]),
     prisma.movement.findMany({
-      where: { name: { contains: q } },
+      where: { name: { contains: q }, custom: false },
       select: { id: true, name: true, bioType: true, complexity: true },
       orderBy: { name: 'asc' },
       take: 6,

@@ -46,6 +46,11 @@ export default function LibraryPicker({ currentName, currentId, onPick, onClose 
   const [results, setResults] = useState<PickableMovement[]>([])
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [showCustomForm, setShowCustomForm] = useState(false)
+  const [customName, setCustomName] = useState('')
+  const [customVideo, setCustomVideo] = useState('')
+  const [customError, setCustomError] = useState('')
+  const [creatingCustom, setCreatingCustom] = useState(false)
 
   const toggle = (set: Set<string>, setSet: (s: Set<string>) => void, value: string) => {
     const next = new Set(set)
@@ -69,6 +74,26 @@ export default function LibraryPicker({ currentName, currentId, onPick, onClose 
 
   useEffect(() => { const t = setTimeout(doFetch, 200); return () => clearTimeout(t) }, [doFetch])
   useEffect(() => { inputRef.current?.focus() }, [])
+
+  const handleCreateCustom = async () => {
+    const name = customName.trim()
+    if (!name) { setCustomError('Nom requis'); return }
+    setCreatingCustom(true)
+    setCustomError('')
+    try {
+      const res = await fetch('/api/movements/custom', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, videoUrl: customVideo.trim() || undefined }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setCustomError(data.error || 'Erreur'); return }
+      onPick(data)
+    } catch {
+      setCustomError('Erreur réseau')
+    } finally {
+      setCreatingCustom(false)
+    }
+  }
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -172,6 +197,40 @@ export default function LibraryPicker({ currentName, currentId, onPick, onClose 
                 ? (<><Heart size={28} strokeWidth={1.2} color="var(--text-dim)" /><span>Aucun favori pour l&apos;instant — ouvre la fiche d&apos;un mouvement et clique ♥ pour l&apos;ajouter.</span></>)
                 : 'Aucun résultat'
               }
+            </div>
+          )}
+          {!loading && !favoritesOnly && !showCustomForm && (
+            <button onClick={() => { setShowCustomForm(true); setCustomName(search) }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', marginTop: 4, background: 'none', border: '1px dashed var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+              + Mouvement personnalisé (nom + vidéo, pour cette séance)
+            </button>
+          )}
+          {showCustomForm && (
+            <div style={{ padding: 12, marginTop: 4, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input
+                autoFocus
+                value={customName}
+                onChange={e => setCustomName(e.target.value)}
+                placeholder="Nom du mouvement"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 7, padding: '8px 10px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
+              />
+              <input
+                value={customVideo}
+                onChange={e => setCustomVideo(e.target.value)}
+                placeholder="Lien vidéo (optionnel)"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 7, padding: '8px 10px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
+              />
+              {customError && <div style={{ fontSize: 12, color: 'var(--red)' }}>{customError}</div>}
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button onClick={() => { setShowCustomForm(false); setCustomError('') }}
+                  style={{ padding: '7px 14px', background: 'none', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 12.5, cursor: 'pointer' }}>
+                  Annuler
+                </button>
+                <button onClick={handleCreateCustom} disabled={creatingCustom || !customName.trim()}
+                  style={{ padding: '7px 14px', background: 'var(--gold)', border: 'none', borderRadius: 7, color: 'var(--ink)', fontSize: 12.5, fontWeight: 700, cursor: creatingCustom ? 'default' : 'pointer', opacity: !customName.trim() ? 0.6 : 1 }}>
+                  {creatingCustom ? '…' : 'Ajouter'}
+                </button>
+              </div>
             </div>
           )}
           {!loading && results.map(m => {

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const toValues = (v: string | null) => v ? v.split(',').map(s => s.trim()).filter(Boolean) : []
   const asFilter = (values: string[]) => values.length === 1 ? values[0] : { in: values }
 
-  const where: Record<string, unknown> = {}
+  const where: Record<string, unknown> = { custom: false }
   const bioTypes = toValues(bioType)
   const complexities = toValues(complexity)
   if (bioTypes.length) where.bioType = asFilter(bioTypes)

@@ -1,0 +1,2 @@
+ALTER TABLE "Movement" ADD COLUMN "custom" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Movement" ADD COLUMN "createdByUserId" TEXT;

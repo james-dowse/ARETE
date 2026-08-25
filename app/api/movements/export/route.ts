@@ -8,7 +8,7 @@ export async function GET() {
   const user = await getCurrentUser()
   if (!isAdmin(user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const movements = await prisma.movement.findMany({ orderBy: [{ bioType: 'asc' }, { name: 'asc' }] })
+  const movements = await prisma.movement.findMany({ where: { custom: false }, orderBy: [{ bioType: 'asc' }, { name: 'asc' }] })
 
   const rows = movements.map(m => ({
     ID: m.id,

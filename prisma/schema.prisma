@@ -15,6 +15,11 @@ model Movement {
   description      String?
   imageUrl         String?
   videoUrl         String?
+  // Mouvement personnalisé créé "à la volée" par un utilisateur (nom + vidéo
+  // seulement, id "custom-xxx") — jamais retourné par la recherche générale de
+  // GET /api/movements, pour ne pas polluer la bibliothèque partagée.
+  custom           Boolean            @default(false)
+  createdByUserId  String?
   workoutMovements WorkoutMovement[]
   favorites        FavoriteMovement[]
 }

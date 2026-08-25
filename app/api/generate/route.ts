@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx]
-    const where: Prisma.MovementWhereInput = {}
+    const where: Prisma.MovementWhereInput = { custom: false }
     if (block.bioTypes?.length) where.bioType = { in: block.bioTypes }
     if (block.complexities?.length) where.complexity = { in: block.complexities }
     if (block.equipments?.length) where.equipment = { in: block.equipments }

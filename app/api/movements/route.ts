@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const asFilter = (values: string[]) => values.length === 1 ? values[0] : { in: values }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = {}
+  const where: Record<string, any> = { custom: false }
   const bioTypes = toValues(bioType)
   const complexities = toValues(complexity)
   const equipments = toValues(equipment)
