@@ -716,12 +716,12 @@ export default function GeneratorPage() {
                 <span style={{ fontSize: 15, color: 'var(--text-muted)' }}>minutes</span>
               </div>
               <input
-                type="range" min={15} max={90} step={5} value={timeTarget}
+                type="range" min={15} max={120} step={5} value={timeTarget}
                 onChange={e => setTimeTarget(Number(e.target.value))}
                 style={{ width: '100%', accentColor: 'var(--crimson)', marginBottom: 10 }}
               />
               <div style={{ display: 'flex', gap: 6, marginBottom: 14, justifyContent: 'center' }}>
-                {[20, 30, 45, 60].map(m => (
+                {[20, 30, 45, 60, 90, 120].map(m => (
                   <button key={m} onClick={() => setTimeTarget(m)} style={{
                     padding: '5px 14px', borderRadius: 'var(--r-full)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                     border: `1px solid ${timeTarget === m ? 'var(--crimson)' : 'var(--border)'}`,

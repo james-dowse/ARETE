@@ -6,6 +6,7 @@ import { useState, useEffect, useLayoutEffect } from 'react'
 import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon, Calendar, Search, X, TrendingUp } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useRef, useCallback } from 'react'
+import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
 
 const allNav = [
   { href: '/dashboard',   label: 'Tableau de bord', icon: LayoutDashboard, admin: false },
@@ -27,6 +28,7 @@ const AUTO_COLLAPSE_BELOW = 1024
 interface SearchResult {
   workouts: { id: string; name: string; duration?: number | null; movements: { movement: { bioType: string } }[] }[]
   movements: { id: string; name: string; bioType: string; complexity: string }[]
+  users: { id: string; firstName: string | null; lastName: string | null; avatarUrl: string | null }[]
 }
 
 export default function Sidebar() {
@@ -354,7 +356,7 @@ export default function Sidebar() {
             {searchLoading && (
               <div style={{ padding: '20px 16px', fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>Recherche…</div>
             )}
-            {!searchLoading && searchResults && searchResults.workouts.length === 0 && searchResults.movements.length === 0 && (
+            {!searchLoading && searchResults && searchResults.workouts.length === 0 && searchResults.movements.length === 0 && searchResults.users.length === 0 && (
               <div style={{ padding: '20px 16px', fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>Aucun résultat</div>
             )}
             {!searchLoading && searchResults && searchResults.workouts.length > 0 && (
@@ -399,6 +401,28 @@ export default function Sidebar() {
                     <Library size={13} style={{ color: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
                     <span style={{ fontSize: 14, flex: 1 }}>{m.name}</span>
                     <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{m.bioType}</span>
+                  </button>
+                ))}
+              </>
+            )}
+            {!searchLoading && searchResults && searchResults.users.length > 0 && (
+              <>
+                <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(200,165,95,0.6)', borderTop: (searchResults.workouts.length > 0 || searchResults.movements.length > 0) ? '1px solid rgba(255,255,255,0.06)' : 'none', marginTop: (searchResults.workouts.length > 0 || searchResults.movements.length > 0) ? 4 : 0 }}>Utilisateurs</div>
+                {searchResults.users.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => navigate(`/users/${u.id}`)}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '9px 16px', background: 'none', border: 'none', cursor: 'pointer',
+                      textAlign: 'left', color: 'var(--text, #fff)',
+                      transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,165,95,0.08)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+                  >
+                    <CreatorBadge user={u} size={20} />
+                    <span style={{ fontSize: 14, flex: 1 }}>{creatorName(u)}</span>
                   </button>
                 ))}
               </>

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
 
   const userId = await getCurrentUserId()
 
-  const [workouts, movements] = await Promise.all([
+  const [workouts, movements, users] = await Promise.all([
     userId
       ? prisma.workout.findMany({
           where: {
@@ -26,7 +26,21 @@ export async function GET(req: NextRequest) {
       orderBy: { name: 'asc' },
       take: 6,
     }),
+    // Recherche par profil — nom/prénom uniquement (jamais l'email). Ouverte
+    // à tout utilisateur connecté, pas réservée à l'admin : c'est le point
+    // d'entrée pour trouver un profil à suivre (voir /users/[id]).
+    userId
+      ? prisma.invitedUser.findMany({
+          where: {
+            status: 'accepted',
+            NOT: { id: userId },
+            OR: [{ firstName: { contains: q } }, { lastName: { contains: q } }],
+          },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+          take: 6,
+        })
+      : Promise.resolve([]),
   ])
 
-  return NextResponse.json({ workouts, movements })
+  return NextResponse.json({ workouts, movements, users })
 }
