@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireWorkoutOwner } from '@/lib/authz'
-import { sendNewWorkoutEmail } from '@/lib/email'
+import { sendNewWorkoutEmail, sendWorkoutRemovedEmail, sendWorkoutUpdatedEmail } from '@/lib/email'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -56,7 +56,31 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     notifyFollowers = before?.public === false
   }
 
+  // Modification substantielle (nom et/ou description) : notifie les
+  // utilisateurs qui ont sauvegardé ce workout précis (SavedWorkout — pas les
+  // abonnés du profil, qui ne sont notifiés qu'à la publication d'un nouveau
+  // workout). Le corps de la requête n'inclut ces clés que si le champ est
+  // réellement modifié (isDirtyName/isDirtyDescription côté client), donc
+  // leur présence ici suffit à qualifier le changement.
+  const notifySavers = 'name' in data || 'description' in data
+
   const updated = await prisma.workout.update({ where: { id }, data })
+
+  if (notifySavers) {
+    const savers = await prisma.savedWorkout.findMany({
+      where: { workoutId: id, NOT: { userId: authz.userId } },
+      select: { user: { select: { email: true } } },
+    })
+    if (savers.length > 0) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3040'
+      const workoutUrl = `${appUrl}/workouts/${id}`
+      await Promise.all(
+        savers.map(s => sendWorkoutUpdatedEmail(s.user.email, updated.name, workoutUrl).catch(err => {
+          console.error('[workout updated email]', err)
+        }))
+      )
+    }
+  }
 
   if (notifyFollowers && updated.userId) {
     const [creator, followers] = await Promise.all([
@@ -85,6 +109,24 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params
   const authz = await requireWorkoutOwner(id)
   if (!authz.ok) return authz.response
+
+  const [workout, savers] = await Promise.all([
+    prisma.workout.findUnique({ where: { id }, select: { name: true } }),
+    prisma.savedWorkout.findMany({
+      where: { workoutId: id, NOT: { userId: authz.userId } },
+      select: { user: { select: { email: true } } },
+    }),
+  ])
+
   await prisma.workout.delete({ where: { id } })
+
+  if (workout && savers.length > 0) {
+    await Promise.all(
+      savers.map(s => sendWorkoutRemovedEmail(s.user.email, workout.name).catch(err => {
+        console.error('[workout removed email]', err)
+      }))
+    )
+  }
+
   return NextResponse.json({ ok: true })
 }
