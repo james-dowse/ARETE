@@ -385,7 +385,7 @@ function WorkoutCard({
           </div>
         </div>
 
-        <div style={{ marginTop: 12, display: 'flex', gap: 3 }}>
+        <div style={{ marginTop: 12, display: 'flex', gap: 1 }}>
           {previewColumns.map((col, ci) => (
             <div key={ci} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
               {col.label && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.3, color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{col.label}</div>}
