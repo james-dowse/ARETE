@@ -567,6 +567,8 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const [difficultyFilters, setDifficultyFilters] = useState<Set<string>>(new Set())
   const [sortBy, setSortBy] = useState<SortOption>('name')
   const [searchQuery, setSearchQuery] = useState('')
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set())
+  const [followedOnly, setFollowedOnly] = useState(false)
 
   const toggleInSet = (set: Set<string>, setSet: (s: Set<string>) => void, value: string) => {
     const next = new Set(set)
@@ -611,8 +613,12 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   }, [])
 
   const loadCommunity = useCallback(async () => {
-    const data = await fetch('/api/workouts?filter=community').then(r => r.json())
+    const [data, follows] = await Promise.all([
+      fetch('/api/workouts?filter=community').then(r => r.json()),
+      fetch('/api/follows').then(r => r.json()).catch(() => ({ followedIds: [] })),
+    ])
     setCommunityWorkouts(data)
+    setFollowedIds(new Set(follows.followedIds ?? []))
   }, [])
 
   useEffect(() => {
@@ -658,6 +664,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   // tous appliqués côté client. À l'intérieur d'un critère c'est un OU (une séance "Tirage"
   // OU "Poussée" matche si les deux sont cochés), entre critères c'est un ET.
   const matchesFilter = (w: Workout) => {
+    if (tab === 'community' && followedOnly && !(w.user && followedIds.has(w.user.id))) return false
     if (searchQuery.trim() && !w.name.toLowerCase().includes(searchQuery.trim().toLowerCase())) return false
     if (bioFilters.size > 0 && !w.movements.some(wm => bioFilters.has(wm.movement.bioType))) return false
     if (difficultyFilters.size > 0) {
@@ -737,6 +744,20 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
             ))}
           </select>
         </div>
+
+        {tab === 'community' && (
+          <button
+            onClick={() => setFollowedOnly(v => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              background: followedOnly ? 'var(--gold-ghost)' : 'var(--bg-card)',
+              color: followedOnly ? 'var(--gold)' : 'var(--text-muted)',
+              border: `1px solid ${followedOnly ? 'var(--gold-border)' : 'var(--border)'}`,
+            }}
+          >
+            <Users size={13} /> Abonnements
+          </button>
+        )}
       </div>
 
       {/* Filtre type biomécanique (multi-sélection) */}
