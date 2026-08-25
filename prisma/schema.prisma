@@ -33,6 +33,10 @@ model Workout {
   blockRest   Int?
   tags        String?
   public      Boolean           @default(false)
+  // Difficulté forcée manuellement en édition — null = calcul auto
+  // (computeWorkoutDifficulty) à partir des mouvements. Valeur libre parmi
+  // COMPLEXITIES (Admin > Référentiels).
+  difficultyOverride String?
   movements   WorkoutMovement[]
   blocks      WorkoutBlock[]
   shares      WorkoutShare[]

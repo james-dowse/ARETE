@@ -41,7 +41,7 @@ function blendTint(hex: string): string {
   if (!hsl) return hex
   const [h, s] = hsl
   const sat = Math.max(s, 0.55)
-  const light = 0.42
+  const light = 0.54
   return hslToCss(h, sat, light)
 }
 

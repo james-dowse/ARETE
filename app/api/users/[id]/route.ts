@@ -20,6 +20,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     orderBy: { createdAt: 'desc' },
     select: {
       id: true, name: true, createdAt: true, duration: true, imageUrl: true, imagePosition: true, tags: true,
+      difficultyOverride: true,
       movements: { select: { movement: { select: { complexity: true } } } },
     },
     take: 100,

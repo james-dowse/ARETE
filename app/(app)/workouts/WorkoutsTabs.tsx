@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
+import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, effectiveDifficulty } from '@/lib/types'
 import { estimateWorkoutMinutes, type DurationBlock } from '@/lib/duration'
 import { stripHtmlMultiline } from '@/lib/html'
 import DifficultyImageTint, { DIFFICULTY_TINT_IMG_FILTER } from '@/components/DifficultyImageTint'
@@ -27,6 +27,7 @@ interface Workout {
   movements: WorkoutMovementItem[]
   blocks?: (DurationBlock & { order?: number; bioType?: string | null })[]
   public?: boolean
+  difficultyOverride?: string | null
   _count?: { savedBy: number }
   user?: WorkoutUser | null
   isSaved?: boolean
@@ -315,7 +316,7 @@ function WorkoutCard({
   const [duplicating, setDuplicating] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
-  const difficulty = computeWorkoutDifficulty(w.movements.map(m => ({ complexity: m.movement.complexity })))
+  const difficulty = effectiveDifficulty(w.difficultyOverride, w.movements.map(m => ({ complexity: m.movement.complexity })))
   const estMin = estimateWorkoutMinutes(toDurationMovements(w.movements), w.blocks)
   const { columns: previewColumns, hiddenBlocksCount } = buildCardPreview(w)
 
@@ -657,7 +658,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
     if (searchQuery.trim() && !w.name.toLowerCase().includes(searchQuery.trim().toLowerCase())) return false
     if (bioFilters.size > 0 && !w.movements.some(wm => bioFilters.has(wm.movement.bioType))) return false
     if (difficultyFilters.size > 0) {
-      const diff = computeWorkoutDifficulty(w.movements.map(wm => ({ complexity: wm.movement.complexity })))
+      const diff = effectiveDifficulty(w.difficultyOverride, w.movements.map(wm => ({ complexity: wm.movement.complexity })))
       if (!diff || !difficultyFilters.has(diff)) return false
     }
     if (activeTags.size > 0) {

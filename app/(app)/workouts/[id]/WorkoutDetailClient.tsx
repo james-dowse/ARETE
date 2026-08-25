@@ -3,7 +3,7 @@ import RichEditor from '@/components/RichEditor'
 import MovementModal from '@/components/MovementModal'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
-import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
+import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, COMPLEXITIES, effectiveDifficulty } from '@/lib/types'
 import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
 import { useToast } from '@/components/Toast'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
@@ -67,6 +67,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [editTags, setEditTags] = useState<string[]>(() => initial.tags ? initial.tags.split(',').map(t => t.trim()).filter(Boolean) : [])
   const [tagInput, setTagInput] = useState('')
   const [editPublic, setEditPublic] = useState(!!initial.public)
+  const [editDifficultyOverride, setEditDifficultyOverride] = useState(initial.difficultyOverride ?? '')
   const [movementOrder, setMovementOrder] = useState<Record<string, number>>({})
   const [draggedWmId, setDraggedWmId] = useState<string | null>(null)
   // Ordre des blocs (édition) — même mécanique que movementOrder pour les
@@ -255,9 +256,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const isDirtyImagePosition = editMode && !isDirtyImage && imagePosition !== (initial.imagePosition ?? null)
   const isDirtyTags = editMode && editTags.join(',') !== (initial.tags ?? '')
   const isDirtyPublic = editMode && editPublic !== !!initial.public
+  const isDirtyDifficultyOverride = editMode && editDifficultyOverride !== (initial.difficultyOverride ?? '')
   const isDirtyOrder = editMode && originals.some(o => (movementOrder[o.id] ?? o.order) !== o.order)
   const isDirtyBlockOrder = editMode && initial.blocks.some(b => (blockOrder[b.id] ?? b.order) !== b.order)
-  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyName || isDirtyDescription || isDirtyImage || isDirtyImagePosition || isDirtyTags || isDirtyPublic || isDirtyOrder || isDirtyBlockOrder || removedWmIds.size > 0 || removedBlockIds.size > 0 || pendingBlocks.length > 0
+  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyName || isDirtyDescription || isDirtyImage || isDirtyImagePosition || isDirtyTags || isDirtyPublic || isDirtyDifficultyOverride || isDirtyOrder || isDirtyBlockOrder || removedWmIds.size > 0 || removedBlockIds.size > 0 || pendingBlocks.length > 0
 
   const pendingCount = editMode
     ? editStates.filter((es, i) => {
@@ -291,6 +293,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
     setEditPublic(!!initial.public)
+    setEditDifficultyOverride(initial.difficultyOverride ?? '')
     setRemovedWmIds(new Set()); setRemovedBlockIds(new Set()); setPendingAdds([]); setPendingBlocks([])
     const initOrder: Record<string, number> = {}
     initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
@@ -316,6 +319,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
     setEditPublic(!!initial.public)
+    setEditDifficultyOverride(initial.difficultyOverride ?? '')
     setRemovedWmIds(new Set()); setRemovedBlockIds(new Set()); setPendingAdds([]); setPendingBlocks([])
     const initOrder: Record<string, number> = {}
     initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
@@ -428,7 +432,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
           }),
         }).catch(() => null)
       ),
-      ...((isDirtyName || isDirtyDescription || isDirtyTags || isDirtyPublic || isDirtyImage || isDirtyImagePosition) ? [
+      ...((isDirtyName || isDirtyDescription || isDirtyTags || isDirtyPublic || isDirtyDifficultyOverride || isDirtyImage || isDirtyImagePosition) ? [
         fetch(`/api/workouts/${initial.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -436,6 +440,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
             ...(isDirtyDescription ? { description: editDescription } : {}),
             ...(isDirtyTags ? { tags: editTags.join(',') || null } : {}),
             ...(isDirtyPublic ? { public: editPublic } : {}),
+            ...(isDirtyDifficultyOverride ? { difficultyOverride: editDifficultyOverride || null } : {}),
             ...(isDirtyImage ? { imageUrl } : {}),
             ...(isDirtyImagePosition ? { imagePosition } : {}),
           }),
@@ -508,10 +513,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     (editMode ? allEditStates.map(es => es.movement.bioType) : initial.movements.map(m => m.movement.bioType))
   ))
 
-  // Difficulté globale : recalculée à chaque changement de mouvement (reroll, bibliothèque, ajout/suppression)
-  const difficulty = computeWorkoutDifficulty(
-    editMode ? allEditStates.map(es => ({ complexity: es.movement.complexity })) : initial.movements.map(m => ({ complexity: m.movement.complexity }))
-  )
+  // Difficulté globale : recalculée à chaque changement de mouvement (reroll, bibliothèque, ajout/suppression),
+  // sauf si un ajustement manuel est actif (editDifficultyOverride / initial.difficultyOverride), qui prime toujours.
+  const computedMovementsForDifficulty = editMode ? allEditStates.map(es => ({ complexity: es.movement.complexity })) : initial.movements.map(m => ({ complexity: m.movement.complexity }))
+  const difficulty = editMode
+    ? effectiveDifficulty(editDifficultyOverride || null, computedMovementsForDifficulty)
+    : effectiveDifficulty(initial.difficultyOverride, computedMovementsForDifficulty)
 
   // Même estimation que partout ailleurs dans l'app (liste des séances, aperçu
   // de bloc, générateur) — voir lib/duration.ts. En édition, reconstruit blockId
@@ -654,7 +661,24 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
 
         {/* Bio tags */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
-          {difficulty && (
+          {editMode ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <select
+                value={editDifficultyOverride}
+                onChange={e => setEditDifficultyOverride(e.target.value)}
+                style={{
+                  padding: '6px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', outline: 'none',
+                  background: difficulty ? `${COMPLEXITY_COLORS[difficulty]}18` : 'var(--bg-elevated)',
+                  color: difficulty ? COMPLEXITY_COLORS[difficulty] : 'var(--text-muted)',
+                  border: `1px solid ${difficulty ? `${COMPLEXITY_COLORS[difficulty]}40` : 'var(--border)'}`,
+                }}
+              >
+                <option value="">Auto{difficulty ? ` (${difficulty})` : ''}</option>
+                {COMPLEXITIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              {isDirtyDifficultyOverride && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 20, background: 'var(--dirty)', fontWeight: 600 }}>modifié</span>}
+            </span>
+          ) : difficulty && (
             <span style={{ padding: '6px 16px', borderRadius: 20, fontSize: 15, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: COMPLEXITY_COLORS[difficulty], border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40` }}>
               {difficulty}
             </span>

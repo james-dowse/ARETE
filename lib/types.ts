@@ -93,6 +93,12 @@ export function computeWorkoutDifficulty(movements: { complexity: string }[]): s
   return majority
 }
 
+// Difficulté réellement affichée/utilisée : l'ajustement manuel (édition)
+// prime toujours sur le calcul auto à partir des mouvements.
+export function effectiveDifficulty(override: string | null | undefined, movements: { complexity: string }[]): string | null {
+  return override || computeWorkoutDifficulty(movements)
+}
+
 export interface TemplateBlockInput {
   bioType: string | null
   complexity: string | null

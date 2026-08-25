@@ -2,13 +2,14 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Clock, UserPlus, UserCheck, Bell, BellOff } from 'lucide-react'
-import { COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
+import { COMPLEXITY_COLORS, effectiveDifficulty } from '@/lib/types'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
 
 interface ProfileUser { id: string; firstName: string | null; lastName: string | null; bio: string | null; avatarUrl: string | null }
 interface ProfileWorkout {
   id: string; name: string; createdAt: string; duration: number | null
   imageUrl: string | null; imagePosition: string | null
+  difficultyOverride?: string | null
   movements: { movement: { complexity: string } }[]
 }
 interface ProfileData {
@@ -93,7 +94,7 @@ export default function UserProfileClient({ userId }: { userId: string }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {workouts.map(w => {
-            const difficulty = computeWorkoutDifficulty(w.movements.map(m => ({ complexity: m.movement.complexity })))
+            const difficulty = effectiveDifficulty(w.difficultyOverride, w.movements.map(m => ({ complexity: m.movement.complexity })))
             return (
               <Link key={w.id} href={`/workouts/${w.id}`} className="card card-interactive"
                 style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 'var(--r-md)', textDecoration: 'none' }}>

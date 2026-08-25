@@ -33,6 +33,7 @@ export interface Workout {
   blockRest?: number | null
   tags?: string | null
   public?: boolean
+  difficultyOverride?: string | null
   userId?: string | null
   user?: { id: string; email: string; firstName?: string | null; lastName?: string | null; avatarUrl?: string | null } | null
   _count?: { savedBy: number }
