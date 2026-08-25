@@ -15,6 +15,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('icon' in body) data.icon = body.icon?.trim() || null
   if ('color' in body) data.color = body.color?.trim() || null
   if ('position' in body) data.position = Number(body.position)
+  if ('tempo' in body) data.tempo = body.tempo === '' || body.tempo === null ? null : Number(body.tempo)
 
   const opt = await prisma.attributeOption.update({ where: { id }, data })
   invalidateAttributes()

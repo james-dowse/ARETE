@@ -6,6 +6,10 @@ import { getCurrentUserId } from '@/lib/session'
 // 3 mouvements et les pastilles. Charger `movement: true` tirait aussi
 // description / imageUrl / videoUrl de chaque mouvement de chaque séance —
 // plusieurs centaines de lignes de texte inutiles par chargement de page.
+//
+// reps/duration/rest/blockId/order + blocks : nécessaires à l'estimation de
+// durée précise (lib/duration.ts), calculée côté client sur ces mêmes données
+// pour rester identique à celle de la fiche détail et du générateur.
 const WORKOUT_SELECT = {
   id: true,
   name: true,
@@ -16,11 +20,17 @@ const WORKOUT_SELECT = {
   tags: true,
   userId: true,
   user: { select: { id: true, email: true } },
+  blocks: { select: { id: true, superset: true, restAfter: true } },
   movements: {
     orderBy: { order: 'asc' },
     select: {
       id: true,
       sets: true,
+      reps: true,
+      duration: true,
+      rest: true,
+      blockId: true,
+      order: true,
       movement: { select: { name: true, bioType: true, complexity: true } },
     },
   },

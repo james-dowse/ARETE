@@ -8,6 +8,7 @@ export interface AttributeOption {
   icon: string | null
   color: string | null
   position: number
+  tempo?: number | null
 }
 
 export interface AttributesData {

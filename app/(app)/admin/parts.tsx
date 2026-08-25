@@ -322,34 +322,36 @@ export function SortTh({ label, field, sort, onSort }: { label: string; field: S
 
 // ─── Référentiels — one category section ──────────────────────────────────────
 function AttributeSection({
-  title, category, items, hasIcon, hasColor, onReload,
+  title, category, items, hasIcon, hasColor, hasTempo, onReload,
 }: {
   title: string
   category: string
   items: AttributeOption[]
   hasIcon?: boolean
   hasColor?: boolean
+  hasTempo?: boolean
   onReload: () => Promise<void>
 }) {
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editBuf, setEditBuf] = useState<{ value: string; icon: string; color: string }>({ value: '', icon: '', color: '' })
+  const [editBuf, setEditBuf] = useState<{ value: string; icon: string; color: string; tempo: string }>({ value: '', icon: '', color: '', tempo: '' })
   const [saving, setSaving] = useState(false)
-  const [addForm, setAddForm] = useState({ value: '', icon: '', color: '' })
+  const [addForm, setAddForm] = useState({ value: '', icon: '', color: '', tempo: '' })
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
 
   const startEdit = (o: AttributeOption) => {
     setEditingId(o.id)
-    setEditBuf({ value: o.value, icon: o.icon ?? '', color: o.color ?? '' })
+    setEditBuf({ value: o.value, icon: o.icon ?? '', color: o.color ?? '', tempo: o.tempo != null ? String(o.tempo) : '' })
     setError('')
   }
-  const cancelEdit = () => { setEditingId(null); setEditBuf({ value: '', icon: '', color: '' }) }
+  const cancelEdit = () => { setEditingId(null); setEditBuf({ value: '', icon: '', color: '', tempo: '' }) }
 
   const commitEdit = async (id: string) => {
     setSaving(true)
-    const body: Record<string, string | null> = { value: editBuf.value.trim() }
+    const body: Record<string, string | number | null> = { value: editBuf.value.trim() }
     if (hasIcon) body.icon = editBuf.icon.trim() || null
     if (hasColor) body.color = editBuf.color.trim() || null
+    if (hasTempo) body.tempo = editBuf.tempo.trim() === '' ? null : Number(editBuf.tempo)
     const res = await fetch(`/api/attributes/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     })
@@ -378,14 +380,15 @@ function AttributeSection({
     e.preventDefault()
     if (!addForm.value.trim()) return
     setAdding(true)
-    const body: Record<string, string | null> = { category, value: addForm.value.trim() }
+    const body: Record<string, string | number | null> = { category, value: addForm.value.trim() }
     if (hasIcon) body.icon = addForm.icon.trim() || null
     if (hasColor) body.color = addForm.color.trim() || null
+    if (hasTempo) body.tempo = addForm.tempo.trim() === '' ? null : Number(addForm.tempo)
     const res = await fetch('/api/attributes', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     })
     setAdding(false)
-    if (res.ok) { setAddForm({ value: '', icon: '', color: '' }); await onReload() } else { const d = await res.json(); setError(d.error || 'Erreur') }
+    if (res.ok) { setAddForm({ value: '', icon: '', color: '', tempo: '' }); await onReload() } else { const d = await res.json(); setError(d.error || 'Erreur') }
   }
 
   const inp = (v: string, onChange: (x: string) => void, placeholder: string, width?: number) => (
@@ -422,6 +425,13 @@ function AttributeSection({
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 2 }}><X size={10} /></button>
                   </div>
                 )}
+                {hasTempo && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3 }} title="Secondes par répétition, pour estimer la durée d'une série au nombre de reps">
+                    <input type="number" step="0.1" min="0" value={editBuf.tempo} onChange={e => setEditBuf(b => ({ ...b, tempo: e.target.value }))} placeholder="3"
+                      style={{ width: 44, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 6px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
+                    <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>s/rep</span>
+                  </div>
+                )}
                 <button onClick={() => commitEdit(opt.id)} disabled={saving} title="Sauvegarder"
                   style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 6, background: 'var(--dirty,rgba(200,165,95,0.15))', border: '1px solid var(--accent)', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Check size={12} />
@@ -436,6 +446,11 @@ function AttributeSection({
                 {opt.icon && <span title={opt.icon} style={{ fontSize: 16, lineHeight: 1, flexShrink: 0, maxWidth: 24, overflow: 'hidden', whiteSpace: 'nowrap', display: 'inline-block' }}>{opt.icon}</span>}
                 {opt.color && <span style={{ width: 10, height: 10, borderRadius: '50%', background: opt.color, flexShrink: 0, border: '1px solid rgba(255,255,255,0.15)' }} />}
                 <span title={opt.value} style={{ fontSize: 13, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: opt.color || 'var(--text-primary)' }}>{opt.value}</span>
+                {hasTempo && (
+                  <span title="Secondes par répétition (estimation de durée)" style={{ fontSize: 11, color: 'var(--text-dim)', flexShrink: 0 }}>
+                    {opt.tempo != null ? `${opt.tempo}s/rep` : '— s/rep'}
+                  </span>
+                )}
                 <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
                   <button onClick={() => handleMove(opt, idx, 'up')} disabled={idx === 0} title="Monter"
                     style={{ width: 22, height: 22, borderRadius: 5, background: 'none', border: 'none', color: idx === 0 ? 'var(--text-dim)' : 'var(--text-muted)', cursor: idx === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: idx === 0 ? 0.3 : 1 }}>
@@ -472,6 +487,13 @@ function AttributeSection({
               style={{ width: 28, height: 28, padding: 2, border: '1px solid var(--border)', borderRadius: 5, cursor: 'pointer', background: 'none' }} />
             <button type="button" onClick={() => setAddForm(f => ({ ...f, color: '' }))} title="Pas de couleur"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 2 }}><X size={10} /></button>
+          </div>
+        )}
+        {hasTempo && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <input type="number" step="0.1" min="0" value={addForm.tempo} onChange={e => setAddForm(f => ({ ...f, tempo: e.target.value }))} placeholder="3"
+              style={{ width: 44, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 6px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
+            <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>s/rep</span>
           </div>
         )}
         <button type="submit" disabled={adding || !addForm.value.trim()}
@@ -515,6 +537,7 @@ export function AttributesTab() {
           items={bioTypes}
           hasIcon
           hasColor
+          hasTempo
           onReload={reload}
         />
         <AttributeSection

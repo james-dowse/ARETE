@@ -10,6 +10,7 @@ import {
   minPerMov as _minPerMov, sizeWorkout, planifierBlocs, categoriesPeuFournies,
   type Capacity, type Plan,
 } from '@/lib/generator-math'
+import { estimateWorkoutMinutes, type DurationMovement, type DurationBlock } from '@/lib/duration'
 
 interface Block {
   id: string
@@ -513,15 +514,21 @@ export default function GeneratorPage() {
   const minPerMov = _minPerMov
   const blockEstMin = (count: number, sets: number, rest: number, dur?: number | null) => count * minPerMov(sets, rest, dur)
   const interBlockRest = (nbBlocks: number) => Math.max(0, nbBlocks - 1) * globalBlockRest / 60
-  // When generated: sum actual per-gap rests (only between non-empty adjacent blocks)
-  const totalInterBlockRestGenerated = blockRests.reduce((s, r, i) => {
-    const hasLeft = generatedByBlock[i]?.length > 0
-    const hasRight = generatedByBlock[i + 1]?.length > 0
-    return s + (hasLeft && hasRight ? r : 0)
-  }, 0)
+  // Après génération, on repasse par le même moteur (lib/duration.ts) que la
+  // fiche séance sauvegardée : mêmes mouvements, mêmes params → même nombre.
+  // Avant génération (aperçu pendant la construction), les mouvements ne sont
+  // pas encore choisis : l'ancien forfait 30s/série reste la meilleure approximation.
+  const toGenDurationMovements = (): DurationMovement[] =>
+    (generated ?? []).map((m, i) => ({
+      sets: params[i]?.sets ?? DEFAULT_SETS, reps: params[i]?.reps ?? DEFAULT_REPS,
+      duration: params[i]?.duration, rest: params[i]?.rest ?? DEFAULT_REST,
+      bioType: m.bioType, blockId: String(m.blockIndex), order: i,
+    }))
+  const toGenDurationBlocks = (): DurationBlock[] =>
+    resultBlocks.map((b, i) => ({ id: String(i), superset: b.superset, restAfter: blockRests[i] ?? null }))
+
   const totalEstMin = generated
-    ? generated.reduce((sum, _, i) => sum + minPerMov(params[i]?.sets ?? DEFAULT_SETS, params[i]?.rest ?? DEFAULT_REST, params[i]?.duration), 0)
-      + totalInterBlockRestGenerated / 60
+    ? estimateWorkoutMinutes(toGenDurationMovements(), toGenDurationBlocks())
     : blocks.reduce((sum, b) => sum + b.count * minPerMov(b.sets, b.rest, b.duration), 0)
       + interBlockRest(blocks.length)
 
@@ -1136,7 +1143,14 @@ export default function GeneratorPage() {
                               <span key={eq} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontWeight: 600 }}>{EQUIPMENT_ICONS[eq]} {eq}</span>
                             ))}
                             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-                              {fmtMin(movs.reduce((s, _, j) => s + minPerMov(params[offset + j]?.sets ?? DEFAULT_SETS, params[offset + j]?.rest ?? DEFAULT_REST, params[offset + j]?.duration), 0))}
+                              {fmtMin(estimateWorkoutMinutes(
+                                movs.map((m, j) => ({
+                                  sets: params[offset + j]?.sets ?? DEFAULT_SETS, reps: params[offset + j]?.reps ?? DEFAULT_REPS,
+                                  duration: params[offset + j]?.duration, rest: params[offset + j]?.rest ?? DEFAULT_REST,
+                                  bioType: m.bioType, blockId: block.id, order: j,
+                                })),
+                                [{ id: block.id, superset: block.superset }],
+                              ))}
                             </span>
                             <span style={{ color: 'var(--text-dim)', flexShrink: 0 }}>
                               {resultCollapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}

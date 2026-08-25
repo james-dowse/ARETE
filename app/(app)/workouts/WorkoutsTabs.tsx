@@ -2,12 +2,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty, estimateWorkoutMinutes } from '@/lib/types'
+import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
+import { estimateWorkoutMinutes, type DurationBlock } from '@/lib/duration'
 import { useToast } from '@/components/Toast'
 import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search, ArrowUpDown } from 'lucide-react'
 
 interface WorkoutUser { id: string; email: string }
-interface WorkoutMovementItem { id: string; sets?: number | null; movement: { bioType: string; name: string; complexity: string } }
+interface WorkoutMovementItem {
+  id: string; sets?: number | null; reps?: string | null; duration?: number | null
+  rest?: number | null; blockId?: string | null; order?: number
+  movement: { bioType: string; name: string; complexity: string }
+}
 interface Workout {
   id: string
   name: string
@@ -16,6 +21,7 @@ interface Workout {
   imageUrl?: string | null
   imagePosition?: string | null
   movements: WorkoutMovementItem[]
+  blocks?: DurationBlock[]
   user?: WorkoutUser | null
   isSaved?: boolean
   isFavorite?: boolean
@@ -39,7 +45,11 @@ const SORT_LABELS: Record<SortOption, string> = {
   movements: 'Nb mouvements',
 }
 
-const estimatedMinutes = (w: Workout): number => estimateWorkoutMinutes(w.movements)
+const toDurationMovements = (movements: WorkoutMovementItem[]) => movements.map(m => ({
+  sets: m.sets, reps: m.reps, duration: m.duration, rest: m.rest,
+  blockId: m.blockId, order: m.order, bioType: m.movement.bioType,
+}))
+const estimatedMinutes = (w: Workout): number => estimateWorkoutMinutes(toDurationMovements(w.movements), w.blocks)
 
 function sortWorkouts(list: Workout[], sortBy: SortOption): Workout[] {
   const arr = [...list]
@@ -229,7 +239,7 @@ function WorkoutCard({
   const [deleting, setDeleting] = useState(false)
   const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType)))
   const difficulty = computeWorkoutDifficulty(w.movements.map(m => ({ complexity: m.movement.complexity })))
-  const estMin = estimateWorkoutMinutes(w.movements)
+  const estMin = estimateWorkoutMinutes(toDurationMovements(w.movements), w.blocks)
   const initiale = w.user?.email?.[0]?.toUpperCase() ?? '?'
 
   async function handleDuplicate(e: React.MouseEvent) {

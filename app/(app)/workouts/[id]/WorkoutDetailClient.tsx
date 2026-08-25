@@ -3,7 +3,8 @@ import RichEditor from '@/components/RichEditor'
 import MovementModal from '@/components/MovementModal'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
-import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty, estimateWorkoutMinutes } from '@/lib/types'
+import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
+import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
 import { useToast } from '@/components/Toast'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -16,7 +17,7 @@ import {
   Workout, WorkoutMovement, WorkoutBlock, Movement, EditState, LastPerf,
   WorkoutImage, ImageEditZone, MovementRowView, MovementRowEdit,
   BlockHeaderView, BlockHeaderEdit, BlockRestAfterEdit, EditBar, AddToWeekModal, Stat,
-  toEditState, stripHtml, fmtMin, fmtSec,
+  toEditState, toDurationMovement, stripHtml, fmtMin, fmtSec,
 } from './parts'
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -472,10 +473,29 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   )
 
   // Même estimation que partout ailleurs dans l'app (liste des séances, aperçu
-  // de bloc) — voir estimateWorkoutMinutes.
-  const estimatedMin = estimateWorkoutMinutes(
-    editMode ? allEditStates.map(es => ({ sets: es.sets })) : initial.movements.map(wm => ({ sets: wm.sets }))
-  )
+  // de bloc, générateur) — voir lib/duration.ts. En édition, reconstruit blockId
+  // par mouvement (EditState ne le porte pas) pour rester exacte y compris sur
+  // les blocs superset et les blocs tout juste créés (pas encore sauvegardés).
+  const editDurationMovements: DurationMovement[] = [
+    ...editStates.map((es, i) => ({
+      sets: es.sets, reps: es.reps, duration: es.duration, rest: es.rest,
+      blockId: originals[i]?.blockId ?? null, order: originals[i]?.order ?? i,
+      bioType: es.movement.bioType,
+    })),
+    ...pendingAdds.map(p => ({
+      sets: p.es.sets, reps: p.es.reps, duration: p.es.duration, rest: p.es.rest,
+      blockId: p.blockId, order: Number.MAX_SAFE_INTEGER, bioType: p.es.movement.bioType,
+    })),
+  ]
+  const editDurationBlocks = [
+    ...initial.blocks.filter(b => !removedBlockIds.has(b.id)).map(b => ({
+      id: b.id, superset: blockSuperset[b.id] ?? b.superset, restAfter: blockRestAfter[b.id] ?? b.restAfter,
+    })),
+    ...pendingBlocks.map(pb => ({ id: pb.tempId, superset: pb.superset, restAfter: pb.restAfter })),
+  ]
+  const estimatedMin = editMode
+    ? estimateWorkoutMinutes(editDurationMovements, editDurationBlocks)
+    : estimateWorkoutMinutes(initial.movements.map(toDurationMovement), initial.blocks)
 
   const hasBlocks = initial.blocks.length > 0
   const blockMovementsMap: Record<string, WorkoutMovement[]> = {}

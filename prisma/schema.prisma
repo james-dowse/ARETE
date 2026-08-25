@@ -204,6 +204,9 @@ model AttributeOption {
   icon     String?
   color    String?
   position Int    @default(0)
+  // Secondes par répétition, utilisé pour estimer la durée d'une série au nombre
+  // de reps (category='bioType' uniquement). null = valeur par défaut globale.
+  tempo    Float?
 
   @@unique([category, value])
 }

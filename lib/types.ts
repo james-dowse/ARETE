@@ -45,6 +45,20 @@ export const BIO_TYPE_ICONS: Record<string, string> = {
   'Boxing': '🥊',
 }
 
+// Secondes par répétition, par type biomécanique — sert à estimer la durée d'une
+// série exprimée en reps (par opposition au mode chronométré, où la durée est
+// connue exactement). Éditable dans Admin > Référentiels ; DEFAULT_TEMPO_SEC_PER_REP
+// s'applique à tout type sans valeur explicite.
+export const DEFAULT_TEMPO_SEC_PER_REP = 3
+export const BIO_TYPE_TEMPO: Record<string, number> = {
+  'Lower body': 3.5,
+  'Push': 3,
+  'Pull': 3,
+  'Core focus': 3.5,
+  'Compound': 3,
+  'Boxing': 1.2,
+}
+
 export const COMPLEXITY_COLORS: Record<string, string> = {
   'Easy':     '#6BAE7C',  // vert sauge
   'Common':   '#7CA8D4',  // bleu acier
@@ -58,16 +72,6 @@ export const COMPLEXITY_COLORS: Record<string, string> = {
 // suffit à qualifier la séance d'Advanced, même si le reste est Easy).
 // Pure fonction de la liste de mouvements : se recalcule à chaque changement
 // (reroll aléatoire, substitution bibliothèque), jamais mise en cache.
-// Estimation de durée, utilisée partout où une séance affiche un temps prévu
-// (liste des séances, fiche détail, aperçu de bloc) : ~1min30 par série, un
-// mouvement sans valeur de séries compte pour 3. Existait auparavant en deux
-// versions divergentes (1min/série ici, 1min30 ailleurs, défaut 2 vs 3) —
-// unifié pour que l'estimation soit la même partout dans l'app.
-export function estimateWorkoutMinutes(movements: { sets?: number | null }[]): number {
-  const totalSets = movements.reduce((sum, m) => sum + (m.sets ?? 3), 0)
-  return Math.max(1, Math.round(totalSets * 1.5))
-}
-
 export function computeWorkoutDifficulty(movements: { complexity: string }[]): string | null {
   if (movements.length === 0) return null
   const counts: Record<string, number> = {}
@@ -126,6 +130,7 @@ export interface AttributeOptionRow {
   icon: string | null
   color: string | null
   position: number
+  tempo?: number | null
 }
 
 export function applyAttributeOverrides(rows: {
@@ -138,6 +143,7 @@ export function applyAttributeOverrides(rows: {
     targetArray: string[],
     colorMap?: Record<string, string>,
     iconMap?: Record<string, string>,
+    tempoMap?: Record<string, number>,
   ) => {
     if (list.length === 0) return
     const sorted = [...list].sort((a, b) => a.position - b.position)
@@ -151,9 +157,13 @@ export function applyAttributeOverrides(rows: {
       for (const key of Object.keys(iconMap)) delete iconMap[key]
       sorted.forEach(o => { if (o.icon) iconMap[o.value] = o.icon })
     }
+    if (tempoMap) {
+      for (const key of Object.keys(tempoMap)) delete tempoMap[key]
+      sorted.forEach(o => { if (o.tempo != null) tempoMap[o.value] = o.tempo })
+    }
   }
 
-  sync(rows.bioTypes, BIO_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS)
+  sync(rows.bioTypes, BIO_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, BIO_TYPE_TEMPO)
   sync(rows.complexities, COMPLEXITIES, COMPLEXITY_COLORS)
   sync(rows.equipments, EQUIPMENT_TYPES, undefined, EQUIPMENT_ICONS)
 }

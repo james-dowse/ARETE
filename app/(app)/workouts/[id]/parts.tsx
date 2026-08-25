@@ -3,8 +3,9 @@ import RichEditor from '@/components/RichEditor'
 import LibraryPicker from '@/components/LibraryPicker'
 import {
   BIO_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS,
-  COMPLEXITY_COLORS, EQUIPMENT_ICONS, FAILURE_REPS, estimateWorkoutMinutes,
+  COMPLEXITY_COLORS, EQUIPMENT_ICONS, FAILURE_REPS,
 } from '@/lib/types'
+import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
 import { useState, useRef } from 'react'
 import {
   RefreshCw, Search, X, Save, Undo2, Minus, Plus,
@@ -34,6 +35,15 @@ export interface Workout {
   blocks: WorkoutBlock[]
 }
 export interface EditState { movementId: string; movement: Movement; sets: number; reps: string; duration: number | null; rest: number | null }
+
+// Adapte un WorkoutMovement (forme base/API) vers l'entrée attendue par
+// lib/duration.ts — réutilisé partout où une durée de séance est estimée.
+export function toDurationMovement(wm: WorkoutMovement): DurationMovement {
+  return {
+    sets: wm.sets, reps: wm.reps, duration: wm.duration, rest: wm.rest,
+    blockId: wm.blockId, order: wm.order, bioType: wm.movement.bioType,
+  }
+}
 
 // ─── Image zone (view) ────────────────────────────────────────────────────────
 export function WorkoutImage({ src, position }: { src: string; position?: string | null }) {
@@ -447,7 +457,9 @@ export function BlockHeaderView({ block, index, movements, collapsed, onToggle }
   collapsed: boolean; onToggle: () => void
 }) {
   const color = block.bioType ? BIO_TYPE_COLORS[block.bioType] : 'var(--text-muted)'
-  const estMin = estimateWorkoutMinutes(movements)
+  // Un seul bloc dans le tableau : son propre restAfter n'est jamais compté (il
+  // est déjà affiché séparément, comme séparateur avant le bloc suivant).
+  const estMin = estimateWorkoutMinutes(movements.map(toDurationMovement), [block])
   return (
     <div style={{ marginTop: index === 0 ? 0 : 10, marginBottom: collapsed ? 0 : 8 }}>
       <div

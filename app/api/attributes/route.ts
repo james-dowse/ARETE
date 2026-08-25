@@ -15,12 +15,12 @@ const CACHE_HEADERS = { 'Cache-Control': 'private, max-age=60, stale-while-reval
 // Default seed values (used only when DB is empty for a category)
 const DEFAULTS = {
   bioType: [
-    { value: 'Lower body', icon: '🦵', color: '#6BAE7C' },
-    { value: 'Push',       icon: '💪', color: '#7CA8D4' },
-    { value: 'Pull',       icon: '🔄', color: '#C47878' },
-    { value: 'Core focus', icon: '🎯', color: '#5BBEBE' },
-    { value: 'Compound',   icon: '⚡', color: '#C8A040' },
-    { value: 'Boxing',     icon: '🥊', color: '#9E7AC4' },
+    { value: 'Lower body', icon: '🦵', color: '#6BAE7C', tempo: 3.5 },
+    { value: 'Push',       icon: '💪', color: '#7CA8D4', tempo: 3 },
+    { value: 'Pull',       icon: '🔄', color: '#C47878', tempo: 3 },
+    { value: 'Core focus', icon: '🎯', color: '#5BBEBE', tempo: 3.5 },
+    { value: 'Compound',   icon: '⚡', color: '#C8A040', tempo: 3 },
+    { value: 'Boxing',     icon: '🥊', color: '#9E7AC4', tempo: 1.2 },
   ],
   complexity: [
     { value: 'Easy',     icon: null, color: '#6BAE7C' },
@@ -91,14 +91,14 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser()
   if (!isAdmin(user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { category, value, icon, color } = await req.json()
+  const { category, value, icon, color, tempo } = await req.json()
   if (!category || !value?.trim()) return NextResponse.json({ error: 'category et value requis' }, { status: 400 })
 
   const maxPos = await prisma.attributeOption.aggregate({ where: { category }, _max: { position: true } })
   const position = (maxPos._max.position ?? -1) + 1
 
   const opt = await prisma.attributeOption.create({
-    data: { category, value: value.trim(), icon: icon?.trim() || null, color: color?.trim() || null, position },
+    data: { category, value: value.trim(), icon: icon?.trim() || null, color: color?.trim() || null, tempo: tempo === '' || tempo == null ? null : Number(tempo), position },
   })
   invalidateAttributes()
   return NextResponse.json(opt, { status: 201 })
