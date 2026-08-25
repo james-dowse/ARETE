@@ -505,16 +505,36 @@ export function BlockHeaderView({ block, index, movements, collapsed, onToggle }
 }
 
 // ─── Block Header (edit) ──────────────────────────────────────────────────────
-export function BlockHeaderEdit({ block, index, title, onTitleChange, instructions, onChange, superset, canSuperset, onToggleSuperset, isDirty, onRemove }: {
+export function BlockHeaderEdit({
+  block, index, title, onTitleChange, instructions, onChange, superset, canSuperset, onToggleSuperset, isDirty, onRemove,
+  onDragStart, onDragOver, onDrop, onDragEnd, isDragging,
+}: {
   block: WorkoutBlock; index: number
   title: string; onTitleChange: (v: string) => void
   instructions: string; onChange: (v: string) => void
   superset: boolean; canSuperset: boolean; onToggleSuperset: () => void; isDirty: boolean; onRemove: () => void
+  // Glisser-déposer pour réordonner les blocs entre eux — seule cette ligne
+  // d'en-tête est draggable, pas tout le bloc (pour ne pas gêner le clic sur
+  // les mouvements en dessous).
+  onDragStart?: () => void; onDragOver?: () => void; onDrop?: () => void; onDragEnd?: () => void
+  isDragging?: boolean
 }) {
   const isTitleDirty = title !== (block.bioType ?? '')
   return (
     <div style={{ marginTop: index === 0 ? 0 : 14, marginBottom: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+      <div
+        draggable={!!onDragStart}
+        onDragStart={onDragStart}
+        onDragOver={e => { e.preventDefault(); onDragOver?.() }}
+        onDrop={e => { e.preventDefault(); onDrop?.() }}
+        onDragEnd={onDragEnd}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, opacity: isDragging ? 0.4 : 1, transition: 'opacity 0.15s' }}
+      >
+        {onDragStart && (
+          <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-dim)', cursor: 'grab', flexShrink: 0 }} title="Glisser pour réordonner ce bloc">
+            <GripVertical size={14} />
+          </span>
+        )}
         <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1, flexShrink: 0 }}>BLOC {index + 1}</span>
         <input
           value={title}

@@ -67,10 +67,31 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [tagInput, setTagInput] = useState('')
   const [movementOrder, setMovementOrder] = useState<Record<string, number>>({})
   const [draggedWmId, setDraggedWmId] = useState<string | null>(null)
+  // Ordre des blocs (édition) — même mécanique que movementOrder pour les
+  // mouvements : un glisser-déposer réordonne localement, la vraie valeur
+  // `order` n'est envoyée au serveur qu'à la sauvegarde, sur les blocs dont
+  // la position a réellement changé.
+  const [blockOrder, setBlockOrder] = useState<Record<string, number>>({})
+  const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null)
 
   const handleReorder = (draggedId: string, targetId: string) => {
     if (draggedId === targetId) return
     setMovementOrder(prev => {
+      const ids = Object.keys(prev).sort((a, b) => prev[a] - prev[b])
+      const from = ids.indexOf(draggedId)
+      const to = ids.indexOf(targetId)
+      if (from === -1 || to === -1) return prev
+      ids.splice(from, 1)
+      ids.splice(to, 0, draggedId)
+      const next: Record<string, number> = {}
+      ids.forEach((id, idx) => { next[id] = idx })
+      return next
+    })
+  }
+
+  const handleReorderBlock = (draggedId: string, targetId: string) => {
+    if (draggedId === targetId) return
+    setBlockOrder(prev => {
       const ids = Object.keys(prev).sort((a, b) => prev[a] - prev[b])
       const from = ids.indexOf(draggedId)
       const to = ids.indexOf(targetId)
@@ -232,7 +253,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const isDirtyImagePosition = editMode && !isDirtyImage && imagePosition !== (initial.imagePosition ?? null)
   const isDirtyTags = editMode && editTags.join(',') !== (initial.tags ?? '')
   const isDirtyOrder = editMode && originals.some(o => (movementOrder[o.id] ?? o.order) !== o.order)
-  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyName || isDirtyDescription || isDirtyImage || isDirtyImagePosition || isDirtyTags || isDirtyOrder || removedWmIds.size > 0 || removedBlockIds.size > 0 || pendingBlocks.length > 0
+  const isDirtyBlockOrder = editMode && initial.blocks.some(b => (blockOrder[b.id] ?? b.order) !== b.order)
+  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyName || isDirtyDescription || isDirtyImage || isDirtyImagePosition || isDirtyTags || isDirtyOrder || isDirtyBlockOrder || removedWmIds.size > 0 || removedBlockIds.size > 0 || pendingBlocks.length > 0
 
   const pendingCount = editMode
     ? editStates.filter((es, i) => {
@@ -244,6 +266,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
       + (isDirtyDescription ? 1 : 0)
       + (isDirtyImage ? 1 : 0)
       + (isDirtyOrder ? 1 : 0)
+      + (isDirtyBlockOrder ? 1 : 0)
       + removedWmIds.size
       + removedBlockIds.size
       + pendingAdds.length
@@ -268,6 +291,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     const initOrder: Record<string, number> = {}
     initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
     setMovementOrder(initOrder)
+    const initBlockOrder: Record<string, number> = {}
+    initial.blocks.forEach(b => { initBlockOrder[b.id] = b.order })
+    setBlockOrder(initBlockOrder)
     setEditMode(true)
   }
 
@@ -289,6 +315,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
     const initOrder: Record<string, number> = {}
     initial.movements.forEach(wm => { initOrder[wm.id] = wm.order })
     setMovementOrder(initOrder)
+    const initBlockOrder: Record<string, number> = {}
+    initial.blocks.forEach(b => { initBlockOrder[b.id] = b.order })
+    setBlockOrder(initBlockOrder)
     setEditMode(false)
   }
 
@@ -363,7 +392,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         || es.duration !== (orig.duration ?? null) || effRest !== (orig.rest ?? null)
         || (movementOrder[orig.id] ?? orig.order) !== orig.order
     })
-    const changedBlocks = initial.blocks.filter(blockChanged)
+    const blockOrderChanged = (b: WorkoutBlock) => (blockOrder[b.id] ?? b.order) !== b.order
+    const changedBlocks = initial.blocks.filter(b => blockChanged(b) || blockOrderChanged(b))
 
     const results = await Promise.all([
       ...changedMovements.map(es => {
@@ -389,6 +419,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
           body: JSON.stringify({
             instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false,
             bioType: blockTitle[b.id] || null, restAfter: blockRestAfter[b.id] ?? null,
+            ...(blockOrderChanged(b) ? { order: blockOrder[b.id] } : {}),
           }),
         }).catch(() => null)
       ),
@@ -722,7 +753,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
         {/* ── MOVEMENTS ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {hasBlocks ? (
-            initial.blocks.filter(block => !removedBlockIds.has(block.id)).map((block, bi) => {
+            initial.blocks
+              .filter(block => !removedBlockIds.has(block.id))
+              .slice()
+              .sort((a, b) => (blockOrder[a.id] ?? a.order) - (blockOrder[b.id] ?? b.order))
+              .map((block, bi) => {
               const blockMovements = blockMovementsMap[block.id] || []
               const blockES = (blockEditStatesMap[block.id] || []).filter(({ orig }) => !removedWmIds.has(orig.id))
               const blockCollapsed = !editMode && !!collapsedViewBlocks[block.id]
@@ -745,6 +780,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                       onToggleSuperset={() => handleToggleSuperset(block.id, false)}
                       isDirty={blockChanged(block)}
                       onRemove={() => setRemovedBlockIds(prev => new Set([...prev, block.id]))}
+                      isDragging={draggedBlockId === block.id}
+                      onDragStart={() => setDraggedBlockId(block.id)}
+                      onDragOver={() => { if (draggedBlockId) handleReorderBlock(draggedBlockId, block.id) }}
+                      onDrop={() => setDraggedBlockId(null)}
+                      onDragEnd={() => setDraggedBlockId(null)}
                     />
                   ) : (
                     <BlockHeaderView

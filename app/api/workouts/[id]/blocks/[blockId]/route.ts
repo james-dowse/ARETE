@@ -20,7 +20,7 @@ export async function PATCH(
   const { id, blockId } = await params
   const denied = await authorize(id, blockId)
   if (denied) return denied
-  const { instructions, superset, bioType, restAfter } = await req.json()
+  const { instructions, superset, bioType, restAfter, order } = await req.json()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: Record<string, any> = {}
@@ -28,6 +28,7 @@ export async function PATCH(
   if (superset !== undefined) data.superset = !!superset
   if (bioType !== undefined) data.bioType = bioType === '' ? null : bioType
   if (restAfter !== undefined) data.restAfter = restAfter === '' || restAfter === null ? null : Number(restAfter)
+  if (order !== undefined) data.order = Number(order)
 
   const updated = await prisma.workoutBlock.update({
     where: { id: blockId },
