@@ -21,7 +21,7 @@ interface Workout {
   imageUrl?: string | null
   imagePosition?: string | null
   movements: WorkoutMovementItem[]
-  blocks?: (DurationBlock & { instructions?: string | null; order?: number })[]
+  blocks?: (DurationBlock & { order?: number })[]
   user?: WorkoutUser | null
   isSaved?: boolean
   isFavorite?: boolean
@@ -51,15 +51,20 @@ const toDurationMovements = (movements: WorkoutMovementItem[]) => movements.map(
 }))
 const estimatedMinutes = (w: Workout): number => estimateWorkoutMinutes(toDurationMovements(w.movements), w.blocks)
 
-// Aperçu compact du WOD pour le cartouche : regroupe les mouvements par bloc
-// (avec leur titre s'il existe) dans l'ordre, et tronque à un nombre de
-// "lignes" (titre de bloc = 1 ligne, mouvement = 1 ligne) qui tient dans la
-// hauteur du cartouche sans l'enlaidir. Au-delà, on affiche un "+N" final.
-const CARD_PREVIEW_MAX_LINES = 7
+// Aperçu compact du WOD pour le cartouche : une colonne par bloc (les
+// mouvements sans bloc forment une colonne finale sans titre), pour exploiter
+// toute la largeur de la carte. Chaque colonne tronque ses mouvements ; si le
+// workout a plus de blocs que MAX_COLUMNS, une pastille "+N blocs" les résume.
+const CARD_PREVIEW_MAX_COLUMNS = 4
+const CARD_PREVIEW_MAX_ROWS_PER_COLUMN = 5
 
-type PreviewLine = { kind: 'block'; label: string } | { kind: 'movement'; name: string; bioType: string }
+interface PreviewColumn {
+  label: string | null
+  movements: { name: string; bioType: string }[]
+  hiddenInColumn: number
+}
 
-function buildCardPreview(w: Workout): { lines: PreviewLine[]; hiddenCount: number } {
+function buildCardPreview(w: Workout): { columns: PreviewColumn[]; hiddenBlocksCount: number } {
   const blocks = (w.blocks ?? []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   const byBlock = new Map<string, WorkoutMovementItem[]>()
   const flat: WorkoutMovementItem[] = []
@@ -73,23 +78,28 @@ function buildCardPreview(w: Workout): { lines: PreviewLine[]; hiddenCount: numb
   }
   for (const arr of byBlock.values()) arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
-  const allLines: PreviewLine[] = []
-  for (const b of blocks) {
+  const allColumns: PreviewColumn[] = []
+  blocks.forEach((b, i) => {
     const mvs = byBlock.get(b.id) ?? []
-    if (mvs.length === 0) continue
-    if (b.instructions) allLines.push({ kind: 'block', label: b.instructions })
-    for (const m of mvs) allLines.push({ kind: 'movement', name: m.movement.name, bioType: m.movement.bioType })
+    if (mvs.length === 0) return
+    allColumns.push({
+      label: `Bloc ${i + 1}`,
+      movements: mvs.slice(0, CARD_PREVIEW_MAX_ROWS_PER_COLUMN).map(m => ({ name: m.movement.name, bioType: m.movement.bioType })),
+      hiddenInColumn: Math.max(0, mvs.length - CARD_PREVIEW_MAX_ROWS_PER_COLUMN),
+    })
+  })
+  if (flat.length > 0) {
+    allColumns.push({
+      label: null,
+      movements: flat.slice(0, CARD_PREVIEW_MAX_ROWS_PER_COLUMN).map(m => ({ name: m.movement.name, bioType: m.movement.bioType })),
+      hiddenInColumn: Math.max(0, flat.length - CARD_PREVIEW_MAX_ROWS_PER_COLUMN),
+    })
   }
-  for (const m of flat) allLines.push({ kind: 'movement', name: m.movement.name, bioType: m.movement.bioType })
 
-  if (allLines.length <= CARD_PREVIEW_MAX_LINES) return { lines: allLines, hiddenCount: 0 }
-
-  // Coupe proprement : ne termine jamais sur un titre de bloc orphelin.
-  let cut = CARD_PREVIEW_MAX_LINES
-  while (cut > 0 && allLines[cut - 1].kind === 'block') cut--
-  const totalMovements = allLines.filter(l => l.kind === 'movement').length
-  const shownMovements = allLines.slice(0, cut).filter(l => l.kind === 'movement').length
-  return { lines: allLines.slice(0, cut), hiddenCount: totalMovements - shownMovements }
+  return {
+    columns: allColumns.slice(0, CARD_PREVIEW_MAX_COLUMNS),
+    hiddenBlocksCount: Math.max(0, allColumns.length - CARD_PREVIEW_MAX_COLUMNS),
+  }
 }
 
 function sortWorkouts(list: Workout[], sortBy: SortOption): Workout[] {
@@ -282,7 +292,7 @@ function WorkoutCard({
   const difficulty = computeWorkoutDifficulty(w.movements.map(m => ({ complexity: m.movement.complexity })))
   const estMin = estimateWorkoutMinutes(toDurationMovements(w.movements), w.blocks)
   const initiale = w.user?.email?.[0]?.toUpperCase() ?? '?'
-  const { lines: previewLines, hiddenCount } = buildCardPreview(w)
+  const { columns: previewColumns, hiddenBlocksCount } = buildCardPreview(w)
 
   async function handleDuplicate(e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation()
@@ -328,7 +338,7 @@ function WorkoutCard({
     <div className="card card-interactive" style={{ borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
       <Link href={`/workouts/${w.id}`} style={{ textDecoration: 'none', display: 'block', padding: '18px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'stretch', gap: 14 }}>
-          <div style={{ width: 130, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 90, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {w.imageUrl ? (
               <img src={w.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block' }} />
             ) : (
@@ -365,19 +375,27 @@ function WorkoutCard({
                 <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--orange)', marginTop: 1 }}>{fmtMin(estMin)}</div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {previewLines.map((line, i) => line.kind === 'block' ? (
-                <div key={`b${i}`} style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.3, color: 'var(--text-dim)', textTransform: 'uppercase', marginTop: i === 0 ? 0 : 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{line.label}</div>
-              ) : (
-                <div key={`m${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: BIO_TYPE_COLORS[line.bioType] || 'var(--text-muted)', flexShrink: 0 }} />
-                  <span style={{ fontSize: 12.5, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{line.name}</span>
+        <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
+          {previewColumns.map((col, ci) => (
+            <div key={ci} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, paddingLeft: 10, borderLeft: '2px solid var(--border)' }}>
+              {col.label && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.3, color: 'var(--text-dim)', textTransform: 'uppercase' }}>{col.label}</div>}
+              {col.movements.map((m, mi) => (
+                <div key={mi} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{m.name}</span>
                 </div>
               ))}
-              {hiddenCount > 0 && <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>+{hiddenCount} autres…</div>}
+              {col.hiddenInColumn > 0 && <div style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>+{col.hiddenInColumn}…</div>}
             </div>
-          </div>
+          ))}
+          {hiddenBlocksCount > 0 && (
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, paddingLeft: 10, borderLeft: '2px solid var(--border)' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-dim)' }}>+{hiddenBlocksCount} blocs</span>
+            </div>
+          )}
         </div>
 
         <div style={{ marginTop: 10, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
