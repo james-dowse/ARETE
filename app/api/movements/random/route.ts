@@ -9,9 +9,15 @@ export async function GET(req: NextRequest) {
   const complexity = searchParams.get('complexity')
   const excludeRaw = searchParams.get('exclude') // comma-separated ids
 
+  // Accepte une valeur unique ou une liste séparée par des virgules (multi-sélection).
+  const toValues = (v: string | null) => v ? v.split(',').map(s => s.trim()).filter(Boolean) : []
+  const asFilter = (values: string[]) => values.length === 1 ? values[0] : { in: values }
+
   const where: Record<string, unknown> = {}
-  if (bioType) where.bioType = bioType
-  if (complexity) where.complexity = complexity
+  const bioTypes = toValues(bioType)
+  const complexities = toValues(complexity)
+  if (bioTypes.length) where.bioType = asFilter(bioTypes)
+  if (complexities.length) where.complexity = asFilter(complexities)
 
   const exclude = excludeRaw ? excludeRaw.split(',').filter(Boolean) : []
 

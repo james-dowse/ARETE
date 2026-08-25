@@ -38,20 +38,28 @@ function Chip({ active, color, onClick, children }: {
 
 export default function LibraryPicker({ currentName, currentId, onPick, onClose }: Props) {
   const [search, setSearch] = useState('')
-  const [bioFilter, setBioFilter] = useState('')
-  const [complexityFilter, setComplexityFilter] = useState('')
-  const [equipmentFilter, setEquipmentFilter] = useState('')
+  // Multi-sélection : un ensemble vide = pas de restriction sur ce critère
+  const [bioFilter, setBioFilter] = useState<Set<string>>(new Set())
+  const [complexityFilter, setComplexityFilter] = useState<Set<string>>(new Set())
+  const [equipmentFilter, setEquipmentFilter] = useState<Set<string>>(new Set())
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [results, setResults] = useState<PickableMovement[]>([])
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const toggle = (set: Set<string>, setSet: (s: Set<string>) => void, value: string) => {
+    const next = new Set(set)
+    if (next.has(value)) next.delete(value)
+    else next.add(value)
+    setSet(next)
+  }
+
   const doFetch = useCallback(async () => {
     setLoading(true)
     const p = new URLSearchParams()
-    if (bioFilter) p.set('bioType', bioFilter)
-    if (complexityFilter) p.set('complexity', complexityFilter)
-    if (equipmentFilter) p.set('equipment', equipmentFilter)
+    if (bioFilter.size) p.set('bioType', [...bioFilter].join(','))
+    if (complexityFilter.size) p.set('complexity', [...complexityFilter].join(','))
+    if (equipmentFilter.size) p.set('equipment', [...equipmentFilter].join(','))
     if (search) p.set('search', search)
     if (favoritesOnly) p.set('favorites', '1')
     const res = await fetch(`/api/movements?${p}`)
@@ -130,25 +138,25 @@ export default function LibraryPicker({ currentName, currentId, onPick, onClose 
             {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={11} color="var(--text-muted)" /></button>}
           </div>
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            <Chip active={!bioFilter} color="" onClick={() => setBioFilter('')}>Tous</Chip>
+            {bioFilter.size > 0 && <Chip active={false} color="" onClick={() => setBioFilter(new Set())}>✕ Tous</Chip>}
             {BIO_TYPES.map(bt => (
-              <Chip key={bt} active={bioFilter === bt} color={BIO_TYPE_COLORS[bt]} onClick={() => setBioFilter(bioFilter === bt ? '' : bt)}>
+              <Chip key={bt} active={bioFilter.has(bt)} color={BIO_TYPE_COLORS[bt]} onClick={() => toggle(bioFilter, setBioFilter, bt)}>
                 {BIO_TYPE_ICONS[bt]} {bt}
               </Chip>
             ))}
           </div>
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            <Chip active={!complexityFilter} color="" onClick={() => setComplexityFilter('')}>Tous niveaux</Chip>
+            {complexityFilter.size > 0 && <Chip active={false} color="" onClick={() => setComplexityFilter(new Set())}>✕ Tous niveaux</Chip>}
             {COMPLEXITIES.map(c => (
-              <Chip key={c} active={complexityFilter === c} color={COMPLEXITY_COLORS[c]} onClick={() => setComplexityFilter(complexityFilter === c ? '' : c)}>
+              <Chip key={c} active={complexityFilter.has(c)} color={COMPLEXITY_COLORS[c]} onClick={() => toggle(complexityFilter, setComplexityFilter, c)}>
                 {c}
               </Chip>
             ))}
           </div>
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            <Chip active={!equipmentFilter} color="" onClick={() => setEquipmentFilter('')}>Tout équipement</Chip>
+            {equipmentFilter.size > 0 && <Chip active={false} color="" onClick={() => setEquipmentFilter(new Set())}>✕ Tout équipement</Chip>}
             {EQUIPMENT_TYPES.map(eq => (
-              <Chip key={eq} active={equipmentFilter === eq} color="" onClick={() => setEquipmentFilter(equipmentFilter === eq ? '' : eq)}>
+              <Chip key={eq} active={equipmentFilter.has(eq)} color="" onClick={() => toggle(equipmentFilter, setEquipmentFilter, eq)}>
                 {EQUIPMENT_ICONS[eq]} {eq}
               </Chip>
             ))}

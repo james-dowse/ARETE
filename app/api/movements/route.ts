@@ -13,11 +13,19 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get('search')
   const favoritesOnly = searchParams.get('favorites') === '1'
 
+  // Chaque paramètre accepte une valeur unique ou une liste séparée par des
+  // virgules (multi-sélection) — ex. bioType=Mobilité,Core.
+  const toValues = (v: string | null) => v ? v.split(',').map(s => s.trim()).filter(Boolean) : []
+  const asFilter = (values: string[]) => values.length === 1 ? values[0] : { in: values }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = {}
-  if (bioType) where.bioType = bioType
-  if (complexity) where.complexity = complexity
-  if (equipment) where.equipment = equipment
+  const bioTypes = toValues(bioType)
+  const complexities = toValues(complexity)
+  const equipments = toValues(equipment)
+  if (bioTypes.length) where.bioType = asFilter(bioTypes)
+  if (complexities.length) where.complexity = asFilter(complexities)
+  if (equipments.length) where.equipment = asFilter(equipments)
   if (search) where.name = { contains: search }
 
   if (favoritesOnly) {
