@@ -518,7 +518,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
   const [bioFilters, setBioFilters] = useState<Set<string>>(new Set())
   const [difficultyFilters, setDifficultyFilters] = useState<Set<string>>(new Set())
-  const [sortBy, setSortBy] = useState<SortOption>('recent')
+  const [sortBy, setSortBy] = useState<SortOption>('name')
   const [searchQuery, setSearchQuery] = useState('')
 
   const toggleInSet = (set: Set<string>, setSet: (s: Set<string>) => void, value: string) => {
