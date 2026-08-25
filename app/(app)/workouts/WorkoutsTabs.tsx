@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, computeWorkoutDifficulty } from '@/lib/types'
 import { estimateWorkoutMinutes, type DurationBlock } from '@/lib/duration'
+import { stripHtmlMultiline } from '@/lib/html'
 import { useToast } from '@/components/Toast'
 import { Zap, Users, User, Share2, X, Send, CheckCircle2, AlertCircle, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search, ArrowUpDown } from 'lucide-react'
 
@@ -58,8 +59,6 @@ const estimatedMinutes = (w: Workout): number => estimateWorkoutMinutes(toDurati
 // workout a plus de blocs que MAX_COLUMNS, une pastille "+N blocs" les résume.
 const CARD_PREVIEW_MAX_COLUMNS = 4
 const CARD_PREVIEW_MAX_ROWS_PER_COLUMN = 5
-
-const stripHtml = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 
 // Le "titre" d'un bloc est stocké dans son champ bioType (texte libre saisi en
 // édition) ; à défaut on retombe sur "Bloc N".
@@ -367,8 +366,8 @@ function WorkoutCard({
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{w.name}</div>
                   {isFavorite && <Star size={12} fill="var(--gold)" color="var(--gold)" style={{ flexShrink: 0 }} />}
                 </div>
-                {w.description && stripHtml(w.description) && (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stripHtml(w.description)}</div>
+                {w.description && stripHtmlMultiline(w.description) && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'pre-line', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{stripHtmlMultiline(w.description)}</div>
                 )}
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   {new Date(w.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}

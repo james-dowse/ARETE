@@ -728,7 +728,7 @@ export function Stat({ value, label, color }: { value: number; label: string; co
 export function toEditState(wm: WorkoutMovement): EditState {
   return { movementId: wm.movementId, movement: wm.movement, sets: wm.sets ?? 2, reps: wm.reps ?? '10', duration: wm.duration ?? null, rest: wm.rest ?? null }
 }
-export function stripHtml(html: string) { return html.replace(/<[^>]*>/g, '').trim() }
+export { stripHtmlMultiline as stripHtml } from '@/lib/html'
 export function fmtMin(min: number) {
   const r = Math.round(min)
   if (r < 60) return `~${r}min`
