@@ -21,7 +21,7 @@ interface Workout {
   imageUrl?: string | null
   imagePosition?: string | null
   movements: WorkoutMovementItem[]
-  blocks?: DurationBlock[]
+  blocks?: (DurationBlock & { instructions?: string | null; order?: number })[]
   user?: WorkoutUser | null
   isSaved?: boolean
   isFavorite?: boolean
@@ -50,6 +50,47 @@ const toDurationMovements = (movements: WorkoutMovementItem[]) => movements.map(
   blockId: m.blockId, order: m.order, bioType: m.movement.bioType,
 }))
 const estimatedMinutes = (w: Workout): number => estimateWorkoutMinutes(toDurationMovements(w.movements), w.blocks)
+
+// Aperçu compact du WOD pour le cartouche : regroupe les mouvements par bloc
+// (avec leur titre s'il existe) dans l'ordre, et tronque à un nombre de
+// "lignes" (titre de bloc = 1 ligne, mouvement = 1 ligne) qui tient dans la
+// hauteur du cartouche sans l'enlaidir. Au-delà, on affiche un "+N" final.
+const CARD_PREVIEW_MAX_LINES = 7
+
+type PreviewLine = { kind: 'block'; label: string } | { kind: 'movement'; name: string; bioType: string }
+
+function buildCardPreview(w: Workout): { lines: PreviewLine[]; hiddenCount: number } {
+  const blocks = (w.blocks ?? []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  const byBlock = new Map<string, WorkoutMovementItem[]>()
+  const flat: WorkoutMovementItem[] = []
+  for (const m of w.movements) {
+    if (m.blockId) {
+      if (!byBlock.has(m.blockId)) byBlock.set(m.blockId, [])
+      byBlock.get(m.blockId)!.push(m)
+    } else {
+      flat.push(m)
+    }
+  }
+  for (const arr of byBlock.values()) arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
+  const allLines: PreviewLine[] = []
+  for (const b of blocks) {
+    const mvs = byBlock.get(b.id) ?? []
+    if (mvs.length === 0) continue
+    if (b.instructions) allLines.push({ kind: 'block', label: b.instructions })
+    for (const m of mvs) allLines.push({ kind: 'movement', name: m.movement.name, bioType: m.movement.bioType })
+  }
+  for (const m of flat) allLines.push({ kind: 'movement', name: m.movement.name, bioType: m.movement.bioType })
+
+  if (allLines.length <= CARD_PREVIEW_MAX_LINES) return { lines: allLines, hiddenCount: 0 }
+
+  // Coupe proprement : ne termine jamais sur un titre de bloc orphelin.
+  let cut = CARD_PREVIEW_MAX_LINES
+  while (cut > 0 && allLines[cut - 1].kind === 'block') cut--
+  const totalMovements = allLines.filter(l => l.kind === 'movement').length
+  const shownMovements = allLines.slice(0, cut).filter(l => l.kind === 'movement').length
+  return { lines: allLines.slice(0, cut), hiddenCount: totalMovements - shownMovements }
+}
 
 function sortWorkouts(list: Workout[], sortBy: SortOption): Workout[] {
   const arr = [...list]
@@ -241,6 +282,7 @@ function WorkoutCard({
   const difficulty = computeWorkoutDifficulty(w.movements.map(m => ({ complexity: m.movement.complexity })))
   const estMin = estimateWorkoutMinutes(toDurationMovements(w.movements), w.blocks)
   const initiale = w.user?.email?.[0]?.toUpperCase() ?? '?'
+  const { lines: previewLines, hiddenCount } = buildCardPreview(w)
 
   async function handleDuplicate(e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation()
@@ -324,15 +366,16 @@ function WorkoutCard({
               </div>
             </div>
 
-            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {w.movements.slice(0, 3).map((wm, i) => (
-                <div key={wm.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 10, color: 'var(--text-dim)', width: 14, textAlign: 'right' }}>{i + 1}</span>
-                  <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{wm.movement.name}</span>
-                  <span style={{ fontSize: 10, color: BIO_TYPE_COLORS[wm.movement.bioType] || 'var(--text-muted)', marginLeft: 'auto' }}>{wm.movement.bioType}</span>
+            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {previewLines.map((line, i) => line.kind === 'block' ? (
+                <div key={`b${i}`} style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.3, color: 'var(--text-dim)', textTransform: 'uppercase', marginTop: i === 0 ? 0 : 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{line.label}</div>
+              ) : (
+                <div key={`m${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: BIO_TYPE_COLORS[line.bioType] || 'var(--text-muted)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 12.5, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{line.name}</span>
                 </div>
               ))}
-              {w.movements.length > 3 && <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>+{w.movements.length - 3} autres</div>}
+              {hiddenCount > 0 && <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>+{hiddenCount} autres…</div>}
             </div>
           </div>
         </div>

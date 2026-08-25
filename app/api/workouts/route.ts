@@ -20,7 +20,7 @@ const WORKOUT_SELECT = {
   tags: true,
   userId: true,
   user: { select: { id: true, email: true } },
-  blocks: { select: { id: true, superset: true, restAfter: true } },
+  blocks: { select: { id: true, superset: true, restAfter: true, instructions: true, order: true }, orderBy: { order: 'asc' } },
   movements: {
     orderBy: { order: 'asc' },
     select: {
