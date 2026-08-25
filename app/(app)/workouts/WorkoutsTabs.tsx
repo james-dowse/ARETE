@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, effectiveDifficulty } from '@/lib/types'
 import { estimateWorkoutMinutes, type DurationBlock } from '@/lib/duration'
 import { stripHtmlMultiline } from '@/lib/html'
+import { readableAccent } from '@/lib/color'
 import DifficultyImageTint, { DIFFICULTY_TINT_IMG_FILTER } from '@/components/DifficultyImageTint'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
 import { useToast } from '@/components/Toast'
@@ -439,7 +440,7 @@ function WorkoutCard({
 
         <div style={{ marginTop: 10, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {difficulty && (
-            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: COMPLEXITY_COLORS[difficulty], border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40` }}>{difficulty}</span>
+            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: readableAccent(COMPLEXITY_COLORS[difficulty]), border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40` }}>{difficulty}</span>
           )}
           {bioTypes.map(bt => (
             <span key={bt} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${BIO_TYPE_COLORS[bt] || '#fff'}15`, color: BIO_TYPE_COLORS[bt] || 'var(--text-muted)', border: `1px solid ${BIO_TYPE_COLORS[bt] || '#fff'}28` }}>{bt}</span>
@@ -768,6 +769,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
         {COMPLEXITIES.map(c => {
           const active = difficultyFilters.has(c)
           const color = COMPLEXITY_COLORS[c]
+          const label = readableAccent(color)
           return (
             <button
               key={c}
@@ -775,8 +777,8 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
               style={{
                 padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 background: active ? `${color}18` : 'var(--bg-card)',
-                color: active ? color : 'var(--text-muted)',
-                border: `1px solid ${active ? color : 'var(--border)'}`,
+                color: active ? label : 'var(--text-muted)',
+                border: `1px solid ${active ? label : 'var(--border)'}`,
                 transition: 'all 0.15s',
               }}
             >{c}</button>

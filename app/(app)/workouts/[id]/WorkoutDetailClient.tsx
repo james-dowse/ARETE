@@ -7,6 +7,7 @@ import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, COMPLEXITIES, effec
 import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
 import { useToast } from '@/components/Toast'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
+import { readableAccent } from '@/lib/color'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -669,7 +670,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                 style={{
                   padding: '6px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', outline: 'none',
                   background: difficulty ? `${COMPLEXITY_COLORS[difficulty]}18` : 'var(--bg-elevated)',
-                  color: difficulty ? COMPLEXITY_COLORS[difficulty] : 'var(--text-muted)',
+                  color: difficulty ? readableAccent(COMPLEXITY_COLORS[difficulty]) : 'var(--text-muted)',
                   border: `1px solid ${difficulty ? `${COMPLEXITY_COLORS[difficulty]}40` : 'var(--border)'}`,
                 }}
               >
@@ -679,7 +680,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
               {isDirtyDifficultyOverride && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 20, background: 'var(--dirty)', fontWeight: 600 }}>modifié</span>}
             </span>
           ) : difficulty && (
-            <span style={{ padding: '6px 16px', borderRadius: 20, fontSize: 15, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: COMPLEXITY_COLORS[difficulty], border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40` }}>
+            <span style={{ padding: '6px 16px', borderRadius: 20, fontSize: 15, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: readableAccent(COMPLEXITY_COLORS[difficulty]), border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40` }}>
               {difficulty}
             </span>
           )}

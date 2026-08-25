@@ -59,11 +59,14 @@ export const BIO_TYPE_TEMPO: Record<string, number> = {
   'Boxing': 1.2,
 }
 
+// Palette pastel : sert à la fois de pastille et de teinte d'image (duotone).
+// Volontairement claire et peu saturée — un niveau "Elite" gris neutre doit
+// rester gris une fois appliqué à l'image, jamais virer à une teinte parasite.
 export const COMPLEXITY_COLORS: Record<string, string> = {
-  'Easy':     '#5CB85C',  // vert
-  'Common':   '#D9A62E',  // jaune
-  'Hard':     '#C0392B',  // rouge
-  'Advanced': '#2A2620',  // noir (charbon, pour rester lisible en badge/filtre)
+  'Easy':     '#8CC98C',  // vert pastel
+  'Common':   '#DEC06B',  // jaune pastel
+  'Hard':     '#D98A8A',  // rouge pastel
+  'Advanced': '#9C9892',  // gris neutre
 }
 
 // Difficulté globale d'un workout : majorité des mouvements, sauf si le niveau

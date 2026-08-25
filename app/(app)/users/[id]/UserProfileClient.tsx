@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Clock, UserPlus, UserCheck, Bell, BellOff } from 'lucide-react'
 import { COMPLEXITY_COLORS, effectiveDifficulty } from '@/lib/types'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
+import { readableAccent } from '@/lib/color'
 
 interface ProfileUser { id: string; firstName: string | null; lastName: string | null; bio: string | null; avatarUrl: string | null }
 interface ProfileWorkout {
@@ -113,7 +114,7 @@ export default function UserProfileClient({ userId }: { userId: string }) {
                   </div>
                 </div>
                 {difficulty && (
-                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: COMPLEXITY_COLORS[difficulty], border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40`, flexShrink: 0 }}>{difficulty}</span>
+                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: readableAccent(COMPLEXITY_COLORS[difficulty]), border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40`, flexShrink: 0 }}>{difficulty}</span>
                 )}
               </Link>
             )
