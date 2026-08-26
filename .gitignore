@@ -51,3 +51,4 @@ prisma/*.db-wal
 .claude/
 REDESIGN_BRIEF.md
 REPAIR-GENERATEUR.md
+.env*.local

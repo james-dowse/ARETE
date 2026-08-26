@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Mail, Trash2, RefreshCw, UserPlus, CheckCircle, Clock, Copy, Check, Link2, AlertTriangle, Pencil, X, Save, Camera } from 'lucide-react'
+import { Mail, Trash2, RefreshCw, UserPlus, CheckCircle, Clock, Copy, Check, Link2, AlertTriangle, Pencil, X, Save, Camera, Star, Search } from 'lucide-react'
 import { useConfirm } from '@/components/ConfirmDialog'
 
 interface InvitedUser {
@@ -51,6 +51,7 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
   const [inviting, setInviting] = useState(false)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'warning' | 'error'; msg: string; inviteUrl?: string } | null>(null)
   const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null)
+  const [assigningTo, setAssigningTo] = useState<{ id: string; email: string } | null>(null)
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -209,7 +210,7 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
               {pending.map(u => <UserRow key={u.id} user={u} onRevoke={revoke} isProtected={u.email === adminEmail} onEditProfile={async () => {
                 const res = await fetch(`/api/admin/users/${u.id}`)
                 setEditingProfile(await res.json())
-              }} />)}
+              }} onAssignWod={() => setAssigningTo({ id: u.id, email: u.email })} />)}
             </div>
           </div>
         )}
@@ -222,7 +223,7 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
               {accepted.map(u => <UserRow key={u.id} user={u} onRevoke={revoke} isProtected={u.email === adminEmail} onEditProfile={async () => {
                 const res = await fetch(`/api/admin/users/${u.id}`)
                 setEditingProfile(await res.json())
-              }} />)}
+              }} onAssignWod={() => setAssigningTo({ id: u.id, email: u.email })} />)}
             </div>
           </div>
         )}
@@ -234,6 +235,14 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
           profile={editingProfile}
           onClose={() => setEditingProfile(null)}
           onSaved={updated => setEditingProfile(updated)}
+        />
+      )}
+
+      {/* ── Modale assigner un WOD ── */}
+      {assigningTo && (
+        <AssignWodModal
+          user={assigningTo}
+          onClose={() => setAssigningTo(null)}
         />
       )}
 
@@ -431,7 +440,7 @@ function AdminProfileModal({ profile, onClose, onSaved }: { profile: UserProfile
   )
 }
 
-function UserRow({ user, onRevoke, isProtected, onEditProfile }: { user: InvitedUser; onRevoke: (id: string, email: string) => void; isProtected?: boolean; onEditProfile?: () => void }) {
+function UserRow({ user, onRevoke, isProtected, onEditProfile, onAssignWod }: { user: InvitedUser; onRevoke: (id: string, email: string) => void; isProtected?: boolean; onEditProfile?: () => void; onAssignWod?: () => void }) {
   const accepted = user.status === 'accepted'
   const date = new Date(accepted && user.acceptedAt ? user.acceptedAt : user.invitedAt)
     .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -463,6 +472,16 @@ function UserRow({ user, onRevoke, isProtected, onEditProfile }: { user: Invited
           onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}
         >
           <Pencil size={14} />
+        </button>
+
+        <button
+          onClick={onAssignWod}
+          title="Assigner un WOD"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: 'var(--text-dim)', borderRadius: 6, flexShrink: 0 }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--gold)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}
+        >
+          <Star size={14} />
         </button>
 
         {!isProtected && (
@@ -508,4 +527,121 @@ async function resizeImage(file: File, maxSize: number): Promise<File> {
     }
     img.src = URL.createObjectURL(file)
   })
+}
+
+interface SearchWorkout { id: string; name: string; duration?: number | null }
+
+function AssignWodModal({ user, onClose }: { user: { id: string; email: string }; onClose: () => void }) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<SearchWorkout[]>([])
+  const [searching, setSearching] = useState(false)
+  const [selected, setSelected] = useState<SearchWorkout | null>(null)
+  const [note, setNote] = useState('')
+  const [scheduledFor, setScheduledFor] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResults([]); return }
+    setSearching(true)
+    const t = setTimeout(() => {
+      fetch(`/api/search?q=${encodeURIComponent(query)}`)
+        .then(r => r.json())
+        .then(data => setResults(data.workouts ?? []))
+        .finally(() => setSearching(false))
+    }, 220)
+    return () => clearTimeout(t)
+  }, [query])
+
+  async function handleAssign() {
+    if (!selected) return
+    setSaving(true)
+    await fetch('/api/admin/assignments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workoutId: selected.id, assignedToId: user.id, note, scheduledFor: scheduledFor || null }),
+    })
+    setSaving(false)
+    setDone(true)
+    setTimeout(onClose, 1200)
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, width: 440, maxWidth: '100%', boxShadow: 'var(--shadow-lg, 0 12px 40px rgba(0,0,0,0.4))' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Assigner un WOD à {user.email}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}><X size={16} /></button>
+        </div>
+
+        {done ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--green)', fontSize: 14, padding: '8px 0' }}>
+            <CheckCircle size={16} /> WOD assigné, notification envoyée.
+          </div>
+        ) : (
+          <>
+            {!selected ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
+                  <Search size={14} color="var(--text-muted)" />
+                  <input
+                    autoFocus
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    placeholder="Rechercher une séance…"
+                    style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 13, color: 'var(--text-primary)' }}
+                  />
+                </div>
+                <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {searching && <div style={{ fontSize: 12, color: 'var(--text-dim)', padding: '8px 4px' }}>Recherche…</div>}
+                  {!searching && query.trim().length >= 2 && results.length === 0 && (
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', padding: '8px 4px' }}>Aucun résultat</div>
+                  )}
+                  {results.map(w => (
+                    <button
+                      key={w.id}
+                      onClick={() => setSelected(w)}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', textAlign: 'left', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: 13 }}
+                    >
+                      <span>{w.name}</span>
+                      {w.duration && <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{w.duration} min</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', borderRadius: 8, padding: '10px 12px', marginBottom: 12 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gold)' }}>{selected.name}</span>
+                  <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11.5, color: 'var(--text-dim)' }}>Changer</button>
+                </div>
+                <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Note (optionnel)</label>
+                <textarea
+                  value={note}
+                  onChange={e => setNote(e.target.value)}
+                  rows={2}
+                  maxLength={280}
+                  style={{ width: '100%', marginTop: 6, marginBottom: 12, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13, fontFamily: 'inherit', resize: 'vertical' }}
+                />
+                <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Date prévue (optionnel)</label>
+                <input
+                  type="date"
+                  value={scheduledFor}
+                  onChange={e => setScheduledFor(e.target.value)}
+                  style={{ width: '100%', marginTop: 6, marginBottom: 16, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13 }}
+                />
+                <button
+                  onClick={handleAssign}
+                  disabled={saving}
+                  style={{ width: '100%', padding: '10px 16px', background: 'var(--gold)', color: '#1D1813', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}
+                >
+                  {saving ? 'Envoi…' : 'Assigner ce WOD'}
+                </button>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
 }

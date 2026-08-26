@@ -49,6 +49,7 @@ model Workout {
   favoritedBy FavoriteWorkout[]
   planEntries WeekPlanEntry[]
   sessions    WorkoutSession[]
+  assignments AssignedWorkout[]
   template    WorkoutTemplate?  @relation(fields: [templateId], references: [id])
   user        InvitedUser?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
@@ -125,6 +126,43 @@ model InvitedUser {
   workoutSessions  WorkoutSession[]
   following        Follow[]           @relation("Follower")
   followers        Follow[]           @relation("Followed")
+  notifications    Notification[]
+  assignedToMe     AssignedWorkout[]  @relation("AssignedTo")
+  assignedByMe     AssignedWorkout[]  @relation("AssignedBy")
+}
+
+// Notification in-app. userId=null = broadcast (tous les users) — ex: annonce
+// admin. Générée par le système uniquement (activation d'une annonce, assignation
+// d'un WOD par le coach) : pas de création manuelle au départ, pour rester simple.
+model Notification {
+  id        String       @id @default(cuid())
+  userId    String?
+  title     String
+  body      String?
+  link      String?
+  createdAt DateTime     @default(now())
+  readAt    DateTime?
+  user      InvitedUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// WOD assigné par un coach/admin à un user précis (mode "programme"). Pas de champ
+// "done" stocké : la complétion se déduit en croisant avec WorkoutSession
+// (même workoutId/userId, doneAt >= createdAt de l'assignation).
+model AssignedWorkout {
+  id           String      @id @default(cuid())
+  workoutId    String
+  workout      Workout     @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  assignedToId String
+  assignedTo   InvitedUser @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: Cascade)
+  assignedById String
+  assignedBy   InvitedUser @relation("AssignedBy", fields: [assignedById], references: [id])
+  note         String?
+  scheduledFor DateTime?
+  createdAt    DateTime    @default(now())
+
+  @@index([assignedToId])
 }
 
 // Abonnement à un profil (pas à un workout précis) — sert uniquement à
@@ -249,6 +287,17 @@ model DifficultyTier {
   complexities String // JSON : ["Facile","Commun"] — valeurs de AttributeOption(category='complexity')
   sets         Int    @default(3)
   position     Int    @default(0)
+}
+
+// Contenu texte de la home, éditable depuis Admin > Contenus. key stable ("app_info",
+// "announcement") ; active=false tant que l'admin n'a pas validé de texte à publier.
+model SiteContent {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  title     String?
+  body      String
+  active    Boolean  @default(false)
+  updatedAt DateTime @updatedAt
 }
 
 model WorkoutShare {

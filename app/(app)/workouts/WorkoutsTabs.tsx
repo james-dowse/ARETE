@@ -54,6 +54,28 @@ const SORT_LABELS: Record<SortOption, string> = {
   movements: 'Nb mouvements',
 }
 
+// ── Filtre durée ─────────────────────────────────────────────────────────────
+type DurationPreset = 'all' | 'lt30' | '30' | '45' | '60' | 'custom'
+
+const DURATION_PRESET_LABELS: Record<Exclude<DurationPreset, 'all' | 'custom'>, string> = {
+  lt30: '< 30 min',
+  '30': '~30 min',
+  '45': '~45 min',
+  '60': '~60 min',
+}
+
+// Tolérance ±5 min sur les presets ronds : une séance à 28 min ne doit pas être
+// exclue du preset "~30 min" pour un simple arrondi d'estimation.
+function matchesDurationPreset(minutes: number, preset: DurationPreset): boolean {
+  switch (preset) {
+    case 'lt30': return minutes < 30
+    case '30':   return minutes >= 25 && minutes <= 35
+    case '45':   return minutes >= 40 && minutes <= 50
+    case '60':   return minutes >= 55 && minutes <= 65
+    default:     return true
+  }
+}
+
 const toDurationMovements = (movements: WorkoutMovementItem[]) => movements.map(m => ({
   sets: m.sets, reps: m.reps, duration: m.duration, rest: m.rest,
   blockId: m.blockId, order: m.order, bioType: m.movement.bioType,
@@ -549,11 +571,22 @@ function SectionLabel({ icon, label, count }: { icon: React.ReactNode; label: st
 }
 
 // ── Tabs principal ───────────────────────────────────────────────────────────
+interface Assignment {
+  id: string
+  note: string | null
+  scheduledFor: string | null
+  createdAt: string
+  done: boolean
+  workout: Workout
+  assignedBy: { firstName: string | null; lastName: string | null; email: string }
+}
+
 export default function WorkoutsTabs({ currentUserId }: { currentUserId: string | null }) {
-  const [tab, setTab] = useState<'mine' | 'community'>('mine')
+  const [tab, setTab] = useState<'mine' | 'community' | 'coach'>('mine')
   const [myWorkouts, setMyWorkouts] = useState<Workout[]>([])
   const [savedWorkouts, setSavedWorkouts] = useState<Workout[]>([])
   const [communityWorkouts, setCommunityWorkouts] = useState<Workout[]>([])
+  const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [sharingWorkout, setSharingWorkout] = useState<Workout | null>(null)
@@ -565,6 +598,10 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
   const [bioFilters, setBioFilters] = useState<Set<string>>(new Set())
   const [difficultyFilters, setDifficultyFilters] = useState<Set<string>>(new Set())
+  const [durationPreset, setDurationPreset] = useState<DurationPreset>('all')
+  const [durationCustomMode, setDurationCustomMode] = useState<'between' | 'lte' | 'gte'>('between')
+  const [durationCustomMin, setDurationCustomMin] = useState('')
+  const [durationCustomMax, setDurationCustomMax] = useState('')
   const [sortBy, setSortBy] = useState<SortOption>('name')
   const [searchQuery, setSearchQuery] = useState('')
   const [followedIds, setFollowedIds] = useState<Set<string>>(new Set())
@@ -621,13 +658,22 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
     setFollowedIds(new Set(follows.followedIds ?? []))
   }, [])
 
+  const loadCoach = useCallback(async () => {
+    const data = await fetch('/api/assignments').then(r => r.json())
+    setAssignments(Array.isArray(data) ? data : [])
+  }, [])
+
   useEffect(() => {
     setLoading(true)
-    const p = tab === 'mine' ? loadMine() : loadCommunity()
+    const p = tab === 'mine' ? loadMine() : tab === 'community' ? loadCommunity() : loadCoach()
     p.finally(() => setLoading(false))
-  }, [tab, loadMine, loadCommunity])
+  }, [tab, loadMine, loadCommunity, loadCoach])
 
-  const tabStyle = (t: 'mine' | 'community'): React.CSSProperties => ({
+  // Chargé en tâche de fond dès le montage (pas seulement au clic sur l'onglet)
+  // pour afficher tout de suite le badge de séances coach en attente.
+  useEffect(() => { loadCoach() }, [loadCoach])
+
+  const tabStyle = (t: 'mine' | 'community' | 'coach'): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: 7,
     padding: '9px 18px', borderRadius: 8, border: 'none', cursor: 'pointer',
     fontWeight: tab === t ? 700 : 500, fontSize: 13,
@@ -675,6 +721,21 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
       const tags = w.tags?.split(',').map(t => t.trim()).filter(Boolean) ?? []
       if (!tags.some(t => activeTags.has(t))) return false
     }
+    if (durationPreset !== 'all') {
+      const minutes = estimatedMinutes(w)
+      if (durationPreset === 'custom') {
+        const min = durationCustomMin ? Number(durationCustomMin) : null
+        const max = durationCustomMax ? Number(durationCustomMax) : null
+        if (durationCustomMode === 'lte' && max !== null && minutes > max) return false
+        if (durationCustomMode === 'gte' && min !== null && minutes < min) return false
+        if (durationCustomMode === 'between') {
+          if (min !== null && minutes < min) return false
+          if (max !== null && minutes > max) return false
+        }
+      } else if (!matchesDurationPreset(minutes, durationPreset)) {
+        return false
+      }
+    }
     return true
   }
   const myWorkoutsFiltered = sortWorkouts(myWorkouts.filter(matchesFilter), sortBy)
@@ -704,18 +765,28 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
         <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, boxShadow: 'var(--shadow-sm)' }}>
           <button style={tabStyle('mine')} onClick={() => setTab('mine')}><User size={14} /> Mes séances</button>
           <button style={tabStyle('community')} onClick={() => setTab('community')}><Users size={14} /> Communauté</button>
+          {assignments.length > 0 && (
+            <button style={tabStyle('coach')} onClick={() => setTab('coach')}>
+              <Star size={14} /> Programme du coach
+              {assignments.some(a => !a.done) && (
+                <span style={{ fontSize: 10, fontWeight: 800, background: 'var(--crimson)', color: '#F8F4EC', borderRadius: 20, padding: '1px 6px', marginLeft: 2 }}>
+                  {assignments.filter(a => !a.done).length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
         {!loading && (
           <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>
-            {tab === 'mine'
-              ? `${myWorkoutsFiltered.length + savedWorkoutsFiltered.length} entraînement${myWorkoutsFiltered.length + savedWorkoutsFiltered.length !== 1 ? 's' : ''}`
-              : `${communityWorkoutsFiltered.length} entraînement${communityWorkoutsFiltered.length !== 1 ? 's' : ''} dans la communauté`
-            }
+            {tab === 'mine' && `${myWorkoutsFiltered.length + savedWorkoutsFiltered.length} entraînement${myWorkoutsFiltered.length + savedWorkoutsFiltered.length !== 1 ? 's' : ''}`}
+            {tab === 'community' && `${communityWorkoutsFiltered.length} entraînement${communityWorkoutsFiltered.length !== 1 ? 's' : ''} dans la communauté`}
+            {tab === 'coach' && `${assignments.length} WOD assigné${assignments.length !== 1 ? 's' : ''}`}
           </span>
         )}
       </div>
 
-      {/* Recherche texte + tri */}
+      {/* Recherche texte + tri (masqués sur l'onglet coach : liste dédiée, pas de filtres) */}
+      {tab !== 'coach' && <>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px', maxWidth: 340, flex: 1, minWidth: 200 }}>
           <Search size={14} color="var(--text-muted)" />
@@ -815,6 +886,77 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
         )}
       </div>
 
+      {/* Filtre durée */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+        {(['lt30', '30', '45', '60'] as const).map(p => {
+          const active = durationPreset === p
+          return (
+            <button
+              key={p}
+              onClick={() => setDurationPreset(active ? 'all' : p)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                background: active ? 'var(--gold-ghost)' : 'var(--bg-card)',
+                color: active ? 'var(--gold)' : 'var(--text-muted)',
+                border: `1px solid ${active ? 'var(--gold-border)' : 'var(--border)'}`,
+                transition: 'all 0.15s',
+              }}
+            ><Clock size={11} /> {DURATION_PRESET_LABELS[p]}</button>
+          )
+        })}
+        <button
+          onClick={() => setDurationPreset(durationPreset === 'custom' ? 'all' : 'custom')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            background: durationPreset === 'custom' ? 'var(--gold-ghost)' : 'var(--bg-card)',
+            color: durationPreset === 'custom' ? 'var(--gold)' : 'var(--text-muted)',
+            border: `1px solid ${durationPreset === 'custom' ? 'var(--gold-border)' : 'var(--border)'}`,
+            transition: 'all 0.15s',
+          }}
+        >Durée personnalisée</button>
+
+        {durationPreset === 'custom' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <select
+              value={durationCustomMode}
+              onChange={e => setDurationCustomMode(e.target.value as 'between' | 'lte' | 'gte')}
+              style={{ fontSize: 12, padding: '4px 6px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+            >
+              <option value="between">Entre</option>
+              <option value="lte">≤</option>
+              <option value="gte">≥</option>
+            </select>
+            {durationCustomMode !== 'lte' && (
+              <input
+                type="number" min={0} placeholder="min"
+                value={durationCustomMin}
+                onChange={e => setDurationCustomMin(e.target.value)}
+                style={{ width: 56, fontSize: 12, padding: '4px 8px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+              />
+            )}
+            {durationCustomMode === 'between' && <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>—</span>}
+            {durationCustomMode !== 'gte' && (
+              <input
+                type="number" min={0} placeholder="max"
+                value={durationCustomMax}
+                onChange={e => setDurationCustomMax(e.target.value)}
+                style={{ width: 56, fontSize: 12, padding: '4px 8px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+              />
+            )}
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>min</span>
+          </div>
+        )}
+
+        {durationPreset !== 'all' && (
+          <button
+            onClick={() => { setDurationPreset('all'); setDurationCustomMin(''); setDurationCustomMax('') }}
+            style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'none', border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+          ><X size={11} /> Tout</button>
+        )}
+      </div>
+
       {/* Filtre tags */}
       {availableTags.length > 0 && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -839,6 +981,8 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
           )}
         </div>
       )}
+
+      </>}
 
       {/* Erreur de chargement */}
       {fetchError && (
@@ -1006,6 +1150,49 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                   }}
                   onShare={() => setSharingWorkout(w)}
                 />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {!loading && tab === 'coach' && (
+        <>
+          {assignments.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 44, marginBottom: 14 }}>⭐</div>
+              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucun WOD assigné</div>
+              <div style={{ fontSize: 13 }}>Les séances que ton coach t&apos;assigne apparaîtront ici</div>
+            </div>
+          )}
+          {assignments.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {assignments.map(a => (
+                <div key={a.id}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                    {a.done ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 700, color: 'var(--green, #6a9)', padding: '2px 10px', border: '1px solid rgba(120,180,140,0.35)', borderRadius: 20 }}>
+                        <CheckCircle2 size={12} /> Fait
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--gold)', padding: '2px 10px', border: '1px solid var(--gold-border)', borderRadius: 20 }}>À faire</span>
+                    )}
+                    {a.scheduledFor && (
+                      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                        Prévu le {new Date(a.scheduledFor).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                      — assigné par {a.assignedBy.firstName || a.assignedBy.email.split('@')[0]}
+                    </span>
+                  </div>
+                  {a.note && (
+                    <div style={{ fontSize: 12.5, color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 8, paddingLeft: 2 }}>
+                      « {a.note} »
+                    </div>
+                  )}
+                  <WorkoutCard w={a.workout} context="community" />
+                </div>
               ))}
             </div>
           )}

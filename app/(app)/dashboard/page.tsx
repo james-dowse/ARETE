@@ -123,7 +123,7 @@ export default async function DashboardPage() {
   const [
     movementCount, workoutCount, templateCount, bioStats,
     recentSessions, streakSessions, monthSessions,
-    weekPlan, weekSessionCount,
+    weekPlan, weekSessionCount, siteContents,
   ] = await Promise.all([
     prisma.movement.count(),
     prisma.workout.count(),
@@ -153,6 +153,7 @@ export default async function DashboardPage() {
       },
     }).catch(() => null) : Promise.resolve(null),
     user ? prisma.workoutSession.count({ where: { userId: user.id, doneAt: { gte: weekBegin } } }).catch(() => 0) : Promise.resolve(0),
+    prisma.siteContent.findMany({ where: { active: true } }).catch(() => []),
   ])
 
   const streak = computeStreak(streakSessions.map(s => s.doneAt))
@@ -337,6 +338,18 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* ── Contenus éditables (Admin > Contenus) ───────────────── */}
+        {siteContents.length > 0 && (
+          <div className="r-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 32 }}>
+            {siteContents.map(c => (
+              <div key={c.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '20px 24px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
+                {c.title && <p style={{ ...SECTION_LABEL_GOLD, marginBottom: 10 }}>{c.title}</p>}
+                <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-muted)', margin: 0, whiteSpace: 'pre-wrap' }}>{c.body}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ── Prochaines séances (seulement si quelque chose est planifié) ── */}
         {heroEntry && upcomingEntries.length > 0 && (

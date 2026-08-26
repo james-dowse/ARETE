@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useLayoutEffect } from 'react'
-import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon, Calendar, Search, X, TrendingUp } from 'lucide-react'
+import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon, Calendar, Search, X, TrendingUp, FileText, Bell } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useRef, useCallback } from 'react'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
@@ -18,6 +18,7 @@ const allNav = [
   { href: '/profile',     label: 'Mon profil',    icon: UserCircle,      admin: false },
   { href: '/admin',       label: 'Mouvements',    icon: Settings2,       admin: true, sub: true },
   { href: '/admin/users', label: 'Utilisateurs',  icon: Users,           admin: true, sub: true },
+  { href: '/admin/content', label: 'Contenus',    icon: FileText,        admin: true, sub: true },
 ]
 
 const EXPANDED_WIDTH = 184
@@ -31,6 +32,15 @@ interface SearchResult {
   users: { id: string; firstName: string | null; lastName: string | null; avatarUrl: string | null }[]
 }
 
+interface NotifItem {
+  id: string
+  title: string
+  body: string | null
+  link: string | null
+  createdAt: string
+  readAt: string | null
+}
+
 export default function Sidebar() {
   const path = usePathname()
   const router = useRouter()
@@ -42,14 +52,51 @@ export default function Sidebar() {
   const [searchResults, setSearchResults] = useState<SearchResult | null>(null)
   const [searchLoading, setSearchLoading] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  const [showNotifs, setShowNotifs] = useState(false)
+  const [notifs, setNotifs] = useState<NotifItem[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [loggedIn, setLoggedIn] = useState(false)
 
   useEffect(() => {
     // Réponse mise en cache par le navigateur (voir /api/me) : sur les
     // navigations suivantes ce fetch ne repart pas sur le réseau.
     fetch('/api/me').then(r => r.json()).then(data => {
       if (data?.isAdmin) setIsAdmin(true)
+      if (data?.id) setLoggedIn(true)
     }).catch(() => {})
   }, [])
+
+  const fetchNotifs = useCallback(() => {
+    fetch('/api/notifications').then(r => r.json()).then(data => {
+      setNotifs(data.items ?? [])
+      setUnreadCount(data.unreadCount ?? 0)
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!loggedIn) return
+    fetchNotifs()
+    const id = setInterval(fetchNotifs, 60000)
+    return () => clearInterval(id)
+  }, [loggedIn, fetchNotifs])
+
+  const openNotifs = () => {
+    setShowNotifs(s => !s)
+    if (!showNotifs) fetchNotifs()
+  }
+
+  const markAllRead = async () => {
+    setUnreadCount(0)
+    setNotifs(ns => ns.map(n => ({ ...n, readAt: n.readAt ?? new Date().toISOString() })))
+    await fetch('/api/notifications/read-all', { method: 'PATCH' })
+  }
+
+  const markOneRead = async (n: NotifItem) => {
+    if (n.readAt) return
+    setNotifs(ns => ns.map(x => x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x))
+    setUnreadCount(c => Math.max(0, c - 1))
+    await fetch(`/api/notifications/${n.id}/read`, { method: 'PATCH' })
+  }
 
   const nav = allNav.filter(item => !item.admin || isAdmin)
 
@@ -215,6 +262,38 @@ export default function Sidebar() {
           )
         })}
       </nav>
+
+      {/* ── Notifications ── */}
+      {loggedIn && (
+        <div style={{ padding: collapsed ? '6px 6px 0' : '6px 8px 0', flexShrink: 0 }}>
+          <button
+            onClick={openNotifs}
+            title="Notifications"
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
+              gap: 7, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 'var(--r-sm)', padding: collapsed ? '7px' : '6px 8px', cursor: 'pointer',
+              color: 'rgba(255,255,255,0.35)', transition: 'color 0.15s, background 0.15s, border-color 0.15s',
+              position: 'relative',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(200,165,95,0.4)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+          >
+            <span style={{ position: 'relative', display: 'flex' }}>
+              <Bell size={13} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+              {unreadCount > 0 && (
+                <span style={{ position: 'absolute', top: -3, right: -4, width: 7, height: 7, borderRadius: '50%', background: 'var(--crimson, #B4552D)', border: '1px solid var(--sidebar-bg, #17130F)' }} />
+              )}
+            </span>
+            <span style={{ fontSize: 11, flex: 1, textAlign: 'left', maxWidth: collapsed ? 0 : 100, opacity: collapsed ? 0 : 1, overflow: 'hidden', whiteSpace: 'nowrap', transition: 'max-width 0.22s, opacity 0.15s' }}>
+              Notifications
+            </span>
+            {!collapsed && unreadCount > 0 && (
+              <span style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--gold)', whiteSpace: 'nowrap' }}>{unreadCount}</span>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* ── Recherche ── */}
       <div style={{ padding: collapsed ? '6px 6px 0' : '6px 8px 0', flexShrink: 0 }}>
@@ -430,6 +509,73 @@ export default function Sidebar() {
             {!searchQ && (
               <div style={{ padding: '18px 16px', fontSize: 13, color: 'rgba(255,255,255,0.25)', textAlign: 'center' }}>Tapez pour rechercher…</div>
             )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Notifications overlay ── */}
+    {showNotifs && (
+      <div
+        onClick={() => setShowNotifs(false)}
+        className="overlay-in"
+        style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: 'rgba(8,6,2,0.4)',
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+          paddingTop: '12vh',
+        }}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          className="modal-in"
+          style={{
+            width: 420, maxWidth: 'calc(100vw - 32px)',
+            background: 'var(--bg-card)', borderRadius: 'var(--r-lg)',
+            border: '1px solid var(--gold-border)',
+            boxShadow: 'var(--elev-3)',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text, #fff)' }}>Notifications</span>
+            {unreadCount > 0 && (
+              <button onClick={markAllRead} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11.5, color: 'var(--gold-dim)', fontWeight: 600 }}>
+                Tout marquer comme lu
+              </button>
+            )}
+          </div>
+          <div style={{ maxHeight: 380, overflowY: 'auto' }}>
+            {notifs.length === 0 && (
+              <div style={{ padding: '24px 16px', fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>Aucune notification</div>
+            )}
+            {notifs.map(n => {
+              const content = (
+                <div
+                  key={n.id}
+                  onClick={() => { markOneRead(n); if (n.link) navigate(n.link); else setShowNotifs(false) }}
+                  style={{
+                    padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    background: n.readAt ? 'transparent' : 'rgba(200,165,95,0.06)',
+                    transition: 'background 0.1s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,165,95,0.1)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = n.readAt ? 'transparent' : 'rgba(200,165,95,0.06)' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    {!n.readAt && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gold)', marginTop: 5, flexShrink: 0 }} />}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text, #fff)' }}>{n.title}</div>
+                      {n.body && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>{n.body}</div>}
+                      <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>
+                        {new Date(n.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+              return content
+            })}
           </div>
         </div>
       </div>
