@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useLayoutEffect } from 'react'
-import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon, Calendar, Search, X, TrendingUp, FileText, Bell } from 'lucide-react'
+import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon, Calendar, Search, X, TrendingUp, FileText, Bell, Star } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useRef, useCallback } from 'react'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
@@ -19,6 +19,7 @@ const allNav = [
   { href: '/admin',       label: 'Mouvements',    icon: Settings2,       admin: true, sub: true },
   { href: '/admin/users', label: 'Utilisateurs',  icon: Users,           admin: true, sub: true },
   { href: '/admin/content', label: 'Contenus',    icon: FileText,        admin: true, sub: true },
+  { href: '/admin/programs', label: 'Programmes', icon: Star,            admin: true, sub: true },
 ]
 
 const EXPANDED_WIDTH = 184

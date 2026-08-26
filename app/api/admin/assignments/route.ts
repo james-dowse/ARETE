@@ -3,6 +3,35 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { isAdmin } from '@/lib/admin'
 
+// GET — vue d'ensemble de tous les WOD assignés, tous users confondus (dashboard
+// de pilotage admin). La complétion se déduit comme dans /api/assignments : une
+// WorkoutSession du même workout/user postérieure à l'assignation vaut "fait".
+export async function GET() {
+  const user = await getCurrentUser()
+  if (!isAdmin(user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const assignments = await prisma.assignedWorkout.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      workout: { select: { id: true, name: true, duration: true } },
+      assignedTo: { select: { id: true, email: true, firstName: true, lastName: true, avatarUrl: true } },
+      assignedBy: { select: { firstName: true, lastName: true, email: true } },
+    },
+  })
+
+  const sessions = await prisma.workoutSession.findMany({
+    where: { workoutId: { in: assignments.map(a => a.workoutId) } },
+    select: { userId: true, workoutId: true, doneAt: true },
+  })
+
+  const result = assignments.map(a => {
+    const done = sessions.some(s => s.userId === a.assignedToId && s.workoutId === a.workoutId && s.doneAt >= a.createdAt)
+    return { ...a, done }
+  })
+
+  return NextResponse.json(result)
+}
+
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser()
   if (!isAdmin(user?.email) || !user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
