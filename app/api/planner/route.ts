@@ -17,21 +17,28 @@ export async function GET(req: NextRequest) {
   // "lundi" décalé de -1 jour. On tente donc aussi la veille par sécurité.
   const shiftedWeekStart = new Date(weekStart.getTime() - 86400000)
 
-  const plan = await prisma.weekPlan.findFirst({
-    where: { userId, weekStart: { in: [weekStart, shiftedWeekStart] } },
+  const entriesInclude = {
+    orderBy: [{ dayOfWeek: 'asc' as const }, { order: 'asc' as const }],
     include: {
-      entries: {
-        orderBy: [{ dayOfWeek: 'asc' }, { order: 'asc' }],
-        include: {
-          workout: {
-            select: {
-              id: true, name: true, duration: true, tags: true,
-              movements: { select: { movement: { select: { bioType: true } } } },
-            },
-          },
+      workout: {
+        select: {
+          id: true, name: true, duration: true, tags: true,
+          movements: { select: { movement: { select: { bioType: true } } } },
         },
       },
     },
+  }
+
+  // L'exact weekStart doit toujours primer : findFirst sur les deux candidats
+  // sans tri ne garantit pas l'ordre, et peut renvoyer l'ancien plan "décalé"
+  // (créé sous l'ancien bug côté client) alors qu'un plan à la bonne date,
+  // avec des entrées plus récentes, existe déjà.
+  const plan = await prisma.weekPlan.findUnique({
+    where: { userId_weekStart: { userId, weekStart } },
+    include: { entries: entriesInclude },
+  }) ?? await prisma.weekPlan.findFirst({
+    where: { userId, weekStart: shiftedWeekStart },
+    include: { entries: entriesInclude },
   })
 
   return NextResponse.json({ entries: plan?.entries ?? [] })
