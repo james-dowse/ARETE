@@ -712,13 +712,56 @@ export function DuplicatesTab() {
   const [data, setData] = useState<{ key: string; group: { id: string; name: string; bioType: string }[] }[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [keepChoice, setKeepChoice] = useState<Record<string, string>>({})
+  const [merging, setMerging] = useState<string | null>(null)
+  const toast = useToast()
+  const confirm = useConfirm()
 
   useEffect(() => {
     fetch('/api/admin/duplicates')
       .then(r => r.json())
-      .then(d => { setData(d.duplicates ?? []); setLoading(false) })
+      .then(d => {
+        const groups = d.duplicates ?? []
+        setData(groups)
+        // Par défaut : garder le plus ancien (id numérique le plus bas) — les mouvements
+        // du référentiel officiel ont des id numériques, les customs "custom-…" passent en dernier.
+        setKeepChoice(Object.fromEntries(groups.map((g: { key: string; group: { id: string }[] }) => {
+          const sorted = [...g.group].sort((a, b) => {
+            const na = Number(a.id), nb = Number(b.id)
+            if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb
+            return Number.isFinite(na) ? -1 : Number.isFinite(nb) ? 1 : 0
+          })
+          return [g.key, sorted[0].id]
+        })))
+        setLoading(false)
+      })
       .catch(e => { setError(String(e)); setLoading(false) })
   }, [])
+
+  const handleMerge = async (key: string, group: { id: string; name: string }[]) => {
+    const keepId = keepChoice[key]
+    const mergeIds = group.filter(m => m.id !== keepId).map(m => m.id)
+    if (mergeIds.length === 0) return
+    const keepName = group.find(m => m.id === keepId)?.name ?? keepId
+    if (!await confirm(
+      `Fusionner ${mergeIds.length} entrée${mergeIds.length > 1 ? 's' : ''} vers « ${keepName} » ? Les séances existantes seront réassignées, les autres entrées supprimées définitivement.`,
+      { danger: true, confirmLabel: 'Fusionner' }
+    )) return
+    setMerging(key)
+    try {
+      const res = await fetch('/api/admin/duplicates/merge', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keepId, mergeIds }),
+      })
+      if (!res.ok) { const d = await res.json(); toast(d.error || 'Échec de la fusion', 'error'); return }
+      setData(prev => prev ? prev.filter(g => g.key !== key) : prev)
+      toast('Mouvements fusionnés ✓')
+    } catch {
+      toast('Erreur réseau', 'error')
+    } finally {
+      setMerging(null)
+    }
+  }
 
   return (
     <div>
@@ -747,16 +790,24 @@ export function DuplicatesTab() {
             <div key={key} style={{ background: 'var(--bg-card)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, overflow: 'hidden' }}>
               <div style={{ padding: '8px 14px', background: 'rgba(239,68,68,0.06)', borderBottom: '1px solid rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Copy size={12} color="var(--red)" />
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', letterSpacing: 0.5, textTransform: 'uppercase', flex: 1 }}>
                   {group.length} entrées · clé : «{key}»
                 </span>
+                <button onClick={() => handleMerge(key, group)} disabled={merging === key}
+                  style={{ padding: '4px 12px', borderRadius: 20, border: '1px solid var(--red)', background: 'none', color: 'var(--red)', fontSize: 11, fontWeight: 700, cursor: merging === key ? 'default' : 'pointer' }}>
+                  {merging === key ? 'Fusion…' : 'Fusionner'}
+                </button>
               </div>
               {group.map((m, i) => (
-                <div key={m.id} style={{ display: 'flex', gap: 12, padding: '9px 14px', borderTop: i > 0 ? '1px solid var(--border)' : 'none', alignItems: 'center' }}>
+                <label key={m.id} style={{ display: 'flex', gap: 12, padding: '9px 14px', borderTop: i > 0 ? '1px solid var(--border)' : 'none', alignItems: 'center', cursor: 'pointer' }}>
+                  <input type="radio" name={`keep-${key}`} checked={keepChoice[key] === m.id}
+                    onChange={() => setKeepChoice(prev => ({ ...prev, [key]: m.id }))}
+                    style={{ accentColor: 'var(--gold)' }} title="Conserver ce mouvement" />
                   <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-dim)', minWidth: 48 }}>{m.id}</span>
                   <span style={{ fontWeight: 600, fontSize: 13, flex: 1 }}>{m.name}</span>
                   <span style={{ fontSize: 11, color: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)', padding: '2px 8px', borderRadius: 10, background: `${BIO_TYPE_COLORS[m.bioType]}15` }}>{BIO_TYPE_ICONS[m.bioType]} {m.bioType}</span>
-                </div>
+                  {keepChoice[key] === m.id && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gold)' }}>CONSERVER</span>}
+                </label>
               ))}
             </div>
           ))}

@@ -12,9 +12,20 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(request.url)
   if (url.origin !== self.location.origin) return
 
-  // Navigations : réseau d'abord, fallback cache puis /offline
+  // Navigations : réseau d'abord, on met en cache les pages de séance active
+  // (seules pages où un rechargement à froid sans réseau doit rester utilisable —
+  // le state + localStorage suffisent tant que l'onglet reste ouvert), fallback
+  // cache puis /offline si vraiment rien n'est disponible.
   if (request.mode === 'navigate') {
-    e.respondWith(fetch(request).catch(() => caches.match(request).then(r => r || caches.match('/offline'))))
+    const cacheable = /\/workouts\/[^/]+\/active$/.test(url.pathname)
+    e.respondWith(
+      fetch(request)
+        .then(res => {
+          if (cacheable && res.ok) { const cp = res.clone(); caches.open(CACHE).then(c => c.put(request, cp)) }
+          return res
+        })
+        .catch(() => caches.match(request).then(r => r || caches.match('/offline')))
+    )
     return
   }
   // Données de séance : stale-while-revalidate
