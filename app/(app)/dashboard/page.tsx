@@ -42,7 +42,7 @@ function parisWeekInfo() {
   const iso = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
   const mondayUTC = new Date(iso)
   const sundayUTC = new Date(mondayUTC.getTime() - 86400000)
-  return { dayIdx, weekStartCandidates: [sundayUTC, mondayUTC], weekBegin: sundayUTC }
+  return { dayIdx, weekStartCandidates: [sundayUTC, mondayUTC], weekBegin: sundayUTC, monday: mondayUTC }
 }
 
 function parisDateKey(d: Date): string {
@@ -115,7 +115,7 @@ export default async function DashboardPage() {
   monthBegin.setHours(0, 0, 0, 0)
   const streakWindowBegin = new Date()
   streakWindowBegin.setDate(streakWindowBegin.getDate() - 60)
-  const { dayIdx, weekStartCandidates, weekBegin } = parisWeekInfo()
+  const { dayIdx, weekStartCandidates, weekBegin, monday } = parisWeekInfo()
 
   // Un seul aller-retour : ces neuf requêtes sont indépendantes entre elles et
   // ne dépendent que de `user`. Les enchaîner en quatre vagues successives
@@ -160,15 +160,17 @@ export default async function DashboardPage() {
   const monthMinutes = monthSessions.reduce((sum, s) => sum + (s.workout?.duration || 0), 0)
   const monthHours = Math.round(monthMinutes / 60)
   const weekEntries = weekPlan?.entries ?? []
-  const todayEntries = weekEntries.filter(e => e.dayOfWeek === dayIdx)
-  const heroEntry = todayEntries[0]
-
-  // « Prochaines séances » : le reste d'aujourd'hui, puis les jours suivants de la semaine —
-  // jamais le passé (dayOfWeek < dayIdx).
   const DAY_LABELS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
-  const upcomingEntries = weekEntries
-    .filter(e => e.dayOfWeek >= dayIdx && e.id !== heroEntry?.id)
-    .slice(0, 4)
+  // Horizon du héros : toute la semaine à partir d'aujourd'hui (jamais le passé,
+  // dayOfWeek < dayIdx), première occurrence trouvée — pas seulement "aujourd'hui".
+  // weekEntries est déjà trié par dayOfWeek puis order (requête Prisma), donc [0]
+  // est bien la plus proche dans le temps.
+  const restOfWeek = weekEntries.filter(e => e.dayOfWeek >= dayIdx)
+  const heroEntry = restOfWeek[0]
+  const heroIsToday = heroEntry?.dayOfWeek === dayIdx
+
+  // « Prochaines séances » : le reste de la semaine après le héros.
+  const upcomingEntries = restOfWeek.filter(e => e.id !== heroEntry?.id).slice(0, 4)
 
   const maxBio = Math.max(...bioStats.map(s => s._count), 1)
 
@@ -180,6 +182,12 @@ export default async function DashboardPage() {
   const heroBioTypes = heroEntry
     ? Array.from(new Set(heroEntry.workout.movements.map(m => m.movement.bioType))).slice(0, 3)
     : []
+
+  const MONTH_LABELS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+  const heroDate = heroEntry ? new Date(monday.getTime() + heroEntry.dayOfWeek * 86400000) : null
+  const heroDateLabel = heroDate
+    ? `${DAY_LABELS[heroEntry!.dayOfWeek]} ${heroDate.getDate()} ${MONTH_LABELS[heroDate.getMonth()]}`
+    : null
 
   return (
     <>
@@ -256,7 +264,7 @@ export default async function DashboardPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 24, height: 2, background: '#D2794A' }} />
               <span style={{ ...MICRO, color: '#D2794A' }}>
-                {heroEntry ? 'Séance du jour' : 'Aucune séance planifiée'}
+                {heroEntry ? (heroIsToday ? 'Séance du jour' : 'Prochaine séance') : 'Aucune séance planifiée'}
               </span>
             </div>
 
@@ -267,6 +275,11 @@ export default async function DashboardPage() {
             <h1 className="display hero-title" style={{ margin: 0, fontSize: 40, lineHeight: 1.05, letterSpacing: '-0.015em', color: '#F0EBE1' }}>
               {heroEntry ? heroEntry.workout.name : 'Forge ta séance'}
             </h1>
+            {heroDateLabel && (
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(240,235,225,0.55)', marginTop: -8 }}>
+                {heroDateLabel}
+              </span>
+            )}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
               {heroEntry && (
