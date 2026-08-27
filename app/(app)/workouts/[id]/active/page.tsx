@@ -282,6 +282,12 @@ export default function ActivePage() {
   // Instagram ne supporte pas l'autoplay en iframe — pas de panneau vidéo dans ce cas
   const currentEmbed = rawEmbed && rawEmbed.type !== 'instagram' ? rawEmbed : null
 
+  // Mouvements suivants (hors mouvement actif), dans l'ordre de la séance —
+  // bande "À suivre" sous la scène vidéo.
+  const upNext = workout
+    ? workout.movements.filter(wm => wm.id !== currentWm?.id && (done[wm.id] ?? 0) < (wm.sets ?? 3)).slice(0, 5)
+    : []
+
   const handleSet = (wm: WM) => {
     ensureAudio()
     if (wm.duration != null) {
@@ -407,42 +413,119 @@ export default function ActivePage() {
         <div style={{ height: '100%', background: allDone ? 'var(--green)' : 'var(--gold)', width: `${pct}%`, transition: 'width 0.4s ease' }} />
       </div>
 
-      {/* ── Video panel (current movement) ── */}
-      {currentEmbed && (
-        <div style={{ position: 'relative', width: '100%', maxWidth: 680, margin: '0 auto', background: '#000', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          {/* movement name badge */}
-          <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 2, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.85)', pointerEvents: 'none' }}>
-            {currentWm?.movement.name}
-          </div>
-          <div style={{ position: 'relative', width: '100%', paddingBottom: '42%', overflow: 'hidden' }}>
-            {currentEmbed.type === 'video' ? (
-              <video
-                key={currentEmbed.url}
-                src={currentEmbed.url}
-                autoPlay
-                muted
-                loop
-                playsInline
-                controls
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : currentEmbed.type === 'youtube' && extractEmbedVideoId(currentEmbed.url) ? (
-              <YouTubeLoopEmbed key={currentEmbed.url} videoId={extractEmbedVideoId(currentEmbed.url)!} />
-            ) : (
-              <iframe
-                key={currentEmbed.url}
-                src={currentEmbed.url}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+      {/* ── Scène : vidéo pleine largeur + HUD superposé (mouvement actif) ── */}
+      {currentWm && (() => {
+        const target = currentWm.sets ?? 3
+        const setsNow = done[currentWm.id] ?? 0
+        const ringProgress = target > 0 ? setsNow / target : 0
+        const circumference = 2 * Math.PI * 64
+        return (
+          <div style={{ maxWidth: 980, margin: '0 auto', width: '100%', padding: '16px 16px 0' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+
+              {/* Cadre vidéo (ou placeholder si pas de vidéo) */}
+              <div style={{ position: 'relative', flex: '1 1 480px', minWidth: 280, aspectRatio: '16 / 10', borderRadius: 18, overflow: 'hidden', background: 'radial-gradient(ellipse at 38% 30%, #3a3428 0%, #221f1a 45%, #0e0d0a 100%)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                {currentEmbed ? (
+                  currentEmbed.type === 'video' ? (
+                    <video key={currentEmbed.url} src={currentEmbed.url} autoPlay muted loop playsInline controls
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : currentEmbed.type === 'youtube' && extractEmbedVideoId(currentEmbed.url) ? (
+                    <YouTubeLoopEmbed key={currentEmbed.url} videoId={extractEmbedVideoId(currentEmbed.url)!} />
+                  ) : (
+                    <iframe key={currentEmbed.url} src={currentEmbed.url}
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                  )
+                ) : (
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 74, height: 74, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)"><path d="M8 5v14l11-7z" /></svg>
+                    </div>
+                  </div>
+                )}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 32%, transparent 70%, rgba(0,0,0,0.25) 100%)', pointerEvents: 'none' }} />
+                {currentEmbed && (
+                  <div style={{ position: 'absolute', top: 14, left: 14, display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 20, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--crimson-bright)' }} />
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#F0EBE1' }}>DÉMONSTRATION</span>
+                  </div>
+                )}
+                <div style={{ position: 'absolute', left: 18, bottom: 16, right: 18 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--crimson-bright)', textTransform: 'uppercase', marginBottom: 3 }}>Mouvement actif</div>
+                  <div className="display" style={{ fontSize: 24, fontWeight: 700, color: '#F8F4EC', lineHeight: 1.15 }}>{currentWm.movement.name}</div>
+                </div>
+              </div>
+
+              {/* HUD superposé : anneau de séries + repos */}
+              <div style={{ flex: '0 1 240px', minWidth: 220, borderRadius: 18, background: 'rgba(23,19,15,0.55)', backdropFilter: 'blur(14px)', border: '1px solid rgba(255,255,255,0.10)', padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                <div style={{ position: 'relative', width: 130, height: 130 }}>
+                  <svg width="130" height="130" viewBox="0 0 130 130">
+                    <circle cx="65" cy="65" r="64" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="7" />
+                    <circle cx="65" cy="65" r="64" fill="none" stroke="url(#activeRingGrad)" strokeWidth="7" strokeLinecap="round"
+                      strokeDasharray={circumference} strokeDashoffset={circumference * (1 - ringProgress)}
+                      transform="rotate(-90 65 65)" style={{ transition: 'stroke-dashoffset 0.3s ease' }} />
+                    <defs>
+                      <linearGradient id="activeRingGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="var(--gold-bright)" />
+                        <stop offset="100%" stopColor="var(--crimson-bright)" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className="display" style={{ fontSize: 30, fontWeight: 800, color: '#F8F4EC' }}>{setsNow}/{target}</span>
+                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>séries</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {Array.from({ length: target }).map((_, i) => (
+                    <span key={i} className="tnum" style={{
+                      width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800,
+                      background: i < setsNow ? 'linear-gradient(160deg, var(--gold-bright), var(--gold))' : 'rgba(255,255,255,0.06)',
+                      color: i < setsNow ? '#17130F' : 'rgba(255,255,255,0.35)',
+                      border: i < setsNow ? 'none' : '1px solid rgba(255,255,255,0.12)',
+                    }}>{i + 1}</span>
+                  ))}
+                </div>
+                {rest?.wmId === currentWm.id && (
+                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.10)' }}>
+                    <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
+                      <svg width="36" height="36" viewBox="0 0 36 36">
+                        <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3.5" />
+                        <circle cx="18" cy="18" r="15" fill="none" stroke="var(--crimson-bright)" strokeWidth="3.5" strokeLinecap="round"
+                          strokeDasharray={2 * Math.PI * 15} strokeDashoffset={2 * Math.PI * 15 * (1 - rest.sec / rest.total)} transform="rotate(-90 18 18)" />
+                      </svg>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#F0EBE1' }}>{rest.sec}</div>
+                    </div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: '#F0EBE1' }}>Repos en cours</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* À suivre */}
+            {upNext.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 8 }}>À suivre</div>
+                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                  {upNext.map((wm, i) => (
+                    <div key={wm.id} style={{
+                      flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 13px', borderRadius: 11,
+                      background: i === 0 ? 'rgba(201,165,53,0.12)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${i === 0 ? 'rgba(201,165,53,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                    }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: BIO_TYPE_COLORS[wm.movement.bioType] || '#888', flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: i === 0 ? 700 : 600, color: i === 0 ? '#F8F4EC' : 'rgba(255,255,255,0.55)', whiteSpace: 'nowrap' }}>{wm.movement.name}</div>
+                        <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)' }}>{wm.movement.bioType} · {wm.sets ?? 3} séries</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', padding: '4px 8px' }}>
-            🔇 Lecture automatique muette en boucle — clique 🔊 dans le player pour le son
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ── Default rest selector ── */}
       <div style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
