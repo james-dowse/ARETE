@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
-import { useState, useEffect, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, X, Zap, Calendar } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { ChevronLeft, ChevronRight, X, Zap, Calendar, GripVertical, Plus, Trash2, Search } from 'lucide-react'
 import { BIO_TYPE_COLORS } from '@/lib/types'
 import { useToast } from '@/components/Toast'
 
@@ -34,11 +34,76 @@ function toISODate(d: Date): string {
   return d.toISOString().split('T')[0]
 }
 
+// ─── Sélecteur de séance (bouton "+" d'un jour) ────────────────────────────
+function WorkoutPickerModal({ dayLabel, onPick, onClose }: {
+  dayLabel: string
+  onPick: (workoutId: string) => void
+  onClose: () => void
+}) {
+  const [search, setSearch] = useState('')
+  const [workouts, setWorkouts] = useState<{ id: string; name: string; duration?: number | null }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/workouts?filter=mine')
+      .then(r => r.json())
+      .then(d => { setWorkouts(Array.isArray(d) ? d : []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const filtered = workouts.filter(w => w.name.toLowerCase().includes(search.trim().toLowerCase()))
+
+  return (
+    <div onClick={onClose} className="overlay-in" style={{ position: 'fixed', inset: 0, background: 'rgba(8,6,2,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: 24 }}>
+      <div onClick={e => e.stopPropagation()} className="modal-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--gold-border)', borderRadius: 'var(--r-lg)', width: '100%', maxWidth: 420, maxHeight: '78vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: 'var(--elev-3)' }}>
+        <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Ajouter une séance</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{dayLabel}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={17} /></button>
+        </div>
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 11px' }}>
+            <Search size={13} color="var(--text-muted)" />
+            <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher une séance…"
+              style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }} />
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '6px 10px' }}>
+          {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Chargement…</div>}
+          {!loading && filtered.length === 0 && (
+            <div style={{ padding: 28, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Aucune séance trouvée</div>
+          )}
+          {!loading && filtered.map(w => (
+            <button key={w.id} onClick={() => onPick(w.id)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px', borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', marginBottom: 2, textAlign: 'left', transition: 'background 0.1s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+              <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)' }}>{w.name}</span>
+              {w.duration && <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{w.duration} min</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function PlannerPage() {
   const [weekStart, setWeekStart] = useState<Date>(() => getMonday(new Date()))
   const [entries, setEntries] = useState<PlanEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [pickerDay, setPickerDay] = useState<number | null>(null)
   const toast = useToast()
+
+  // ── Drag and drop (pointer events — fonctionne souris ET tactile, contrairement
+  // au drag natif HTML5 qui ne se déclenche pas sur mobile) ──
+  const [dragEntry, setDragEntry] = useState<PlanEntry | null>(null)
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
+  const [hoverDay, setHoverDay] = useState<number | null>(null)
+  const [overDelete, setOverDelete] = useState(false)
+  const dragStateRef = useRef<{ entry: PlanEntry; startX: number; startY: number; moved: boolean } | null>(null)
 
   const load = useCallback(async (mon: Date) => {
     setLoading(true)
@@ -62,18 +127,77 @@ export default function PlannerPage() {
     toast('Retirée de la semaine', 'info')
   }
 
+  const moveEntry = async (entryId: string, dayOfWeek: number) => {
+    setEntries(prev => prev.map(e => e.id === entryId ? { ...e, dayOfWeek } : e))
+    const res = await fetch(`/api/planner/entries/${entryId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dayOfWeek }),
+    }).catch(() => null)
+    if (!res || !res.ok) { toast('Impossible de déplacer cette séance', 'error'); load(weekStart) }
+  }
+
+  const addEntry = async (workoutId: string, dayOfWeek: number) => {
+    const res = await fetch('/api/planner', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workoutId, dayOfWeek, weekStart: toISODate(weekStart) }),
+    }).catch(() => null)
+    if (!res || !res.ok) { toast('Impossible d\'ajouter cette séance', 'error'); return }
+    const created = await res.json()
+    setEntries(prev => [...prev, created])
+    setPickerDay(null)
+    toast('Ajoutée à la semaine ✓')
+  }
+
   const goWeek = (delta: number) => {
     setWeekStart(prev => { const d = new Date(prev); d.setDate(d.getDate() + delta * 7); return d })
   }
 
+  // ── Pointer drag handlers ──
+  const handlePointerDown = (e: React.PointerEvent, entry: PlanEntry) => {
+    e.preventDefault()
+    dragStateRef.current = { entry, startX: e.clientX, startY: e.clientY, moved: false }
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    const st = dragStateRef.current
+    if (!st) return
+    const dx = e.clientX - st.startX, dy = e.clientY - st.startY
+    if (!st.moved && Math.hypot(dx, dy) < 6) return
+    st.moved = true
+    if (!dragEntry) setDragEntry(st.entry)
+    setDragPos({ x: e.clientX, y: e.clientY })
+
+    const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
+    const dayEl = el?.closest('[data-planner-day]') as HTMLElement | null
+    const deleteEl = el?.closest('[data-planner-delete]')
+    setOverDelete(!!deleteEl)
+    setHoverDay(deleteEl ? null : dayEl ? Number(dayEl.dataset.plannerDay) : null)
+  }
+
+  const endDrag = (e: React.PointerEvent) => {
+    const st = dragStateRef.current
+    dragStateRef.current = null
+    if (st?.moved) {
+      if (overDelete) removeEntry(st.entry.id)
+      else if (hoverDay != null && hoverDay !== st.entry.dayOfWeek) moveEntry(st.entry.id, hoverDay)
+    }
+    setDragEntry(null)
+    setDragPos(null)
+    setHoverDay(null)
+    setOverDelete(false)
+    try { (e.target as HTMLElement).releasePointerCapture(e.pointerId) } catch {}
+  }
+
   const isCurrentWeek = toISODate(weekStart) === toISODate(getMonday(new Date()))
+  const isDragging = !!dragEntry
 
   const totalByDay = DAYS.map((_, i) => entries.filter(e => e.dayOfWeek === i).length)
   const totalWorkouts = entries.length
 
   return (
     <>
-      <div style={{ maxWidth: 1320, margin: '0 auto', width: '100%' }}>
+      <div style={{ maxWidth: 1320, margin: '0 auto', width: '100%' }} onPointerMove={handlePointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -102,13 +226,19 @@ export default function PlannerPage() {
         </div>
 
         {/* Week grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
+        <div className="r-planner-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
           {DAYS.map((day, i) => {
             const dayEntries = entries.filter(e => e.dayOfWeek === i)
             const dayDate = new Date(weekStart); dayDate.setDate(weekStart.getDate() + i)
             const isToday = toISODate(dayDate) === toISODate(new Date())
+            const isHovered = isDragging && hoverDay === i
             return (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div key={i} data-planner-day={i} style={{
+                display: 'flex', flexDirection: 'column', gap: 6, borderRadius: 10, padding: isHovered ? 4 : 0,
+                background: isHovered ? 'var(--gold-ghost)' : 'transparent',
+                outline: isHovered ? '2px dashed var(--gold-border)' : 'none',
+                transition: 'background 0.15s',
+              }}>
                 {/* Day header */}
                 <div style={{ textAlign: 'center', padding: '8px 4px', borderRadius: 8, background: isToday ? 'var(--gold-ghost)' : 'var(--bg-card)', border: `1px solid ${isToday ? 'var(--gold-border)' : 'var(--border)'}` }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: isToday ? 'var(--gold)' : 'var(--text-muted)', letterSpacing: 0.5 }}>{day}</div>
@@ -124,33 +254,48 @@ export default function PlannerPage() {
                 {loading ? (
                   <div style={{ height: 60, background: 'var(--bg-card)', borderRadius: 8, opacity: 0.4, animation: 'pulse 1.5s ease-in-out infinite' }} />
                 ) : (
-                  dayEntries.map(entry => {
-                    const bioTypes = Array.from(new Set(entry.workout.movements.map(m => m.movement.bioType)))
-                    return (
-                      <div key={entry.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 10px', position: 'relative' }}>
-                        <button
-                          onClick={() => removeEntry(entry.id)}
-                          style={{ position: 'absolute', top: 5, right: 5, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 2, borderRadius: 4 }}
-                          title="Retirer"
-                        >
-                          <X size={11} />
-                        </button>
-                        <Link href={`/workouts/${entry.workout.id}`} style={{ textDecoration: 'none' }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', paddingRight: 16, lineHeight: 1.3, marginBottom: 5 }}>
-                            {entry.workout.name}
+                  <>
+                    {dayEntries.map(entry => {
+                      const bioTypes = Array.from(new Set(entry.workout.movements.map(m => m.movement.bioType)))
+                      const isBeingDragged = dragEntry?.id === entry.id
+                      return (
+                        <div key={entry.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 10px 9px 6px', position: 'relative', opacity: isBeingDragged ? 0.35 : 1, display: 'flex', gap: 4 }}>
+                          <div
+                            onPointerDown={e => handlePointerDown(e, entry)}
+                            style={{ touchAction: 'none', cursor: 'grab', display: 'flex', alignItems: 'center', color: 'var(--text-dim)', flexShrink: 0, padding: '2px 2px' }}
+                            title="Glisser pour déplacer">
+                            <GripVertical size={13} />
                           </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                            {bioTypes.slice(0, 2).map(bt => (
-                              <span key={bt} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 10, background: `${BIO_TYPE_COLORS[bt] || '#fff'}18`, color: BIO_TYPE_COLORS[bt] || 'var(--text-muted)', border: `1px solid ${BIO_TYPE_COLORS[bt] || '#fff'}28` }}>{bt}</span>
-                            ))}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <button
+                              onClick={() => removeEntry(entry.id)}
+                              style={{ position: 'absolute', top: 5, right: 5, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 2, borderRadius: 4 }}
+                              title="Retirer"
+                            >
+                              <X size={11} />
+                            </button>
+                            <Link href={`/workouts/${entry.workout.id}`} style={{ textDecoration: 'none' }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', paddingRight: 16, lineHeight: 1.3, marginBottom: 5 }}>
+                                {entry.workout.name}
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                                {bioTypes.slice(0, 2).map(bt => (
+                                  <span key={bt} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 10, background: `${BIO_TYPE_COLORS[bt] || '#fff'}18`, color: BIO_TYPE_COLORS[bt] || 'var(--text-muted)', border: `1px solid ${BIO_TYPE_COLORS[bt] || '#fff'}28` }}>{bt}</span>
+                                ))}
+                              </div>
+                              {entry.workout.duration && (
+                                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>{entry.workout.duration} min</div>
+                              )}
+                            </Link>
                           </div>
-                          {entry.workout.duration && (
-                            <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>{entry.workout.duration} min</div>
-                          )}
-                        </Link>
-                      </div>
-                    )
-                  })
+                        </div>
+                      )
+                    })}
+                    <button onClick={() => setPickerDay(i)}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '7px', borderRadius: 8, background: 'none', border: '1px dashed var(--border-plus)', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                      <Plus size={12} /> Ajouter
+                    </button>
+                  </>
                 )}
               </div>
             )
@@ -161,7 +306,7 @@ export default function PlannerPage() {
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
             <Calendar size={40} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
             <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Semaine vide</div>
-            <div style={{ fontSize: 13, marginBottom: 20 }}>Ouvre une séance et clique "Ajouter à ma semaine"</div>
+            <div style={{ fontSize: 13, marginBottom: 20 }}>Ouvre une séance et clique "Ajouter à ma semaine", ou utilise le "+" d'un jour</div>
             <Link href="/workouts">
               <button style={{ padding: '10px 24px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Zap size={13} /> Voir mes séances
@@ -171,7 +316,47 @@ export default function PlannerPage() {
         )}
       </div>
 
-      <style>{`@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:.8} }`}</style>
+      {/* Ghost du drag — suit le pointeur */}
+      {isDragging && dragPos && dragEntry && (
+        <div style={{
+          position: 'fixed', left: dragPos.x, top: dragPos.y, transform: 'translate(-50%, -50%) rotate(-2deg)',
+          zIndex: 2000, pointerEvents: 'none', background: 'var(--bg-elevated)', border: '1px solid var(--gold-border)',
+          borderRadius: 8, padding: '9px 14px', boxShadow: 'var(--elev-3)', maxWidth: 220,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {dragEntry.workout.name}
+          </div>
+        </div>
+      )}
+
+      {/* Zone de suppression façon Android — apparaît pendant le drag */}
+      <div
+        data-planner-delete
+        style={{
+          position: 'fixed', left: '50%', bottom: isDragging ? 24 : -80, transform: 'translateX(-50%)',
+          zIndex: 1999, display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', borderRadius: 999,
+          background: overDelete ? 'var(--red)' : 'rgba(23,19,15,0.92)', border: `1px solid ${overDelete ? 'var(--red)' : 'rgba(255,255,255,0.15)'}`,
+          color: '#fff', fontSize: 13, fontWeight: 700, boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+          transition: 'bottom 0.25s ease, background 0.15s ease', pointerEvents: isDragging ? 'auto' : 'none',
+        }}>
+        <Trash2 size={15} />
+        {overDelete ? 'Relâche pour supprimer' : 'Glisser ici pour supprimer'}
+      </div>
+
+      {pickerDay != null && (
+        <WorkoutPickerModal
+          dayLabel={DAYS[pickerDay]}
+          onPick={workoutId => addEntry(workoutId, pickerDay)}
+          onClose={() => setPickerDay(null)}
+        />
+      )}
+
+      <style>{`
+        @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:.8} }
+        @media (max-width: 768px) {
+          .r-planner-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </>
   )
 }
