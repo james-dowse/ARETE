@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ChevronLeft, ChevronRight, X, Zap, Calendar, GripVertical, Plus, Trash2, Search } from 'lucide-react'
-import { BIO_TYPE_COLORS } from '@/lib/types'
+import { BIO_TYPE_COLORS, COMPLEXITY_COLORS, effectiveDifficulty } from '@/lib/types'
 import { useToast } from '@/components/Toast'
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -35,13 +35,20 @@ function toISODate(d: Date): string {
 }
 
 // ─── Sélecteur de séance (bouton "+" d'un jour) ────────────────────────────
+interface PickerWorkout {
+  id: string; name: string; duration?: number | null
+  imageUrl?: string | null; imagePosition?: string | null
+  difficultyOverride?: string | null
+  movements: { movement: { bioType: string; complexity: string } }[]
+}
+
 function WorkoutPickerModal({ dayLabel, onPick, onClose }: {
   dayLabel: string
   onPick: (workoutId: string) => void
   onClose: () => void
 }) {
   const [search, setSearch] = useState('')
-  const [workouts, setWorkouts] = useState<{ id: string; name: string; duration?: number | null }[]>([])
+  const [workouts, setWorkouts] = useState<PickerWorkout[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -75,15 +82,37 @@ function WorkoutPickerModal({ dayLabel, onPick, onClose }: {
           {!loading && filtered.length === 0 && (
             <div style={{ padding: 28, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Aucune séance trouvée</div>
           )}
-          {!loading && filtered.map(w => (
-            <button key={w.id} onClick={() => onPick(w.id)}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px', borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', marginBottom: 2, textAlign: 'left', transition: 'background 0.1s' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
-              <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)' }}>{w.name}</span>
-              {w.duration && <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{w.duration} min</span>}
-            </button>
-          ))}
+          {!loading && filtered.map(w => {
+            const difficulty = effectiveDifficulty(w.difficultyOverride, w.movements.map(m => ({ complexity: m.movement.complexity })))
+            const bioTypes = Array.from(new Set(w.movements.map(m => m.movement.bioType))).slice(0, 3)
+            return (
+              <button key={w.id} onClick={() => onPick(w.id)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', marginBottom: 2, textAlign: 'left', transition: 'background 0.1s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {w.imageUrl
+                    ? <img src={w.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%' }} />
+                    : <img src="/logo.svg" alt="" style={{ width: '45%', height: '45%', objectFit: 'contain', opacity: 0.18 }} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {difficulty && <span style={{ width: 7, height: 7, borderRadius: '50%', background: COMPLEXITY_COLORS[difficulty] || 'var(--text-muted)', flexShrink: 0 }} />}
+                    <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.name}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                    {difficulty && (
+                      <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: `${COMPLEXITY_COLORS[difficulty]}18`, color: COMPLEXITY_COLORS[difficulty], border: `1px solid ${COMPLEXITY_COLORS[difficulty]}40` }}>{difficulty}</span>
+                    )}
+                    {bioTypes.map(bt => (
+                      <span key={bt} style={{ fontSize: 9.5, padding: '1px 6px', borderRadius: 10, background: `${BIO_TYPE_COLORS[bt] || '#fff'}18`, color: BIO_TYPE_COLORS[bt] || 'var(--text-muted)', border: `1px solid ${BIO_TYPE_COLORS[bt] || '#fff'}28` }}>{bt}</span>
+                    ))}
+                    {w.duration && <span style={{ fontSize: 9.5, color: 'var(--text-dim)' }}>{w.duration} min</span>}
+                  </div>
+                </div>
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>

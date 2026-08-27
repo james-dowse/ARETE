@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, X, Heart } from 'lucide-react'
+import { Search, X, Heart, Shuffle } from 'lucide-react'
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, EQUIPMENT_ICONS } from '@/lib/types'
 
 export interface PickableMovement {
@@ -74,6 +74,15 @@ export default function LibraryPicker({ currentName, currentId, onPick, onClose 
 
   useEffect(() => { const t = setTimeout(doFetch, 200); return () => clearTimeout(t) }, [doFetch])
   useEffect(() => { inputRef.current?.focus() }, [])
+
+  // Tirage aléatoire dans l'ensemble déjà filtré (mêmes critères que la liste
+  // affichée : types, niveau, équipement, favoris, recherche) — l'aléatoire
+  // n'est plus un bouton à part, juste une façon de choisir dans ce même picker.
+  const handleRandomPick = () => {
+    const pool = results.filter(m => m.id !== currentId)
+    const pick = (pool.length > 0 ? pool : results)[Math.floor(Math.random() * (pool.length > 0 ? pool.length : results.length))]
+    if (pick) onPick(pick)
+  }
 
   const handleCreateCustom = async () => {
     const name = customName.trim()
@@ -151,16 +160,23 @@ export default function LibraryPicker({ currentName, currentId, onPick, onClose 
 
         {/* Filters */}
         <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 11px' }}>
-            <Search size={13} color="var(--text-muted)" />
-            <input
-              ref={inputRef}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder={favoritesOnly ? 'Rechercher dans mes favoris…' : 'Rechercher…'}
-              style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }}
-            />
-            {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={11} color="var(--text-muted)" /></button>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 11px', flex: 1 }}>
+              <Search size={13} color="var(--text-muted)" />
+              <input
+                ref={inputRef}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder={favoritesOnly ? 'Rechercher dans mes favoris…' : 'Rechercher…'}
+                style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }}
+              />
+              {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={11} color="var(--text-muted)" /></button>}
+            </div>
+            <button onClick={handleRandomPick} disabled={results.length === 0}
+              title="Tirer un mouvement au hasard parmi les résultats filtrés"
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', borderRadius: 8, color: 'var(--gold)', fontSize: 12.5, fontWeight: 700, cursor: results.length === 0 ? 'default' : 'pointer', opacity: results.length === 0 ? 0.5 : 1, whiteSpace: 'nowrap' }}>
+              <Shuffle size={13} /> Aléatoire
+            </button>
           </div>
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {bioFilter.size > 0 && <Chip active={false} color="" onClick={() => setBioFilter(new Set())}>✕ Tous</Chip>}

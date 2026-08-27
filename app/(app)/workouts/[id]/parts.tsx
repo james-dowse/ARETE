@@ -242,13 +242,7 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
   // dernier du bloc — son repos sépare la fin d'un tour du début du suivant.
   supersetRole?: 'none' | 'linked' | 'last'
 }) {
-  const [loadingRandom, setLoadingRandom] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
-  const [randomFilterOpen, setRandomFilterOpen] = useState(false)
-  // Défaut = le type du mouvement actuel (comportement historique du bouton
-  // "Aléatoire" : un remplacement à l'identique). L'utilisateur peut élargir
-  // ou changer la sélection via le panneau de filtres.
-  const [randomBioTypes, setRandomBioTypes] = useState<Set<string>>(new Set([es.movement.bioType]))
   const m = es.movement
   const isDirtyMovement = es.movementId !== original.movementId
   const isDirtySets = es.sets !== (original.sets ?? 2)
@@ -256,30 +250,6 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
   const isDirtyDuration = es.duration !== (original.duration ?? null)
   const isDirtyRest = es.rest !== (original.rest ?? null)
   const isDirty = isDirtyMovement || isDirtySets || isDirtyReps || isDirtyDuration || isDirtyRest
-
-  const handleRandom = async () => {
-    setLoadingRandom(true)
-    const exclude = allMovementIds.filter(id => id !== es.movementId).join(',')
-    const p = new URLSearchParams({ exclude })
-    // Tant que la sélection n'a pas été touchée, elle ne contient que le type du
-    // mouvement actuel : on retrouve le comportement historique (remplacement à
-    // l'identique). Dès qu'elle est élargie ou changée, le tirage s'y limite —
-    // ex. "un mouvement Mobilité au hasard", indépendamment du mouvement actuel.
-    if (randomBioTypes.size > 0) p.set('bioType', [...randomBioTypes].join(','))
-    const res = await fetch(`/api/movements/random?${p}`)
-    const newM: Movement = await res.json()
-    if (newM) onUpdate(index, { movementId: newM.id, movement: newM })
-    setLoadingRandom(false)
-  }
-
-  const toggleRandomBioType = (bt: string) => {
-    setRandomBioTypes(prev => {
-      const next = new Set(prev)
-      if (next.has(bt)) next.delete(bt)
-      else next.add(bt)
-      return next
-    })
-  }
 
   return (
     <>
@@ -318,43 +288,10 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
                 <Undo2 size={11} /> Rétablir
               </button>
             )}
-            <div style={{ position: 'relative', display: 'flex' }}>
-              <button onClick={handleRandom} disabled={loadingRandom}
-                title={randomBioTypes.size > 0 ? `Tirage dans : ${[...randomBioTypes].join(', ')}` : 'Tirage dans tous les types'}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px 4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRight: 'none', borderRadius: '7px 0 0 7px', color: 'var(--text-muted)', fontSize: 11, cursor: loadingRandom ? 'wait' : 'pointer', opacity: loadingRandom ? 0.6 : 1 }}>
-                <RefreshCw size={11} style={loadingRandom ? { animation: 'spin 0.8s linear infinite' } : {}} /> Aléatoire
-              </button>
-              <button onClick={() => setRandomFilterOpen(o => !o)} title="Choisir les types tirés au sort"
-                style={{ display: 'flex', alignItems: 'center', padding: '4px 5px', background: randomFilterOpen ? 'var(--accent-dim)' : 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '0 7px 7px 0', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                <ChevronDown size={11} />
-              </button>
-              {randomFilterOpen && (
-                <>
-                  <div onClick={() => setRandomFilterOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 9 }} />
-                  <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: 8, width: 220, boxShadow: 'var(--elev-2, 0 4px 16px rgba(0,0,0,0.2))' }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', marginBottom: 6, letterSpacing: 0.4 }}>TIRER PARMI CES TYPES</div>
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {randomBioTypes.size > 0 && (
-                        <button onClick={() => setRandomBioTypes(new Set())} style={{ fontSize: 10, padding: '3px 8px', borderRadius: 20, background: 'none', border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer' }}>✕ Tous</button>
-                      )}
-                      {BIO_TYPES.map(bt => {
-                        const active = randomBioTypes.has(bt)
-                        const color = BIO_TYPE_COLORS[bt]
-                        return (
-                          <button key={bt} onClick={() => toggleRandomBioType(bt)}
-                            style={{ fontSize: 10, padding: '3px 8px', borderRadius: 20, cursor: 'pointer', fontWeight: active ? 600 : 400, background: active ? `${color}18` : 'var(--bg-elevated)', border: `1px solid ${active ? color : 'var(--border)'}`, color: active ? color : 'var(--text-muted)' }}>
-                            {BIO_TYPE_ICONS[bt]} {bt}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
             <button onClick={() => setShowPicker(true)}
+              title="Remplacer ce mouvement (choisir ou tirer au hasard, avec filtres)"
               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}>
-              <Search size={11} /> Biblio
+              <Search size={11} /> Remplacer
             </button>
             <button onClick={onRemove} title="Supprimer ce mouvement"
               style={{ display: 'flex', alignItems: 'center', padding: '4px 6px', background: 'none', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer' }}

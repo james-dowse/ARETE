@@ -352,7 +352,7 @@ export default async function DashboardPage() {
         )}
 
         {/* ── Prochaines séances (seulement si quelque chose est planifié) ── */}
-        {heroEntry && upcomingEntries.length > 0 && (
+        {upcomingEntries.length > 0 && (
           <div style={{ marginBottom: 32 }}>
             <p style={SECTION_LABEL_GOLD}>Prochaines séances</p>
             <div style={{ display: 'flex', flexDirection: 'column', marginTop: 12, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
