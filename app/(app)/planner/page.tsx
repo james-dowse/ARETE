@@ -30,8 +30,14 @@ function fmtWeekLabel(mon: Date): string {
   return `${mon.toLocaleDateString('fr-FR', opts)} – ${sun.toLocaleDateString('fr-FR', opts)}`
 }
 
+// Construit "YYYY-MM-DD" à partir des composants LOCAUX de la date (jamais
+// toISOString(), qui convertit en UTC : pour un fuseau en avance sur UTC —
+// Europe/Paris — minuit local un lundi devient dimanche 22h ou 23h UTC, donc
+// .toISOString().split('T')[0] renvoyait la veille. Ce décalage silencieux
+// faisait que le planning enregistrait ses séances sous un "lundi" qui ne
+// correspondait à aucune semaine réellement affichée ailleurs dans l'app.
 function toISODate(d: Date): string {
-  return d.toISOString().split('T')[0]
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 // ─── Sélecteur de séance (bouton "+" d'un jour) ────────────────────────────
@@ -132,7 +138,7 @@ export default function PlannerPage() {
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
   const [hoverDay, setHoverDay] = useState<number | null>(null)
   const [overDelete, setOverDelete] = useState(false)
-  const dragStateRef = useRef<{ entry: PlanEntry; startX: number; startY: number; moved: boolean } | null>(null)
+  const dragStateRef = useRef<{ entry: PlanEntry; startX: number; startY: number; moved: boolean; startDay: number; reordered: boolean } | null>(null)
 
   const load = useCallback(async (mon: Date) => {
     setLoading(true)
@@ -165,6 +171,18 @@ export default function PlannerPage() {
     if (!res || !res.ok) { toast('Impossible de déplacer cette séance', 'error'); load(weekStart) }
   }
 
+  // Réordonnancement au sein d'un même jour (glisser une carte au-dessus/en
+  // dessous d'une autre) — persiste l'ordre final de tout le jour concerné.
+  const persistDayOrder = async (dayOfWeek: number, orderedIds: string[]) => {
+    const res = await Promise.all(orderedIds.map((entryId, i) =>
+      fetch(`/api/planner/entries/${entryId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: i }),
+      }).catch(() => null)
+    ))
+    if (res.some(r => !r || !r.ok)) { toast('Impossible de réordonner cette journée', 'error'); load(weekStart) }
+  }
+
   const addEntry = async (workoutId: string, dayOfWeek: number) => {
     const res = await fetch('/api/planner', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -184,7 +202,7 @@ export default function PlannerPage() {
   // ── Pointer drag handlers ──
   const handlePointerDown = (e: React.PointerEvent, entry: PlanEntry) => {
     e.preventDefault()
-    dragStateRef.current = { entry, startX: e.clientX, startY: e.clientY, moved: false }
+    dragStateRef.current = { entry, startX: e.clientX, startY: e.clientY, moved: false, startDay: entry.dayOfWeek, reordered: false }
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
   }
 
@@ -199,17 +217,47 @@ export default function PlannerPage() {
 
     const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
     const dayEl = el?.closest('[data-planner-day]') as HTMLElement | null
+    const entryEl = el?.closest('[data-planner-entry]') as HTMLElement | null
     const deleteEl = el?.closest('[data-planner-delete]')
     setOverDelete(!!deleteEl)
-    setHoverDay(deleteEl ? null : dayEl ? Number(dayEl.dataset.plannerDay) : null)
+    const overDay = deleteEl ? null : dayEl ? Number(dayEl.dataset.plannerDay) : null
+    setHoverDay(overDay)
+
+    // Survol d'une autre carte du MÊME jour que la carte glissée en ce moment
+    // (son jour courant, pas son jour de départ — elle peut avoir déjà changé
+    // de jour pendant ce même geste) : on réordonne en direct, comme le
+    // drag-and-drop des blocs/mouvements ailleurs dans l'app.
+    const targetId = entryEl?.dataset.plannerEntry
+    if (targetId && targetId !== st.entry.id && overDay != null) {
+      setEntries(prev => {
+        const dragged = prev.find(e => e.id === st.entry.id)
+        const target = prev.find(e => e.id === targetId)
+        if (!dragged || !target || dragged.dayOfWeek !== target.dayOfWeek || dragged.dayOfWeek !== overDay) return prev
+        const dayIds = prev.filter(e => e.dayOfWeek === overDay).map(e => e.id)
+        const from = dayIds.indexOf(dragged.id), to = dayIds.indexOf(target.id)
+        if (from === to) return prev
+        dayIds.splice(to, 0, dayIds.splice(from, 1)[0])
+        st.reordered = true
+        const orderById = new Map(dayIds.map((id, i) => [id, i]))
+        return prev.map(e => e.dayOfWeek === overDay && orderById.has(e.id) ? { ...e, order: orderById.get(e.id)! } : e)
+          .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.order - b.order)
+      })
+    }
   }
 
   const endDrag = (e: React.PointerEvent) => {
     const st = dragStateRef.current
     dragStateRef.current = null
     if (st?.moved) {
-      if (overDelete) removeEntry(st.entry.id)
-      else if (hoverDay != null && hoverDay !== st.entry.dayOfWeek) moveEntry(st.entry.id, hoverDay)
+      const liveDay = entries.find(en => en.id === st.entry.id)?.dayOfWeek ?? st.startDay
+      if (overDelete) {
+        removeEntry(st.entry.id)
+      } else if (hoverDay != null && hoverDay !== liveDay) {
+        moveEntry(st.entry.id, hoverDay)
+      } else if (st.reordered && hoverDay != null) {
+        const dayIds = entries.filter(e => e.dayOfWeek === hoverDay).sort((a, b) => a.order - b.order).map(e => e.id)
+        persistDayOrder(hoverDay, dayIds)
+      }
     }
     setDragEntry(null)
     setDragPos(null)
@@ -288,7 +336,7 @@ export default function PlannerPage() {
                       const bioTypes = Array.from(new Set(entry.workout.movements.map(m => m.movement.bioType)))
                       const isBeingDragged = dragEntry?.id === entry.id
                       return (
-                        <div key={entry.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 10px 9px 6px', position: 'relative', opacity: isBeingDragged ? 0.35 : 1, display: 'flex', gap: 4 }}>
+                        <div key={entry.id} data-planner-entry={entry.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 10px 9px 6px', position: 'relative', opacity: isBeingDragged ? 0.35 : 1, display: 'flex', gap: 4 }}>
                           <div
                             onPointerDown={e => handlePointerDown(e, entry)}
                             style={{ touchAction: 'none', cursor: 'grab', display: 'flex', alignItems: 'center', color: 'var(--text-dim)', flexShrink: 0, padding: '2px 2px' }}

@@ -11,9 +11,14 @@ export async function GET(req: NextRequest) {
   if (!weekStartStr) return NextResponse.json({ error: 'weekStart requis' }, { status: 400 })
 
   const weekStart = new Date(weekStartStr)
+  // Compense un ancien bug côté client (voir app/(app)/planner/page.tsx) où
+  // toISODate() décalait la date d'un jour pour les fuseaux en avance sur UTC
+  // (Europe/Paris) : certains WeekPlan existants ont pu être créés sous ce
+  // "lundi" décalé de -1 jour. On tente donc aussi la veille par sécurité.
+  const shiftedWeekStart = new Date(weekStart.getTime() - 86400000)
 
-  const plan = await prisma.weekPlan.findUnique({
-    where: { userId_weekStart: { userId, weekStart } },
+  const plan = await prisma.weekPlan.findFirst({
+    where: { userId, weekStart: { in: [weekStart, shiftedWeekStart] } },
     include: {
       entries: {
         orderBy: [{ dayOfWeek: 'asc' }, { order: 'asc' }],
