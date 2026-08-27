@@ -10,7 +10,7 @@ const TABS = [
   { href: '/dashboard', label: 'Accueil',    icon: LayoutDashboard },
   { href: '/generator', label: 'Générer',    icon: Zap },
   { href: '/workouts',  label: 'Séances',    icon: BookOpen },
-  { href: '/planner',   label: 'Semaine',    icon: Calendar },
+  { href: '/planner',   label: 'Planning',   icon: Calendar },
   { href: '/library',   label: 'Biblio',     icon: Library },
   { href: '/profile',   label: 'Profil',     icon: UserCircle },
 ]

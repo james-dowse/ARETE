@@ -12,7 +12,7 @@ const allNav = [
   { href: '/dashboard',   label: 'Tableau de bord', icon: LayoutDashboard, admin: false },
   { href: '/generator',   label: 'Générateur',    icon: Zap,             admin: false },
   { href: '/workouts',    label: 'Mes Séances',   icon: BookOpen,        admin: false },
-  { href: '/planner',     label: 'Semaine',       icon: Calendar,        admin: false },
+  { href: '/planner',     label: 'Planning',      icon: Calendar,        admin: false },
   { href: '/library',     label: 'Bibliothèque',  icon: Library,         admin: false },
   { href: '/progression', label: 'Progression',   icon: TrendingUp,      admin: false },
   { href: '/profile',     label: 'Mon profil',    icon: UserCircle,      admin: false },

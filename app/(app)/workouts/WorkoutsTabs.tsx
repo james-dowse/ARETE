@@ -522,9 +522,9 @@ function WorkoutCard({
             </button>
             {(context === 'mine' || context === 'saved') && (
               <button onClick={e => { e.preventDefault(); setAddingToWeek(true) }}
-                title="Ajouter à ma semaine"
+                title="Ajouter au planning"
                 style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', borderRadius: 6, padding: '5px 10px', color: 'var(--gold)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                <CalendarPlus size={12} /> Semaine
+                <CalendarPlus size={12} /> Planning
               </button>
             )}
             {context === 'mine' && (

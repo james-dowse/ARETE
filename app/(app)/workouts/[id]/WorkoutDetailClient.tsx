@@ -623,7 +623,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                 </button>
                 <button onClick={() => setShowAddToWeek(true)}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', borderRadius: 9, color: 'var(--gold)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                  <CalendarPlus size={14} /> Semaine
+                  <CalendarPlus size={14} /> Planning
                 </button>
                 <button onClick={handleDuplicate} disabled={duplicating}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: duplicating ? 'wait' : 'pointer', opacity: duplicating ? 0.7 : 1 }}>

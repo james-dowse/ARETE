@@ -630,7 +630,7 @@ export function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: str
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <CalendarPlus size={16} color="var(--gold)" />
-            <span style={{ fontWeight: 700, fontSize: 15 }}>Ajouter à cette semaine</span>
+            <span style={{ fontWeight: 700, fontSize: 15 }}>Ajouter au planning</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={16} /></button>
         </div>
