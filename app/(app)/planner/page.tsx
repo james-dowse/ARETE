@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ChevronLeft, ChevronRight, X, Zap, Calendar, GripVertical, Plus, Trash2, Search } from 'lucide-react'
-import { BIO_TYPE_COLORS, COMPLEXITY_COLORS, effectiveDifficulty } from '@/lib/types'
+import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, effectiveDifficulty } from '@/lib/types'
 import { useToast } from '@/components/Toast'
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -56,6 +56,8 @@ function WorkoutPickerModal({ dayLabel, onPick, onClose }: {
   const [search, setSearch] = useState('')
   const [workouts, setWorkouts] = useState<PickerWorkout[]>([])
   const [loading, setLoading] = useState(true)
+  const [bioFilters, setBioFilters] = useState<Set<string>>(new Set())
+  const [difficultyFilters, setDifficultyFilters] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetch('/api/workouts?filter=mine')
@@ -64,7 +66,22 @@ function WorkoutPickerModal({ dayLabel, onPick, onClose }: {
       .catch(() => setLoading(false))
   }, [])
 
-  const filtered = workouts.filter(w => w.name.toLowerCase().includes(search.trim().toLowerCase()))
+  const toggleFilter = (set: Set<string>, setSet: (s: Set<string>) => void, value: string) => {
+    const next = new Set(set)
+    if (next.has(value)) next.delete(value)
+    else next.add(value)
+    setSet(next)
+  }
+
+  const filtered = workouts.filter(w => {
+    if (search.trim() && !w.name.toLowerCase().includes(search.trim().toLowerCase())) return false
+    if (bioFilters.size > 0 && !w.movements.some(m => bioFilters.has(m.movement.bioType))) return false
+    if (difficultyFilters.size > 0) {
+      const diff = effectiveDifficulty(w.difficultyOverride, w.movements.map(m => ({ complexity: m.movement.complexity })))
+      if (!diff || !difficultyFilters.has(diff)) return false
+    }
+    return true
+  })
 
   return (
     <div onClick={onClose} className="overlay-in" style={{ position: 'fixed', inset: 0, background: 'rgba(8,6,2,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: 24 }}>
@@ -76,11 +93,41 @@ function WorkoutPickerModal({ dayLabel, onPick, onClose }: {
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={17} /></button>
         </div>
-        <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 7 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 11px' }}>
             <Search size={13} color="var(--text-muted)" />
             <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher une séance…"
               style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }} />
+          </div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {BIO_TYPES.map(bt => {
+              const active = bioFilters.has(bt)
+              const color = BIO_TYPE_COLORS[bt]
+              return (
+                <button key={bt} onClick={() => toggleFilter(bioFilters, setBioFilters, bt)}
+                  style={{ fontSize: 10.5, padding: '3px 8px', borderRadius: 20, cursor: 'pointer', fontWeight: active ? 600 : 400, background: active ? `${color}18` : 'var(--bg-elevated)', border: `1px solid ${active ? color : 'var(--border)'}`, color: active ? color : 'var(--text-muted)' }}>
+                  {BIO_TYPE_ICONS[bt]} {bt}
+                </button>
+              )
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {COMPLEXITIES.map(c => {
+              const active = difficultyFilters.has(c)
+              const color = COMPLEXITY_COLORS[c]
+              return (
+                <button key={c} onClick={() => toggleFilter(difficultyFilters, setDifficultyFilters, c)}
+                  style={{ fontSize: 10.5, padding: '3px 8px', borderRadius: 20, cursor: 'pointer', fontWeight: active ? 600 : 400, background: active ? `${color}18` : 'var(--bg-elevated)', border: `1px solid ${active ? color : 'var(--border)'}`, color: active ? color : 'var(--text-muted)' }}>
+                  {c}
+                </button>
+              )
+            })}
+            {(bioFilters.size > 0 || difficultyFilters.size > 0) && (
+              <button onClick={() => { setBioFilters(new Set()); setDifficultyFilters(new Set()) }}
+                style={{ fontSize: 10.5, padding: '3px 8px', borderRadius: 20, background: 'none', border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer' }}>
+                ✕ Réinitialiser
+              </button>
+            )}
           </div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '6px 10px' }}>
