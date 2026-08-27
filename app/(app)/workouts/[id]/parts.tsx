@@ -606,17 +606,22 @@ export function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: str
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const weekStart = getMonday(new Date())
-  const weekStartStr = weekStart.toISOString().split('T')[0]
+  // Ne pas utiliser toISOString() ici : ça convertit en UTC et décale la date
+  // d'un jour pour les fuseaux en avance sur UTC (Europe/Paris), donc le
+  // WeekPlan créé ne correspond pas à celui que /api/planner recherche au
+  // chargement de la page Planning (même bug que planner/page.tsx::toISODate).
+  const weekStartStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`
 
   async function handleAdd() {
     if (selectedDay === null) return
     setSaving(true)
-    await fetch('/api/planner', {
+    const res = await fetch('/api/planner', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workoutId, dayOfWeek: selectedDay, weekStart: weekStartStr }),
     })
     setSaving(false)
+    if (!res.ok) return
     onAdded()
     onClose()
   }

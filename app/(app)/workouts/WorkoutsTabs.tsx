@@ -166,7 +166,10 @@ function getMonday(d: Date): Date {
   mon.setHours(0, 0, 0, 0)
   return mon
 }
-function toISODate(d: Date): string { return d.toISOString().split('T')[0] }
+// Ne pas utiliser toISOString() : ça convertit en UTC et décale la date
+// d'un jour pour les fuseaux en avance sur UTC (Europe/Paris), désynchronisant
+// le WeekPlan créé ici de celui que /api/planner recherche côté Planning.
+function toISODate(d: Date): string { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 
 // ── Modale ajout au planner ──────────────────────────────────────────────────
 const DAYS_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -180,12 +183,13 @@ function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: string; on
   async function handleAdd() {
     if (selected === null) return
     setSaving(true)
-    await fetch('/api/planner', {
+    const res = await fetch('/api/planner', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workoutId, dayOfWeek: selected, weekStart }),
     })
     setSaving(false)
+    if (!res.ok) return
     onAdded()
     onClose()
   }
