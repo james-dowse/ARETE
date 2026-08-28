@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.jimmydowse.arete",
+        "sha256_cert_fingerprints": ["BD:AA:62:16:89:77:1B:C0:CD:04:8A:83:1D:2E:6B:21:25:34:40:4B:4B:13:FE:7F:5A:D2:07:67:D8:03:80:F0"]
+      }
+    }]
