@@ -3,7 +3,7 @@ import { readFileSync } from 'fs'
 const svg = readFileSync('public/logo.svg')
 const bg = { r: 10, g: 9, b: 8, alpha: 1 } // --bg-primary Sparte #0A0908
 for (const size of [192, 512]) {
-  const inner = Math.round(size * 0.62)
+  const inner = Math.round(size * 0.78)
   const padA = Math.floor((size - inner) / 2)
   const padB = size - inner - padA // garantit une taille finale EXACTE de size×size
   await sharp(svg).resize(inner, inner, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
