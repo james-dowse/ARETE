@@ -14,6 +14,7 @@ export function proxy(request: NextRequest) {
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
+    pathname.startsWith('/.well-known') ||
     pathname === '/sw.js' ||
     pathname.endsWith('.png') || pathname.endsWith('.svg') || pathname.endsWith('.ico') ||
     pathname.endsWith('.webmanifest') ||
