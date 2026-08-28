@@ -15,16 +15,18 @@ import { useState, useEffect } from 'react'
 import {
   ArrowLeft, Clock, Copy, X, Pencil, Plus,
   Trash2, ChevronDown, ChevronUp, CalendarPlus, CheckCircle2, History, FileText, PlayCircle,
+  Share2, UserPlus,
 } from 'lucide-react'
 import {
   Workout, WorkoutMovement, WorkoutBlock, Movement, EditState, LastPerf,
   WorkoutImage, ImageEditZone, MovementRowView, MovementRowEdit,
   BlockHeaderView, BlockHeaderEdit, BlockRestAfterEdit, EditBar, AddToWeekModal, Stat,
+  ShareModal, AssignFromWorkoutModal,
   toEditState, toDurationMovement, stripHtml, fmtMin, fmtSec,
 } from './parts'
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function WorkoutDetailClient({ workout: initial, backTo }: { workout: Workout; backTo?: string }) {
+export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin }: { workout: Workout; backTo?: string; isAdmin?: boolean }) {
   const router = useRouter()
 
   const [editMode, setEditMode] = useState(false)
@@ -42,6 +44,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
   const [duplicating, setDuplicating] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showAddToWeek, setShowAddToWeek] = useState(false)
+  const [showShare, setShowShare] = useState(false)
+  const [showAssign, setShowAssign] = useState(false)
   const toast = useToast()
   const confirm = useConfirm()
   const [saving, setSaving] = useState(false)
@@ -625,6 +629,16 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', borderRadius: 9, color: 'var(--gold)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                   <CalendarPlus size={14} /> Planning
                 </button>
+                <button onClick={() => setShowShare(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  <Share2 size={14} /> Recommander
+                </button>
+                {isAdmin && (
+                  <button onClick={() => setShowAssign(true)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--crimson-ghost)', border: '1px solid var(--crimson-border)', borderRadius: 9, color: 'var(--crimson-bright)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    <UserPlus size={14} /> Assigner
+                  </button>
+                )}
                 <button onClick={handleDuplicate} disabled={duplicating}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: duplicating ? 'wait' : 'pointer', opacity: duplicating ? 0.7 : 1 }}>
                   <Copy size={14} /> {duplicating ? 'Copie…' : 'Dupliquer'}
@@ -1047,6 +1061,14 @@ export default function WorkoutDetailClient({ workout: initial, backTo }: { work
           onClose={() => setShowAddToWeek(false)}
           onAdded={() => toast('Ajouté au planner ✓')}
         />
+      )}
+
+      {showShare && (
+        <ShareModal workout={{ id: initial.id, name: initial.name }} onClose={() => setShowShare(false)} />
+      )}
+
+      {showAssign && (
+        <AssignFromWorkoutModal workout={{ id: initial.id, name: initial.name }} onClose={() => setShowAssign(false)} />
       )}
 
       {/* Historique des séances */}

@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
+import { getCurrentUser } from '@/lib/session'
+import { isAdmin } from '@/lib/admin'
 import WorkoutDetailClient from './WorkoutDetailClient'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +13,7 @@ export default async function WorkoutDetailPage({
   params: Promise<{ id: string }>
   searchParams: Promise<{ from?: string }>
 }) {
-  const [{ id }, { from }] = await Promise.all([params, searchParams])
+  const [{ id }, { from }, user] = await Promise.all([params, searchParams, getCurrentUser()])
   const workout = await prisma.workout.findUnique({
     where: { id },
     include: {
@@ -22,5 +24,5 @@ export default async function WorkoutDetailPage({
   })
   if (!workout) notFound()
 
-  return <WorkoutDetailClient workout={JSON.parse(JSON.stringify(workout))} backTo={from === 'admin' ? '/admin' : undefined} />
+  return <WorkoutDetailClient workout={JSON.parse(JSON.stringify(workout))} backTo={from === 'admin' ? '/admin' : undefined} isAdmin={isAdmin(user?.email)} />
 }
