@@ -123,7 +123,7 @@ export default async function DashboardPage() {
   const [
     movementCount, workoutCount, templateCount, bioStats,
     recentSessions, streakSessions, monthSessions,
-    weekPlan, weekSessionCount, siteContents,
+    weekPlan, weekSessionCount, siteContents, resources,
   ] = await Promise.all([
     prisma.movement.count(),
     prisma.workout.count(),
@@ -154,7 +154,11 @@ export default async function DashboardPage() {
     }).catch(() => null) : Promise.resolve(null),
     user ? prisma.workoutSession.count({ where: { userId: user.id, doneAt: { gte: weekBegin } } }).catch(() => 0) : Promise.resolve(0),
     prisma.siteContent.findMany({ where: { active: true } }).catch(() => []),
+    prisma.resource.findMany({ orderBy: [{ order: 'asc' }, { createdAt: 'desc' }], take: 3 }).catch(() => []),
   ])
+
+  const textContents = siteContents.filter(c => c.key !== 'resources')
+  const resourcesEnabled = siteContents.some(c => c.key === 'resources')
 
   const streak = computeStreak(streakSessions.map(s => s.doneAt))
   const monthMinutes = monthSessions.reduce((sum, s) => sum + (s.workout?.duration || 0), 0)
@@ -353,14 +357,36 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Contenus éditables (Admin > Contenus) ───────────────── */}
-        {siteContents.length > 0 && (
-          <div className="r-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 32 }}>
-            {siteContents.map(c => (
+        {/* "resources" a sa propre carte (widget de liens, pas de texte libre) :
+            elle ne rejoint pas cette grille de contenus texte. */}
+        {textContents.length > 0 && (
+          <div className="r-grid-2" style={{ display: 'grid', gridTemplateColumns: textContents.length === 1 ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 32 }}>
+            {textContents.map(c => (
               <div key={c.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '20px 24px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
                 {c.title && <p style={{ ...SECTION_LABEL_GOLD, marginBottom: 10 }}>{c.title}</p>}
                 <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-muted)', margin: 0, whiteSpace: 'pre-wrap' }}>{c.body}</p>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── Ressources utiles (widget, indépendant du toggle des contenus texte) ── */}
+        {resourcesEnabled && resources.length > 0 && (
+          <div style={{ marginBottom: 32, background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px 20px' }}>
+              <p style={{ ...SECTION_LABEL_GOLD, margin: 0 }}>Ressources utiles</p>
+              <Link href="/resources" style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>Tout voir →</Link>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {resources.map((r, i) => (
+                <a key={r.id} href={r.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderTop: '1px solid var(--border)', textDecoration: 'none' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.title}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{r.source}</span>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
         )}
 

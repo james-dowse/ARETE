@@ -10,9 +10,10 @@ interface SiteContent {
   active: boolean
 }
 
-const LABELS: Record<string, { label: string; bodyMax: number; hint: string }> = {
+const LABELS: Record<string, { label: string; bodyMax: number; hint: string; noText?: boolean }> = {
   app_info: { label: 'App & méthode', bodyMax: 500, hint: "Description de l'appli / consignes générales (ex: variations force/endurance/pliométrie)." },
   announcement: { label: 'Annonces', bodyMax: 280, hint: 'Annonce courte — publier une nouvelle valeur crée une notification pour tous les utilisateurs.' },
+  resources: { label: 'Ressources utiles', bodyMax: 0, noText: true, hint: "Widget de liens vers des articles sport/santé/nutrition sur le tableau de bord. Le contenu des liens se gère depuis la page Ressources — ce réglage n'affecte que sa visibilité sur l'accueil." },
 }
 
 function ContentForm({ content, onSaved }: { content: SiteContent; onSaved: (c: SiteContent) => void }) {
@@ -50,28 +51,36 @@ function ContentForm({ content, onSaved }: { content: SiteContent; onSaved: (c: 
       </div>
       {meta.hint && <p style={{ margin: 0, fontSize: 12, color: 'var(--text-dim)' }}>{meta.hint}</p>}
 
-      <div>
-        <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Titre</label>
-        <input
-          value={title}
-          maxLength={60}
-          onChange={e => setTitle(e.target.value)}
-          style={{ width: '100%', marginTop: 6, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13.5 }}
-        />
-        <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 4, textAlign: 'right' }}>{title.length}/60</div>
-      </div>
+      {meta.noText && (
+        <a href="/resources" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--gold)' }}>Gérer les liens →</a>
+      )}
 
-      <div>
-        <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Texte</label>
-        <textarea
-          value={body}
-          maxLength={meta.bodyMax}
-          onChange={e => setBody(e.target.value)}
-          rows={5}
-          style={{ width: '100%', marginTop: 6, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13.5, fontFamily: 'inherit', resize: 'vertical' }}
-        />
-        <div style={{ fontSize: 10.5, color: body.length > meta.bodyMax * 0.9 ? 'var(--gold)' : 'var(--text-dim)', marginTop: 4, textAlign: 'right' }}>{body.length}/{meta.bodyMax}</div>
-      </div>
+      {!meta.noText && (
+        <>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Titre</label>
+            <input
+              value={title}
+              maxLength={60}
+              onChange={e => setTitle(e.target.value)}
+              style={{ width: '100%', marginTop: 6, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13.5 }}
+            />
+            <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 4, textAlign: 'right' }}>{title.length}/60</div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Texte</label>
+            <textarea
+              value={body}
+              maxLength={meta.bodyMax}
+              onChange={e => setBody(e.target.value)}
+              rows={5}
+              style={{ width: '100%', marginTop: 6, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13.5, fontFamily: 'inherit', resize: 'vertical' }}
+            />
+            <div style={{ fontSize: 10.5, color: body.length > meta.bodyMax * 0.9 ? 'var(--gold)' : 'var(--text-dim)', marginTop: 4, textAlign: 'right' }}>{body.length}/{meta.bodyMax}</div>
+          </div>
+        </>
+      )}
 
       {error && <div style={{ fontSize: 12, color: 'var(--crimson-bright, #c44)' }}>{error}</div>}
 

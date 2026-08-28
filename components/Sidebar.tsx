@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useLayoutEffect } from 'react'
-import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon, Calendar, Search, X, TrendingUp, FileText, Bell, Star } from 'lucide-react'
+import { Zap, Library, BookOpen, LayoutDashboard, Settings2, Users, ChevronLeft, ChevronRight, UserCircle, Sun, Moon, Calendar, Search, X, TrendingUp, FileText, Bell, Star, Link2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useRef, useCallback } from 'react'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
@@ -14,6 +14,7 @@ const allNav = [
   { href: '/workouts',    label: 'Mes Séances',   icon: BookOpen,        admin: false },
   { href: '/planner',     label: 'Planning',      icon: Calendar,        admin: false },
   { href: '/library',     label: 'Bibliothèque',  icon: Library,         admin: false },
+  { href: '/resources',   label: 'Ressources',    icon: Link2,           admin: false },
   { href: '/progression', label: 'Progression',   icon: TrendingUp,      admin: false },
   { href: '/profile',     label: 'Mon profil',    icon: UserCircle,      admin: false },
   { href: '/admin',       label: 'Mouvements',    icon: Settings2,       admin: true, sub: true },
