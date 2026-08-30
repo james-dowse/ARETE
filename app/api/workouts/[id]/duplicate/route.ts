@@ -13,7 +13,11 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
       blocks: { orderBy: { order: 'asc' } },
       movements: { orderBy: { order: 'asc' } },
     },
-  })
+  }) as ({
+    name: string; duration: number | null; notes: string | null; templateId: string | null
+    blocks: { id: string; order: number; bioType: string | null; instructions: string | null; restAfter: number | null; superset: boolean }[]
+    movements: { movementId: string; order: number; sets: number | null; reps: string | null; duration: number | null; blockId: string | null }[]
+  }) | null
   if (!original) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   // Create the workout shell

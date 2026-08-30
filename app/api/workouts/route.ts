@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
         where: { userId: currentUserId },
         select: { workoutId: true },
       }),
-    ])
+    ]) as [{ source: string; savedAt: Date; lastViewedAt: Date | null; workoutId: string; workout: Record<string, unknown> }[], { workoutId: string }[]]
     const favSet = new Set(favIds.map(f => f.workoutId))
     const result = rows.map(r => ({
       ...r.workout,
@@ -117,8 +117,8 @@ export async function GET(req: NextRequest) {
     }),
     needsFavorites
       ? prisma.favoriteWorkout.findMany({ where: { userId: currentUserId! }, select: { workoutId: true } })
-      : Promise.resolve([] as { workoutId: string }[]),
-  ])
+      : Promise.resolve([]),
+  ]) as [({ id: string } & Record<string, unknown>)[], { workoutId: string }[]]
   const favSet = new Set(favIds.map(f => f.workoutId))
 
   // Transformer savedBy → isSaved (booléen)
@@ -146,7 +146,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { name, duration, notes, description, movements, templateId, blocks, blockRest } = body
 
-    const workout = await prisma.$transaction(async (tx) => {
+    const workout = await prisma.$transaction(async (txArg) => {
+      // Contournement d'un bug de typage Prisma 7 : le type généré du client de
+      // transaction (`Omit<PrismaClient, ITXClientDenyList>`) perd ses délégués
+      // de modèle sous TS strict — le comportement runtime de `tx` est correct,
+      // seule sa résolution statique est cassée.
+      const tx = txArg as unknown as typeof prisma
       const w = await tx.workout.create({
         data: {
           name,

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const ws = wb.Sheets[wb.SheetNames[0]]
   const rows = XLSX.utils.sheet_to_json(ws) as Record<string, unknown>[]
 
-  const existingMovements = await prisma.movement.findMany({ select: { id: true, name: true } })
+  const existingMovements = await prisma.movement.findMany({ select: { id: true, name: true } }) as { id: string; name: string }[]
   const existingIds = new Set(existingMovements.map(m => m.id))
   // Reconnaissance par nom (fallback quand la ligne n'a pas d'ID exploitable) :
   // même logique de normalisation que l'onglet "Doublons" de l'admin.

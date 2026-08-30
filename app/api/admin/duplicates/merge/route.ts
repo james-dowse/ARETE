@@ -22,12 +22,17 @@ export async function POST(req: NextRequest) {
   const kept = await prisma.movement.findUnique({ where: { id: keepId } })
   if (!kept) return NextResponse.json({ error: 'Mouvement conservé introuvable' }, { status: 404 })
 
-  await prisma.$transaction(async tx => {
+  // Contournement d'un bug de typage Prisma 7 : le type généré du client de
+  // transaction (`Omit<PrismaClient, ITXClientDenyList>`) perd ses délégués
+  // de modèle sous TS strict — le comportement runtime de `tx` est correct,
+  // seule sa résolution statique est cassée.
+  await prisma.$transaction(async txArg => {
+    const tx = txArg as unknown as typeof prisma
     await tx.workoutMovement.updateMany({ where: { movementId: { in: toMerge } }, data: { movementId: keepId } })
 
     const dupFavorites = await tx.favoriteMovement.findMany({ where: { movementId: { in: toMerge } } })
     const keptFavoriteUserIds = new Set(
-      (await tx.favoriteMovement.findMany({ where: { movementId: keepId }, select: { userId: true } })).map(f => f.userId)
+      ((await tx.favoriteMovement.findMany({ where: { movementId: keepId }, select: { userId: true } })) as { userId: string }[]).map(f => f.userId)
     )
     for (const fav of dupFavorites) {
       if (keptFavoriteUserIds.has(fav.userId)) {

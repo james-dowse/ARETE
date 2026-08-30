@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       const movement = await prisma.movement.create({ data: { id, ...data } })
       return NextResponse.json(movement, { status: 201 })
     } catch (e) {
-      const isUniqueClash = e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002'
+      const isUniqueClash = e instanceof Prisma.PrismaClientKnownRequestError && (e as { code: string }).code === 'P2002'
       if (!isUniqueClash || attempt === 4) throw e
     }
   }

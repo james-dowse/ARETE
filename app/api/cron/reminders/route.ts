@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
     prisma.invitedUser.findMany({
       where: { status: 'accepted' },
       select: { id: true, email: true, firstName: true, acceptedAt: true },
-    }),
-    prisma.workoutSession.groupBy({ by: ['userId'], _max: { doneAt: true } }),
+    }) as Promise<{ id: string; email: string; firstName: string | null; acceptedAt: Date | null }[]>,
+    prisma.workoutSession.groupBy({ by: ['userId'], _max: { doneAt: true } }) as Promise<{ userId: string; _max: { doneAt: Date | null } }[]>,
   ])
   const lastByUser = new Map(lastSessions.map(s => [s.userId, s._max.doneAt]))
 

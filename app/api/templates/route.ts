@@ -20,7 +20,7 @@ export async function GET() {
     where: currentUserId ? { userId: currentUserId } : { userId: null },
     orderBy: { createdAt: 'desc' },
     include: { blocks: { orderBy: { order: 'asc' } } },
-  })
+  }) as ({ blocks: { bioType: string | null; complexity: string | null; equipments: string | null }[] } & Record<string, unknown>)[]
 
   // Deserialize arrays stored as JSON strings
   const result = templates.map(t => ({

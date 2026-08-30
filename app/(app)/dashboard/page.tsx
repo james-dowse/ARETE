@@ -120,6 +120,18 @@ export default async function DashboardPage() {
   // Un seul aller-retour : ces neuf requêtes sont indépendantes entre elles et
   // ne dépendent que de `user`. Les enchaîner en quatre vagues successives
   // multipliait la latence réseau par quatre sur la page d'accueil.
+  type RecentSession = { id: string; doneAt: Date; workout: { id: string; name: string; duration: number | null; movements: { movement: { bioType: string } }[] } }
+  type StreakSession = { doneAt: Date }
+  type MonthSession = { workout: { duration: number | null } | null }
+  type WeekPlanResult = { entries: { id: string; dayOfWeek: number; order: number; workout: { id: string; name: string; duration: number | null; movements: { id: string; movement: { bioType: string } }[] } }[] } | null
+  type SiteContentRow = { id: string; key: string; title: string | null; body: string; active: boolean; updatedAt: Date }
+  type ResourceRow = { id: string; title: string; url: string; source: string; category: string; order: number; createdAt: Date }
+
+  // Le tuple entier est casté en une fois plutôt que chaque promesse
+  // individuellement : sur ce Promise.all à 11 éléments mêlant des types
+  // Prisma profondément imbriqués, TS abandonnait l'inférence tuple-par-tuple
+  // et retombait sur un type homogène `any`/`unknown` pour TOUTES les
+  // positions déstructurées (pas seulement celle en cause).
   const [
     movementCount, workoutCount, templateCount, bioStats,
     recentSessions, streakSessions, monthSessions,
@@ -128,21 +140,24 @@ export default async function DashboardPage() {
     prisma.movement.count(),
     prisma.workout.count(),
     prisma.workoutTemplate.count(),
-    prisma.movement.groupBy({ by: ['bioType'], _count: true }),
+    prisma.movement.groupBy({ by: ['bioType'], _count: true }) as Promise<{ bioType: string; _count: number }[]>,
+    // `.catch((): never[] => [])` plutôt que `.catch(() => [])` : un tableau vide
+    // littéral sans contexte s'infère `any[]`, et `any` contamine toute l'union
+    // du ternaire — perdant le typage de tout ce bloc et de ce qui en dépend.
     user ? prisma.workoutSession.findMany({
       where: { userId: user.id },
       take: 5,
       orderBy: { doneAt: 'desc' },
       include: { workout: { select: { id: true, name: true, duration: true, movements: { select: { movement: { select: { bioType: true } } } } } } },
-    }).catch(() => []) : Promise.resolve([]),
+    }).catch((): never[] => []) : Promise.resolve([] as never[]),
     user ? prisma.workoutSession.findMany({
       where: { userId: user.id, doneAt: { gte: streakWindowBegin } },
       select: { doneAt: true },
-    }).catch(() => []) : Promise.resolve([]),
+    }).catch((): never[] => []) : Promise.resolve([] as never[]),
     user ? prisma.workoutSession.findMany({
       where: { userId: user.id, doneAt: { gte: monthBegin } },
       include: { workout: { select: { duration: true } } },
-    }).catch(() => []) : Promise.resolve([]),
+    }).catch((): never[] => []) : Promise.resolve([] as never[]),
     user ? prisma.weekPlan.findFirst({
       where: { userId: user.id, weekStart: { in: weekStartCandidates } },
       include: {
@@ -151,11 +166,15 @@ export default async function DashboardPage() {
           include: { workout: { select: { id: true, name: true, duration: true, movements: { select: { id: true, movement: { select: { bioType: true } } } } } } },
         },
       },
-    }).catch(() => null) : Promise.resolve(null),
+    }).catch(() => null) : Promise.resolve(null) as Promise<({ entries: { id: string; dayOfWeek: number; order: number; workout: { id: string; name: string; duration: number | null; movements: { id: string; movement: { bioType: string } }[] } }[] }) | null>,
     user ? prisma.workoutSession.count({ where: { userId: user.id, doneAt: { gte: weekBegin } } }).catch(() => 0) : Promise.resolve(0),
-    prisma.siteContent.findMany({ where: { active: true } }).catch(() => []),
-    prisma.resource.findMany({ orderBy: [{ order: 'asc' }, { createdAt: 'desc' }], take: 3 }).catch(() => []),
-  ])
+    prisma.siteContent.findMany({ where: { active: true } }).catch((): never[] => []),
+    prisma.resource.findMany({ orderBy: [{ order: 'asc' }, { createdAt: 'desc' }], take: 3 }).catch((): never[] => []),
+  ]) as [
+    number, number, number, { bioType: string; _count: number }[],
+    RecentSession[], StreakSession[], MonthSession[],
+    WeekPlanResult, number, SiteContentRow[], ResourceRow[],
+  ]
 
   const textContents = siteContents.filter(c => c.key !== 'resources')
   const resourcesEnabled = siteContents.some(c => c.key === 'resources')

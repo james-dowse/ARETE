@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
   const exclude = excludeRaw ? excludeRaw.split(',').filter(Boolean) : []
 
-  const pool = await prisma.movement.findMany({ where })
+  const pool = await prisma.movement.findMany({ where }) as { id: string }[]
   const filtered = exclude.length ? pool.filter(m => !exclude.includes(m.id)) : pool
 
   if (filtered.length === 0) {

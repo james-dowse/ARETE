@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     by: ['movementId'],
     where: { movementId: { in: ids } },
     _count: true,
-  })
+  }) as { movementId: string }[]
   const usedIds = new Set(usages.map(u => u.movementId))
 
   const deletable = ids.filter(id => !usedIds.has(id))

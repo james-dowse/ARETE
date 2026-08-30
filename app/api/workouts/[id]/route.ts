@@ -71,7 +71,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const savers = await prisma.savedWorkout.findMany({
       where: { workoutId: id, NOT: { userId: authz.userId } },
       select: { user: { select: { email: true } } },
-    })
+    }) as { user: { email: string } }[]
     if (savers.length > 0) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3040'
       const workoutUrl = `${appUrl}/workouts/${id}`
@@ -90,7 +90,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         where: { followedId: updated.userId, notifyByEmail: true },
         select: { follower: { select: { email: true } } },
       }),
-    ])
+    ]) as [{ firstName: string | null; lastName: string | null; email: string } | null, { follower: { email: string } }[]]
     if (creator && followers.length > 0) {
       const followedName = [creator.firstName, creator.lastName].filter(Boolean).join(' ').trim() || creator.email.split('@')[0]
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3040'
@@ -117,7 +117,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
       where: { workoutId: id, NOT: { userId: authz.userId } },
       select: { user: { select: { email: true } } },
     }),
-  ])
+  ]) as [{ name: string } | null, { user: { email: string } }[]]
 
   await prisma.workout.delete({ where: { id } })
 

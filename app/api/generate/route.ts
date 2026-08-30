@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     if (block.exclude?.length) where.id = { notIn: block.exclude }
     if (videoOnly) where.videoUrl = { not: null }
 
-    const pool = await prisma.movement.findMany({ where })
+    const pool = await prisma.movement.findMany({ where }) as { id: string; name: string; bioType: string; complexity: string; videoUrl: string | null }[]
     const picked = shuffle(pool).slice(0, block.count)
 
     result.push(...picked.map(m => ({

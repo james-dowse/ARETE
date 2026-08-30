@@ -71,14 +71,15 @@ export async function GET() {
   const hit = getCachedAttributes()
   if (hit) return NextResponse.json(hit, { headers: CACHE_HEADERS })
 
-  let all = await prisma.attributeOption.findMany({ orderBy: [...ORDER_BY] })
+  type AttrOption = { id: string; category: string; value: string; icon: string | null; color: string | null; position: number; tempo: number | null }
+  let all = await prisma.attributeOption.findMany({ orderBy: [...ORDER_BY] }) as AttrOption[]
 
   // Base neuve ou catégorie vidée : on sème puis on relit, une seule fois.
   const missing = Object.keys(DEFAULTS).filter(c => !all.some(o => o.category === c))
   if (missing.length > 0) {
     try {
       await seedMissing(missing)
-      all = await prisma.attributeOption.findMany({ orderBy: [...ORDER_BY] })
+      all = await prisma.attributeOption.findMany({ orderBy: [...ORDER_BY] }) as AttrOption[]
     } catch { /* non bloquant : on renvoie ce que la base contient déjà */ }
   }
 

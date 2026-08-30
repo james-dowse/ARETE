@@ -10,6 +10,9 @@ export async function GET() {
   const user = await getCurrentUser()
   if (!isAdmin(user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
+  // Cast explicite : ce `findMany` à includes imbriqués pousse l'inférence de
+  // type de Prisma au-delà de ce que TS résout correctement sous ce mode
+  // strict (any implicite en cascade sur tout ce qui en dépend).
   const assignments = await prisma.assignedWorkout.findMany({
     orderBy: { createdAt: 'desc' },
     include: {
@@ -17,12 +20,12 @@ export async function GET() {
       assignedTo: { select: { id: true, email: true, firstName: true, lastName: true, avatarUrl: true } },
       assignedBy: { select: { firstName: true, lastName: true, email: true } },
     },
-  })
+  }) as ({ workoutId: string; assignedToId: string; createdAt: Date } & Record<string, unknown>)[]
 
   const sessions = await prisma.workoutSession.findMany({
     where: { workoutId: { in: assignments.map(a => a.workoutId) } },
     select: { userId: true, workoutId: true, doneAt: true },
-  })
+  }) as { userId: string; workoutId: string; doneAt: Date }[]
 
   const result = assignments.map(a => {
     const done = sessions.some(s => s.userId === a.assignedToId && s.workoutId === a.workoutId && s.doneAt >= a.createdAt)

@@ -1,3 +1,4 @@
+import type { AttributeOption } from '@prisma/client'
 import { prisma } from './prisma'
 import { applyAttributeOverrides } from './types'
 import { getCachedAttributes, setCachedAttributes } from './attributes-cache'
@@ -19,7 +20,7 @@ export async function syncAttributesFromDb() {
   }
   const all = await prisma.attributeOption.findMany({
     orderBy: [{ category: 'asc' }, { position: 'asc' }, { value: 'asc' }],
-  })
+  }) as AttributeOption[]
   const payload = {
     bioTypes: all.filter(o => o.category === 'bioType'),
     complexities: all.filter(o => o.category === 'complexity'),

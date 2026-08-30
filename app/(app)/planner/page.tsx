@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { ChevronLeft, ChevronRight, X, Zap, Calendar, GripVertical, Plus, Trash2, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, Zap, Calendar, GripVertical, Plus, Trash2, Search } from 'lucide-react'
 import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, effectiveDifficulty } from '@/lib/types'
 import { useToast } from '@/components/Toast'
 
@@ -230,6 +230,23 @@ export default function PlannerPage() {
     if (res.some(r => !r || !r.ok)) { toast('Impossible de réordonner cette journée', 'error'); load(weekStart) }
   }
 
+  // Alternative cliquable au drag-and-drop (peu fiable au toucher sur certains
+  // mobiles) : monter/descendre dans le jour, ou changer de jour via un select.
+  const moveWithinDay = (entryId: string, direction: -1 | 1) => {
+    const entry = entries.find(e => e.id === entryId)
+    if (!entry) return
+    const dayIds = entries.filter(e => e.dayOfWeek === entry.dayOfWeek).sort((a, b) => a.order - b.order).map(e => e.id)
+    const idx = dayIds.indexOf(entryId)
+    const swapIdx = idx + direction
+    if (swapIdx < 0 || swapIdx >= dayIds.length) return
+    ;[dayIds[idx], dayIds[swapIdx]] = [dayIds[swapIdx], dayIds[idx]]
+    setEntries(prev => prev.map(e => {
+      const newOrder = dayIds.indexOf(e.id)
+      return newOrder === -1 ? e : { ...e, order: newOrder }
+    }))
+    persistDayOrder(entry.dayOfWeek, dayIds)
+  }
+
   const addEntry = async (workoutId: string, dayOfWeek: number) => {
     const res = await fetch('/api/planner', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -379,7 +396,7 @@ export default function PlannerPage() {
                   <div style={{ height: 60, background: 'var(--bg-card)', borderRadius: 8, opacity: 0.4, animation: 'pulse 1.5s ease-in-out infinite' }} />
                 ) : (
                   <>
-                    {dayEntries.map(entry => {
+                    {dayEntries.map((entry, entryIdx) => {
                       const bioTypes = Array.from(new Set(entry.workout.movements.map(m => m.movement.bioType)))
                       const isBeingDragged = dragEntry?.id === entry.id
                       return (
@@ -411,6 +428,31 @@ export default function PlannerPage() {
                                 <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>{entry.workout.duration} min</div>
                               )}
                             </Link>
+                            {/* Alternative cliquable au drag (peu fiable au toucher sur
+                                certains mobiles) : monter/descendre + changer de jour. */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                              <button
+                                onClick={() => moveWithinDay(entry.id, -1)}
+                                disabled={entryIdx === 0}
+                                title="Monter"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 5, color: entryIdx === 0 ? 'var(--text-dim)' : 'var(--text-muted)', cursor: entryIdx === 0 ? 'default' : 'pointer', opacity: entryIdx === 0 ? 0.4 : 1 }}>
+                                <ChevronUp size={11} />
+                              </button>
+                              <button
+                                onClick={() => moveWithinDay(entry.id, 1)}
+                                disabled={entryIdx === dayEntries.length - 1}
+                                title="Descendre"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 5, color: entryIdx === dayEntries.length - 1 ? 'var(--text-dim)' : 'var(--text-muted)', cursor: entryIdx === dayEntries.length - 1 ? 'default' : 'pointer', opacity: entryIdx === dayEntries.length - 1 ? 0.4 : 1 }}>
+                                <ChevronDown size={11} />
+                              </button>
+                              <select
+                                value={entry.dayOfWeek}
+                                onChange={e => moveEntry(entry.id, Number(e.target.value))}
+                                title="Changer de jour"
+                                style={{ flex: 1, minWidth: 0, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--text-muted)', fontSize: 10, padding: '2px 4px', height: 20, cursor: 'pointer' }}>
+                                {DAYS.map((d, di) => <option key={di} value={di}>{d}</option>)}
+                              </select>
+                            </div>
                           </div>
                         </div>
                       )

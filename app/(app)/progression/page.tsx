@@ -31,7 +31,12 @@ export default async function ProgressionPage() {
   await syncAttributesFromDb()
   const user = await getCurrentUser()
 
-  const sessions = user
+  type ProgressionSession = { id: string; doneAt: Date; note: string | null; workout: { id: string; name: string; movements: { movement: { bioType: string } }[] } }
+
+  // Cast du ternary entier plutôt que branche par branche : TS abandonnait
+  // l'inférence sur ce `findMany` à includes imbriqués et retombait sur `any`
+  // pour toute l'expression, quelle que soit la branche.
+  const sessions = (user
     ? await prisma.workoutSession.findMany({
         where: { userId: user.id },
         orderBy: { doneAt: 'desc' },
@@ -42,7 +47,7 @@ export default async function ProgressionPage() {
           },
         },
       }).catch(() => [])
-    : []
+    : []) as ProgressionSession[]
 
   const totalSessions = sessions.length
 

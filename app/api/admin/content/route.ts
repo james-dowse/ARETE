@@ -11,7 +11,7 @@ const KNOWN_KEYS = ['app_info', 'announcement', 'resources']
 export async function GET() {
   const user = await getCurrentUser()
   if (!isAdmin(user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const contents = await prisma.siteContent.findMany({ orderBy: { key: 'asc' } })
+  const contents = await prisma.siteContent.findMany({ orderBy: { key: 'asc' } }) as { id: string; key: string; title: string | null; body: string; active: boolean; updatedAt: Date }[]
 
   const missingKeys = KNOWN_KEYS.filter(k => !contents.some(c => c.key === k))
   if (missingKeys.length > 0) {

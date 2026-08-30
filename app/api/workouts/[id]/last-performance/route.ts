@@ -15,7 +15,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
   const workout = await prisma.workout.findUnique({
     where: { id: workoutId },
     select: { movements: { select: { movementId: true } } },
-  })
+  }) as { movements: { movementId: string }[] } | null
   if (!workout) return NextResponse.json({}, { status: 200 })
 
   const movementIds = [...new Set(workout.movements.map(m => m.movementId))]
@@ -27,7 +27,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     orderBy: { createdAt: 'desc' },
     take: 1000,
     select: { movementId: true, reps: true, weight: true, setNumber: true, sessionId: true, createdAt: true },
-  })
+  }) as { movementId: string; reps: number | null; weight: number | null; setNumber: number; sessionId: string; createdAt: Date }[]
 
   const result: Record<string, {
     last: { weight: number | null; reps: number | null } | null

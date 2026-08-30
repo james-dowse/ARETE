@@ -11,7 +11,7 @@ export async function GET() {
     where: { userId },
     select: { movementId: true },
     orderBy: { createdAt: 'desc' },
-  })
+  }) as { movementId: string }[]
   return NextResponse.json(favs.map(f => f.movementId))
 }
 

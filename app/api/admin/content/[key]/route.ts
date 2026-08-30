@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ke
   const justPublished = key === 'announcement' && updated.active && updated.body
     && (!existing?.active || existing.body !== updated.body)
   if (justPublished) {
-    const users = await prisma.invitedUser.findMany({ select: { id: true } })
+    const users = await prisma.invitedUser.findMany({ select: { id: true } }) as { id: string }[]
     await prisma.notification.createMany({
       data: users.map(u => ({ userId: u.id, title: updated.title || 'Nouvelle annonce', body: updated.body, link: '/dashboard' })),
     })

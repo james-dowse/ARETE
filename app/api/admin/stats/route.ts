@@ -38,23 +38,28 @@ export async function GET() {
     }),
   ])
 
+  // `groupBy` avec `orderBy` sur un agrégat casse l'inférence de type de Prisma
+  // sous ce TS strict (any implicite en cascade) — annotations explicites.
+  const topMoves = topMovements as { movementId: string; _count: { movementId: number } }[]
+  const usersWithCounts = workoutsByUser as { userId: string | null; _count: { id: number } }[]
+
   // Résoudre noms des mouvements top
-  const movIds = topMovements.map(m => m.movementId)
-  const movNames = await prisma.movement.findMany({ where: { id: { in: movIds } }, select: { id: true, name: true, bioType: true } })
+  const movIds = topMoves.map(m => m.movementId)
+  const movNames = await prisma.movement.findMany({ where: { id: { in: movIds } }, select: { id: true, name: true, bioType: true } }) as { id: string; name: string; bioType: string }[]
   const movMap = Object.fromEntries(movNames.map(m => [m.id, m]))
 
   // Résoudre emails des users top
-  const uIds = workoutsByUser.map(u => u.userId).filter(Boolean) as string[]
-  const users = await prisma.invitedUser.findMany({ where: { id: { in: uIds } }, select: { id: true, email: true } })
+  const uIds = usersWithCounts.map(u => u.userId).filter(Boolean) as string[]
+  const users = await prisma.invitedUser.findMany({ where: { id: { in: uIds } }, select: { id: true, email: true } }) as { id: string; email: string }[]
   const userMap = Object.fromEntries(users.map(u => [u.id, u.email]))
 
   return NextResponse.json({
     totals: { users: totalUsers, workouts: totalWorkouts, movements: totalMovements, saved: totalSaved, favorites: totalFavorites },
-    topMovements: topMovements.map(m => ({
+    topMovements: topMoves.map(m => ({
       movement: movMap[m.movementId] ?? { id: m.movementId, name: '?', bioType: '?' },
       count: m._count.movementId,
     })),
-    workoutsByUser: workoutsByUser.map(u => ({
+    workoutsByUser: usersWithCounts.map(u => ({
       email: u.userId ? (userMap[u.userId] ?? u.userId) : '(anonyme)',
       count: u._count.id,
     })),

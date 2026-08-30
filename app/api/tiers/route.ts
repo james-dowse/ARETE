@@ -18,7 +18,7 @@ async function defaultTiers(): Promise<TierDTO[]> {
   const rows = await prisma.attributeOption.findMany({
     where: { category: 'complexity' },
     orderBy: [{ position: 'asc' }, { value: 'asc' }],
-  })
+  }) as { value: string }[]
   const scale = rows.map(r => r.value)
   if (scale.length === 0) return []
 
@@ -73,7 +73,7 @@ export async function PUT(req: NextRequest) {
   // Les complexités proposées doivent exister dans le référentiel : on refuse une
   // configuration qui pointerait vers un niveau supprimé (sinon blocs vides).
   const known = new Set(
-    (await prisma.attributeOption.findMany({ where: { category: 'complexity' }, select: { value: true } })).map(r => r.value)
+    ((await prisma.attributeOption.findMany({ where: { category: 'complexity' }, select: { value: true } })) as { value: string }[]).map(r => r.value)
   )
 
   const clean: TierDTO[] = []

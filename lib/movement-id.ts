@@ -6,7 +6,7 @@ import { prisma } from './prisma'
 export const MOVEMENT_ID_PATTERN = /^\d+$/
 
 export async function nextMovementId(): Promise<string> {
-  const rows = await prisma.movement.findMany({ select: { id: true } })
+  const rows = await prisma.movement.findMany({ select: { id: true } }) as { id: string }[]
   const max = rows.reduce((m, r) => {
     const n = Number(r.id)
     return Number.isInteger(n) && n > m ? n : m
@@ -18,7 +18,7 @@ export async function nextMovementId(): Promise<string> {
 // ceux déjà réservés dans le même lot (ex: des lignes du fichier importé qui
 // fournissent elles-mêmes un ID numérique proche).
 export async function nextMovementIds(count: number, reserved: Set<string> = new Set()): Promise<string[]> {
-  const rows = await prisma.movement.findMany({ select: { id: true } })
+  const rows = await prisma.movement.findMany({ select: { id: true } }) as { id: string }[]
   let max = rows.reduce((m, r) => {
     const n = Number(r.id)
     return Number.isInteger(n) && n > m ? n : m
