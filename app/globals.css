@@ -615,6 +615,10 @@ h1,
 
 @media (max-width: 480px) {
   .main-grid { padding: 16px 12px !important; }
+  /* Ce bloc, plus étroit, vient après le @media 768px dans la cascade et
+     écrasait son padding-bottom réservé à la barre d'onglets (retombait à
+     16px au lieu de 72px+safe-area sur un téléphone) — on le réaffirme ici. */
+  .app-shell-main { padding-bottom: var(--mobile-tabbar-h) !important; }
   .r-h1 { font-size: 24px !important; }
   .r-grid-3 { grid-template-columns: 1fr !important; }
   .r-lib-grid { grid-template-columns: 1fr !important; }
