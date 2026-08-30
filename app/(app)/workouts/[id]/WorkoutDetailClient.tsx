@@ -1037,7 +1037,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin 
       {editMode && isDirty && <EditBar count={pendingCount} onSave={handleSave} onCancel={handleCancelAll} saving={saving} />}
 
       {editMode && !isDirty && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, animation: 'slideUp 0.25s ease' }}>
+        <div style={{ position: 'fixed', bottom: 'calc(28px + var(--mobile-tabbar-h, 0px))', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, animation: 'slideUp 0.25s ease' }}>
           <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Aucune modification</span>
           <button onClick={() => setEditMode(false)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             <X size={13} /> Quitter l'édition

@@ -564,7 +564,7 @@ export function EditBar({ count, onSave, onCancel, saving }: {
   count: number; onSave: () => void; onCancel: () => void; saving: boolean
 }) {
   return (
-    <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-card)', border: '1px solid var(--accent)', borderRadius: 14, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.15)', zIndex: 50, minWidth: 340, animation: 'slideUp 0.25s ease' }}>
+    <div style={{ position: 'fixed', bottom: 'calc(28px + var(--mobile-tabbar-h, 0px))', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-card)', border: '1px solid var(--accent)', borderRadius: 14, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.15)', zIndex: 50, minWidth: 340, animation: 'slideUp 0.25s ease' }}>
       <div style={{ flex: 1 }}>
         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{count} modification{count > 1 ? 's' : ''}</span>
         <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 6 }}>non sauvegardée{count > 1 ? 's' : ''}</span>

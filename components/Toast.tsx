@@ -28,7 +28,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={toast}>
       {children}
       <div style={{
-        position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
+        position: 'fixed', bottom: 'calc(28px + var(--mobile-tabbar-h, 0px))', left: '50%', transform: 'translateX(-50%)',
         zIndex: 3000, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center',
         pointerEvents: 'none', width: 'max-content', maxWidth: 'calc(100vw - 32px)',
       }}>

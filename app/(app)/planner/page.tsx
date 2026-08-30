@@ -499,7 +499,7 @@ export default function PlannerPage() {
       <div
         data-planner-delete
         style={{
-          position: 'fixed', left: '50%', bottom: isDragging ? 24 : -80, transform: 'translateX(-50%)',
+          position: 'fixed', left: '50%', bottom: isDragging ? 'calc(24px + var(--mobile-tabbar-h, 0px))' : -80, transform: 'translateX(-50%)',
           zIndex: 1999, display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', borderRadius: 999,
           background: overDelete ? 'var(--red)' : 'rgba(23,19,15,0.92)', border: `1px solid ${overDelete ? 'var(--red)' : 'rgba(255,255,255,0.15)'}`,
           color: '#fff', fontSize: 13, fontWeight: 700, boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
