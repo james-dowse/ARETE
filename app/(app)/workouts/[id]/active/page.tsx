@@ -383,34 +383,65 @@ export default function ActivePage() {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── Header ── */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <button onClick={() => router.push(`/workouts/${id}`)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 0, display: 'flex', lineHeight: 1 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workout.name}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 1 }}>
-            {workout.movements.length} mouvement{workout.movements.length > 1 ? 's' : ''} · {doneSets}/{totalSets()} séries
+      {/* ── Header + bouton d'action collants ── : sur un superset à rallonge, la
+          vidéo défile hors écran et cocher l'exercice en cours devient une
+          chasse au scroll. Ce bandeau reste visible en permanence et déclenche
+          exactement la même action que la ligne du mouvement actif — plus
+          besoin de chercher, on tape le gros bouton dès qu'on est prêt. */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+        <div style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button onClick={() => router.push(`/workouts/${id}`)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 0, display: 'flex', lineHeight: 1 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workout.name}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 1 }}>
+              {workout.movements.length} mouvement{workout.movements.length > 1 ? 's' : ''} · {doneSets}/{totalSets()} séries
+            </div>
+          </div>
+          {/* Cadran du chrono — aplat or massif, texte encre */}
+          <div className="tnum display" style={{
+            fontSize: 22, fontWeight: 700, flexShrink: 0, lineHeight: 1,
+            padding: '9px 16px', borderRadius: 'var(--r-sm)',
+            background: started ? 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)' : 'var(--bg-elevated)',
+            color: started ? 'var(--ink)' : 'var(--text-dim)',
+            boxShadow: started ? 'var(--elev-gold)' : 'none',
+            transition: 'background 0.3s, color 0.3s',
+          }}>
+            {fmt(elapsed)}
           </div>
         </div>
-        {/* Cadran du chrono — aplat or massif, texte encre */}
-        <div className="tnum display" style={{
-          fontSize: 22, fontWeight: 700, flexShrink: 0, lineHeight: 1,
-          padding: '9px 16px', borderRadius: 'var(--r-sm)',
-          background: started ? 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)' : 'var(--bg-elevated)',
-          color: started ? 'var(--ink)' : 'var(--text-dim)',
-          boxShadow: started ? 'var(--elev-gold)' : 'none',
-          transition: 'background 0.3s, color 0.3s',
-        }}>
-          {fmt(elapsed)}
-        </div>
-      </div>
 
-      {/* ── Progress bar ── */}
-      <div style={{ height: 3, background: 'rgba(255,255,255,0.06)' }}>
-        <div style={{ height: '100%', background: allDone ? 'var(--green)' : 'var(--gold)', width: `${pct}%`, transition: 'width 0.4s ease' }} />
+        {/* ── Progress bar ── */}
+        <div style={{ height: 3, background: 'rgba(255,255,255,0.06)' }}>
+          <div style={{ height: '100%', background: allDone ? 'var(--green)' : 'var(--gold)', width: `${pct}%`, transition: 'width 0.4s ease' }} />
+        </div>
+
+        {/* ── Bouton d'action toujours visible : coche le mouvement actif ── */}
+        {currentWm && (
+          <button
+            onClick={() => handleSet(currentWm)}
+            disabled={exerciseTimer?.wmId === currentWm.id}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px',
+              background: 'var(--accent)', border: 'none', borderBottom: '1px solid var(--border)',
+              cursor: exerciseTimer?.wmId === currentWm.id ? 'default' : 'pointer',
+              opacity: exerciseTimer?.wmId === currentWm.id ? 0.6 : 1, textAlign: 'left',
+            }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F8F4EC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(248,244,236,0.75)' }}>
+                {currentWm.duration != null ? 'Lancer' : 'Série suivante'} · {(done[currentWm.id] ?? 0) + 1}/{currentWm.sets ?? 3}
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#F8F4EC', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {currentWm.movement.name}
+              </div>
+            </div>
+          </button>
+        )}
       </div>
 
       {/* ── Scène : vidéo pleine largeur + HUD superposé (mouvement actif) ── */}
