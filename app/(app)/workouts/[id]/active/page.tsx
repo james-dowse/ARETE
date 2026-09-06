@@ -430,7 +430,7 @@ export default function ActivePage() {
                     <video key={currentEmbed.url} src={currentEmbed.url} autoPlay muted loop playsInline controls
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : currentEmbed.type === 'youtube' && extractEmbedVideoId(currentEmbed.url) ? (
-                    <YouTubeLoopEmbed key={currentEmbed.url} videoId={extractEmbedVideoId(currentEmbed.url)!} />
+                    <YouTubeLoopEmbed videoId={extractEmbedVideoId(currentEmbed.url)!} />
                   ) : (
                     <iframe key={currentEmbed.url} src={currentEmbed.url}
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}

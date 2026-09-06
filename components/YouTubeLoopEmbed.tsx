@@ -20,6 +20,7 @@ interface YTPlayer {
   destroy: () => void
   seekTo: (seconds: number, allowSeekAhead: boolean) => void
   playVideo: () => void
+  loadVideoById: (videoId: string) => void
 }
 
 let apiReady: Promise<void> | null = null
@@ -43,11 +44,23 @@ function loadYouTubeApi(): Promise<void> {
 export default function YouTubeLoopEmbed({ videoId, style }: { videoId: string; style?: React.CSSProperties }) {
   const containerId = 'yt-loop-' + useId().replace(/[^a-zA-Z0-9]/g, '')
   const playerRef = useRef<YTPlayer | null>(null)
+  // L'ID de la vidéo actuellement chargée dans le player, distinct de la prop
+  // `videoId` : permet de détecter un changement de mouvement sans dépendre
+  // de l'ordre effet/re-render.
+  const loadedIdRef = useRef<string | null>(null)
 
+  // Un seul player créé au montage, jamais détruit/recréé lors d'un simple
+  // changement de mouvement (`loadVideoById` à la place) : détruire l'iframe
+  // YouTube pendant que React tient encore une réf dessus (remount forcé par
+  // une `key` sur ce composant à chaque mouvement) provoquait une exception
+  // DOM (`removeChild` sur un nœud déjà retiré par l'API YouTube) qui
+  // plantait le rendu React de toute la page "séance en cours" — d'où le
+  // "page can't load" à chaque changement d'exercice, aussi bien en
+  // superset qu'en classique.
   useEffect(() => {
     let cancelled = false
     loadYouTubeApi().then(() => {
-      if (cancelled || !window.YT) return
+      if (cancelled || !window.YT || playerRef.current) return
       playerRef.current = new window.YT.Player(containerId, {
         host: 'https://www.youtube-nocookie.com',
         videoId,
@@ -64,13 +77,23 @@ export default function YouTubeLoopEmbed({ videoId, style }: { videoId: string; 
           },
         },
       })
+      loadedIdRef.current = videoId
     })
     return () => {
       cancelled = true
       playerRef.current?.destroy?.()
       playerRef.current = null
+      loadedIdRef.current = null
     }
-  }, [videoId, containerId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerId])
+
+  useEffect(() => {
+    if (playerRef.current && loadedIdRef.current !== videoId) {
+      playerRef.current.loadVideoById(videoId)
+      loadedIdRef.current = videoId
+    }
+  }, [videoId])
 
   return <div id={containerId} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', ...style }} />
 }
