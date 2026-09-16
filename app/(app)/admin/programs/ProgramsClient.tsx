@@ -55,7 +55,7 @@ export default function ProgramsClient() {
   const totalPending = assignments.filter(a => !a.done).length
 
   return (
-    <div style={{ maxWidth: 820 }}>
+    <div className="page-list">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28, gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>Programmes</h1>

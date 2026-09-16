@@ -107,7 +107,7 @@ export default function ResourcesClient({ initialResources, isAdmin }: { initial
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', width: '100%' }}>
+    <div className="page-list">
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 className="r-h1">Ressources utiles</h1>

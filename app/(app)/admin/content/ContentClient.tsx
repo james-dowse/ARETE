@@ -111,7 +111,7 @@ export default function ContentClient() {
   if (loading) return <div style={{ padding: 24, color: 'var(--text-muted)' }}>Chargement…</div>
 
   return (
-    <div style={{ maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="page-reading" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Contenus de la page d&apos;accueil</h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6 }}>

@@ -64,7 +64,7 @@ export default function UserProfileClient({ userId }: { userId: string }) {
   const name = creatorName(user)
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 20px' }}>
+    <div className="page-reading" style={{ padding: '32px 20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 24 }}>
         <CreatorBadge user={user} size={72} />
         <div style={{ flex: 1, minWidth: 0 }}>

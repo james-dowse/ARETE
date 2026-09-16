@@ -67,7 +67,7 @@ export default function ProfileClient() {
   if (notLoggedIn) {
     return (
       <>
-        <div style={{ maxWidth: 560, margin: '0 auto', width: '100%', textAlign: 'center', paddingTop: 64 }}>
+        <div className="page-reading" style={{ textAlign: 'center', paddingTop: 64 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Connexion requise</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 15 }}>
@@ -87,7 +87,7 @@ export default function ProfileClient() {
   if (!profile) {
     return (
       <>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 560, margin: '0 auto', width: '100%' }}>
+        <div className="page-reading" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {[1, 2].map(i => <div key={i} style={{ height: 140, background: 'var(--bg-card)', borderRadius: 14, opacity: 0.5 }} />)}
         </div>
       </>
@@ -103,7 +103,7 @@ export default function ProfileClient() {
 
   return (
     <>
-      <div style={{ maxWidth: 560, margin: '0 auto', width: '100%' }}>
+      <div className="page-reading">
         <div style={{ marginBottom: 32 }}>
           <h1 className="r-h1">Mon profil</h1>
           <p className="r-subtitle">Informations personnelles</p>

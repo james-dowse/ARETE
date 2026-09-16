@@ -85,7 +85,7 @@ export default async function ProgressionPage() {
 
   return (
     <>
-      <div style={{ maxWidth: 1160, margin: '0 auto', width: '100%' }}>
+      <div className="page">
         <div style={{ marginBottom: 32 }}>
           <h1 className="r-h1">Progression</h1>
           <p className="r-subtitle">

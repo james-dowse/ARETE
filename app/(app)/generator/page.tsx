@@ -601,7 +601,7 @@ export default function GeneratorPage() {
 
   return (
     <>
-      <div style={{ maxWidth: 1320, margin: '0 auto', width: '100%' }}>
+      <div className="page">
         <div style={{ marginBottom: 24 }}>
           <h1 className="r-h1">Générateur</h1>
           <p className="r-subtitle">Trois façons de composer ta séance.</p>

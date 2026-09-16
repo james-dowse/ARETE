@@ -120,7 +120,7 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
 
   return (
     <>
-      <div style={{ maxWidth: 680 }}>
+      <div className="page-list">
 
         {/* Header */}
         <div style={{ marginBottom: 32 }}>

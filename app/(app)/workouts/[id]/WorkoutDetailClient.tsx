@@ -577,7 +577,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin 
 
   return (
     <>
-      <div style={{ maxWidth: 900, margin: '0 auto', width: '100%', paddingBottom: isDirty ? 100 : 32 }}>
+      <div className="page-list" style={{ paddingBottom: isDirty ? 100 : 32 }}>
         <Link href={backTo ?? '/workouts'} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', textDecoration: 'none', fontSize: 13, marginBottom: 24 }}>
           <ArrowLeft size={14} /> {backTo === '/admin' ? 'Retour à l\'administration' : 'Retour aux séances'}
         </Link>

@@ -339,7 +339,7 @@ export default function PlannerPage() {
 
   return (
     <>
-      <div style={{ maxWidth: 1320, margin: '0 auto', width: '100%' }} onPointerMove={handlePointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}>
+      <div className="page" onPointerMove={handlePointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
           <div>

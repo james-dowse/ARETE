@@ -689,3 +689,53 @@ h1,
     aspect-ratio: 1;
   }
 }
+
+/* ══ Largeur des pages ═════════════════════════════════════════════════
+   Chaque écran fixait sa propre largeur maximale, au jugé : 560, 680, 720,
+   820, 900, 1160, 1200, 1240, 1320. Pire, les écrans d'administration
+   n'avaient pas de `margin: 0 auto` — leur contenu restait collé à gauche
+   avec la moitié droite de l'écran vide sur un moniteur de bureau.
+
+   Deux gabarits seulement :
+   - `.page`        : listes, grilles, tableaux de bord — occupe la largeur.
+   - `.page-reading`: formulaires et texte suivi — largeur de lecture
+                      confortable, mais centrée, jamais plaquée sur un bord.
+   Les deux sont centrés. */
+:root {
+  --page-max: 1440px;
+  --page-reading-max: 780px;
+}
+
+.page,
+.page-reading {
+  width: 100%;
+  margin-inline: auto;
+}
+
+.page         { max-width: var(--page-max); }
+.page-reading { max-width: var(--page-reading-max); }
+
+/* Gabarit intermédiaire : listes de cartes qui deviendraient des rubans
+   démesurés à pleine largeur (utilisateurs, programmes, ressources). */
+.page-list { width: 100%; margin-inline: auto; max-width: 1040px; }
+
+/* ── Grille de cartouches de séance ────────────────────────────────────
+   Une colonne unique étirée sur 1440 px transforme chaque cartouche en
+   ruban : vignette à l'extrême gauche, boutons à l'extrême droite, et le
+   regard qui traverse l'écran pour chaque ligne. Au-delà de 1100 px, on
+   passe donc à deux colonnes, trois au-delà de 1600 px — c'est remplir
+   l'espace utilement plutôt que l'étirer. */
+.wod-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .wod-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+}
+
+@media (min-width: 1600px) {
+  .wod-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

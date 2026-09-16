@@ -214,7 +214,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%' }}>
+      <div className="page">
 
         <ResumeSessionBanner />
 

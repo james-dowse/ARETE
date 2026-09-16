@@ -10,7 +10,7 @@ export default async function WorkoutsPage() {
 
   return (
     <>
-      <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%' }}>
+      <div className="page">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
           <div>
             <h1 className="r-h1">Mes séances</h1>

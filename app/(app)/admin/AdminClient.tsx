@@ -269,7 +269,7 @@ export default function AdminClient({
   const bioStats = BIO_TYPES.map(bt => ({ bt, count: movements.filter(m => m.bioType === bt).length }))
 
   return (
-    <div style={{ maxWidth: 1200, paddingRight: activeTab === 'mouvements' && usagePanel ? 364 : 0, transition: 'padding-right 0.2s' }}>
+    <div className="page" style={{ paddingRight: activeTab === 'mouvements' && usagePanel ? 364 : 0, transition: 'padding-right 0.2s' }}>
 
       {/* ── Tab bar ── */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 28, gap: 0 }}>

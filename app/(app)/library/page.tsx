@@ -180,7 +180,7 @@ export default function LibraryPage() {
 
   return (
     <>
-      <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%' }}>
+      <div className="page">
         <div style={{ marginBottom: 28 }}>
           <h1 className="r-h1">Bibliothèque</h1>
           <p className="r-subtitle">

@@ -959,7 +959,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
 
       {/* Skeleton */}
       {loading && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="wod-list">
           {[1, 2, 3].map(i => <div key={i} style={{ height: 140, background: 'var(--bg-card)', borderRadius: 12, animation: 'pulse 1.5s ease-in-out infinite' }} />)}
         </div>
       )}
@@ -1013,7 +1013,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                 <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', display: 'flex' }}>{favoritesOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</span>
               </div>
               {favoritesOpen && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div className="wod-list">
                   {favorites.map(w => (
                     <WorkoutCard
                       key={w.id}
@@ -1042,7 +1042,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                 <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{recents.length}</span>
                 <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', display: 'flex' }}>{recentsOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</span>
               </div>
-              {recentsOpen && <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {recentsOpen && <div className="wod-list">
                 {recents.map(w => (
                   <WorkoutCard
                     key={w.id}
@@ -1061,7 +1061,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
           {myWorkoutsFiltered.length > 0 && (
             <div style={{ marginBottom: 32 }}>
               <SectionLabel icon={<Zap size={13} />} label="Mes créations" count={myWorkoutsFiltered.length} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="wod-list">
                 {myWorkoutsFiltered.map(w => (
                   <WorkoutCard
                     key={w.id}
@@ -1079,7 +1079,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
           {savedWorkoutsFiltered.length > 0 && (
             <div>
               <SectionLabel icon={<Layers size={13} />} label="Sauvegardés" count={savedWorkoutsFiltered.length} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="wod-list">
                 {savedWorkoutsFiltered.map(w => (
                   <WorkoutCard
                     key={w.id}
@@ -1108,7 +1108,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
             </div>
           )}
           {communityWorkoutsFiltered.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="wod-list">
               {communityWorkoutsFiltered.map(w => (
                 <WorkoutCard
                   key={w.id}
