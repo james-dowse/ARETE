@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
+import { WORKOUT_SELECT } from '@/lib/workout-select'
+import { getAvatarOwnerIds, withHasAvatar } from '@/lib/avatar-server'
 
 export async function GET() {
   const user = await getCurrentUser()
@@ -13,26 +15,27 @@ export async function GET() {
     where: { assignedToId: user.id },
     orderBy: [{ scheduledFor: 'asc' }, { createdAt: 'desc' }],
     include: {
-      workout: {
-        include: {
-          movements: { include: { movement: true } },
-          blocks: true,
-        },
-      },
+      // Même projection légère que /api/workouts : l'onglet « WOD du coach »
+      // affiche les mêmes cartouches. `movement: true` tirait description,
+      // imageUrl et videoUrl de chaque mouvement de chaque WOD assigné.
+      workout: { select: WORKOUT_SELECT },
       assignedBy: { select: { firstName: true, lastName: true, email: true } },
     },
-  }) as ({ workoutId: string; createdAt: Date } & Record<string, unknown>)[]
+  }) as ({ workoutId: string; createdAt: Date; workout: { user: { id: string } | null } } & Record<string, unknown>)[]
 
   // Complétion déduite : une WorkoutSession du même workout par ce user, postérieure
   // à l'assignation, vaut "fait" — pas de champ "done" dupliqué en base.
-  const sessions = await prisma.workoutSession.findMany({
-    where: { userId: user.id, workoutId: { in: assignments.map(a => a.workoutId) } },
-    select: { workoutId: true, doneAt: true },
-  }) as { workoutId: string; doneAt: Date }[]
+  const [sessions, avatarOwners] = await Promise.all([
+    prisma.workoutSession.findMany({
+      where: { userId: user.id, workoutId: { in: assignments.map(a => a.workoutId) } },
+      select: { workoutId: true, doneAt: true },
+    }) as Promise<{ workoutId: string; doneAt: Date }[]>,
+    getAvatarOwnerIds(),
+  ])
 
   const result = assignments.map(a => {
     const done = sessions.some(s => s.workoutId === a.workoutId && s.doneAt >= a.createdAt)
-    return { ...a, done }
+    return { ...a, workout: { ...a.workout, user: withHasAvatar(a.workout.user, avatarOwners) }, done }
   })
 
   return NextResponse.json(result)

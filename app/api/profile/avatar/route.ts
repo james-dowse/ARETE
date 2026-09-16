@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
+import { invalidateAvatarOwners } from '@/lib/avatar-server'
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser()
@@ -14,6 +15,7 @@ export async function POST(req: NextRequest) {
   const base64 = `data:${file.type};base64,${Buffer.from(bytes).toString('base64')}`
 
   await prisma.invitedUser.update({ where: { id: user.id }, data: { avatarUrl: base64 } })
+  invalidateAvatarOwners()
   return NextResponse.json({ avatarUrl: base64 })
 }
 
@@ -21,5 +23,6 @@ export async function DELETE() {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
   await prisma.invitedUser.update({ where: { id: user.id }, data: { avatarUrl: null } })
+  invalidateAvatarOwners()
   return NextResponse.json({ ok: true })
 }

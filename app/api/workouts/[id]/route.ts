@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireWorkoutOwner } from '@/lib/authz'
 import { sendNewWorkoutEmail, sendWorkoutRemovedEmail, sendWorkoutUpdatedEmail } from '@/lib/email'
+import { getAvatarOwnerIds, withHasAvatar } from '@/lib/avatar-server'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -14,12 +15,16 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
         orderBy: { order: 'asc' },
       },
       template: true,
-      user: { select: { id: true, email: true, firstName: true, lastName: true, avatarUrl: true } },
+      // `avatarUrl` (data URI base64) exclu : l'image passe par
+      // /api/users/[id]/avatar, que le navigateur garde en cache d'un écran à
+      // l'autre au lieu de la retélécharger dans chaque réponse JSON.
+      user: { select: { id: true, email: true, firstName: true, lastName: true } },
       _count: { select: { savedBy: true } },
     },
-  })
+  }) as ({ user: { id: string } | null } & Record<string, unknown>) | null
   if (!workout) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json(workout)
+  const avatarOwners = await getAvatarOwnerIds()
+  return NextResponse.json({ ...workout, user: withHasAvatar(workout.user, avatarOwners) })
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

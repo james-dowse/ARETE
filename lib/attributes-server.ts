@@ -1,7 +1,7 @@
 import type { AttributeOption } from '@prisma/client'
 import { prisma } from './prisma'
 import { applyAttributeOverrides } from './types'
-import { getCachedAttributes, setCachedAttributes } from './attributes-cache'
+import { getCachedAttributes, setCachedAttributes, type AttributesPayload } from './attributes-cache'
 
 // Équivalent server-side de components/AttributesSync.tsx : à appeler en tête
 // de TOUTE page serveur dont l'arbre rend un composant client utilisant
@@ -12,11 +12,16 @@ import { getCachedAttributes, setCachedAttributes } from './attributes-cache'
 // une fois pour toutes dans app/(app)/layout.tsx.
 // Passe par le même cache mémoire que /api/attributes (lib/attributes-cache.ts)
 // pour ne pas payer un aller-retour DB à chaque requête.
-export async function syncAttributesFromDb() {
+// Renvoie le référentiel appliqué, pour que le layout puisse le passer au
+// composant client : sans ça, le premier rendu CLIENT repartait des valeurs
+// anglaises par défaut alors que le HTML serveur contenait déjà les libellés et
+// icônes du référentiel — React détectait une différence d'hydratation et
+// re-rendait tout l'arbre côté client (flash de contenu + travail inutile).
+export async function syncAttributesFromDb(): Promise<AttributesPayload> {
   const cached = getCachedAttributes()
   if (cached) {
     applyAttributeOverrides(cached)
-    return
+    return cached
   }
   const all = await prisma.attributeOption.findMany({
     orderBy: [{ category: 'asc' }, { position: 'asc' }, { value: 'asc' }],
@@ -28,4 +33,5 @@ export async function syncAttributesFromDb() {
   }
   setCachedAttributes(payload)
   applyAttributeOverrides(payload)
+  return payload
 }

@@ -1,44 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserId } from '@/lib/session'
-
-// Projection minimale pour les listes : la carte n'affiche que le nom, la date,
-// 3 mouvements et les pastilles. Charger `movement: true` tirait aussi
-// description / imageUrl / videoUrl de chaque mouvement de chaque séance —
-// plusieurs centaines de lignes de texte inutiles par chargement de page.
-//
-// reps/duration/rest/blockId/order + blocks : nécessaires à l'estimation de
-// durée précise (lib/duration.ts), calculée côté client sur ces mêmes données
-// pour rester identique à celle de la fiche détail et du générateur.
-const WORKOUT_SELECT = {
-  id: true,
-  name: true,
-  description: true,
-  createdAt: true,
-  duration: true,
-  imageUrl: true,
-  imagePosition: true,
-  tags: true,
-  userId: true,
-  public: true,
-  difficultyOverride: true,
-  user: { select: { id: true, email: true, firstName: true, lastName: true, avatarUrl: true } },
-  _count: { select: { savedBy: true } },
-  blocks: { select: { id: true, superset: true, restAfter: true, order: true, bioType: true }, orderBy: { order: 'asc' } },
-  movements: {
-    orderBy: { order: 'asc' },
-    select: {
-      id: true,
-      sets: true,
-      reps: true,
-      duration: true,
-      rest: true,
-      blockId: true,
-      order: true,
-      movement: { select: { name: true, bioType: true, complexity: true } },
-    },
-  },
-} as const
+import { getAvatarOwnerIds, withHasAvatar } from '@/lib/avatar-server'
+import { WORKOUT_SELECT } from '@/lib/workout-select'
 
 export async function GET(req: NextRequest) {
   try {
@@ -51,7 +15,7 @@ export async function GET(req: NextRequest) {
     // Si non authentifié → liste vide
     if (!currentUserId) return NextResponse.json([])
 
-    const [rows, favIds] = await Promise.all([
+    const [rows, favIds, avatarOwners] = await Promise.all([
       prisma.savedWorkout.findMany({
         where: {
           userId: currentUserId,
@@ -70,10 +34,12 @@ export async function GET(req: NextRequest) {
         where: { userId: currentUserId },
         select: { workoutId: true },
       }),
-    ]) as [{ source: string; savedAt: Date; lastViewedAt: Date | null; workoutId: string; workout: Record<string, unknown> }[], { workoutId: string }[]]
+      getAvatarOwnerIds(),
+    ]) as [{ source: string; savedAt: Date; lastViewedAt: Date | null; workoutId: string; workout: Record<string, unknown> }[], { workoutId: string }[], Set<string>]
     const favSet = new Set(favIds.map(f => f.workoutId))
     const result = rows.map(r => ({
       ...r.workout,
+      user: withHasAvatar(r.workout.user as { id: string } | null, avatarOwners),
       _savedSource: r.source,
       _savedAt: r.savedAt,
       _lastViewedAt: r.lastViewedAt,
@@ -103,7 +69,7 @@ export async function GET(req: NextRequest) {
   const needsSavedBy = filter === 'community' && !!currentUserId
   const needsFavorites = filter === 'mine' && !!currentUserId
 
-  const [workouts, favIds] = await Promise.all([
+  const [workouts, favIds, avatarOwners] = await Promise.all([
     prisma.workout.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -117,13 +83,15 @@ export async function GET(req: NextRequest) {
     }),
     needsFavorites
       ? prisma.favoriteWorkout.findMany({ where: { userId: currentUserId! }, select: { workoutId: true } })
-      : Promise.resolve([]),
-  ]) as [({ id: string } & Record<string, unknown>)[], { workoutId: string }[]]
+      : Promise.resolve([] as never[]),
+    getAvatarOwnerIds(),
+  ]) as [({ id: string } & Record<string, unknown>)[], { workoutId: string }[], Set<string>]
   const favSet = new Set(favIds.map(f => f.workoutId))
 
   // Transformer savedBy → isSaved (booléen)
   const result = workouts.map(w => ({
     ...w,
+    user: withHasAvatar(w.user as { id: string } | null, avatarOwners),
     isSaved: needsSavedBy && Array.isArray((w as { savedBy?: { id: string }[] }).savedBy) && (w as { savedBy?: { id: string }[] }).savedBy!.length > 0,
     isFavorite: needsFavorites ? favSet.has(w.id) : undefined,
     savedBy: undefined,

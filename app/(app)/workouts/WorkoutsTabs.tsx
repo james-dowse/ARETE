@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, effectiveDifficulty } from '@/lib/types'
@@ -13,7 +13,9 @@ import { useToast } from '@/components/Toast'
 import { Zap, Users, User, Share2, X, CheckCircle2, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search, ArrowUpDown } from 'lucide-react'
 import { ShareModal } from './[id]/parts'
 
-interface WorkoutUser { id: string; email: string; firstName?: string | null; lastName?: string | null; avatarUrl?: string | null }
+// `hasAvatar` et non l'image : les listes ne transportent plus le data URI
+// base64 du créateur (il était dupliqué par cartouche) — voir lib/avatar.ts.
+interface WorkoutUser { id: string; email: string; firstName?: string | null; lastName?: string | null; hasAvatar?: boolean }
 interface WorkoutMovementItem {
   id: string; sets?: number | null; reps?: string | null; duration?: number | null
   rest?: number | null; blockId?: string | null; order?: number
@@ -308,11 +310,11 @@ function WorkoutCard({
           <div style={{ position: 'relative', width: 90, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {w.imageUrl ? (
               <>
-                <img src={w.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block', filter: difficulty ? DIFFICULTY_TINT_IMG_FILTER : undefined }} />
+                <img src={w.imageUrl} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block', filter: difficulty ? DIFFICULTY_TINT_IMG_FILTER : undefined }} />
                 <DifficultyImageTint difficulty={difficulty} />
               </>
             ) : (
-              <img src="/logo.svg" alt="" style={{ width: '40%', height: '40%', objectFit: 'contain', opacity: 0.18, display: 'block' }} />
+              <img src="/logo.svg" alt="" loading="lazy" decoding="async" style={{ width: '40%', height: '40%', objectFit: 'contain', opacity: 0.18, display: 'block' }} />
             )}
           </div>
 
@@ -575,15 +577,23 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
     setAssignments(Array.isArray(data) ? data : [])
   }, [])
 
+  // Un onglet déjà chargé n'est pas rechargé quand on y revient : avant, chaque
+  // aller-retour entre « Mes séances » et « Communauté » relançait les requêtes
+  // et réaffichait le squelette, alors que les données étaient déjà en mémoire.
+  // Les mutations (import, suppression, favori…) rafraîchissent explicitement
+  // l'onglet concerné, donc rien ne peut rester périmé sans qu'on le sache.
+  const loadedTabs = useRef<Set<string>>(new Set())
+
   useEffect(() => {
+    if (loadedTabs.current.has(tab)) return
     setLoading(true)
     const p = tab === 'mine' ? loadMine() : tab === 'community' ? loadCommunity() : loadCoach()
-    p.finally(() => setLoading(false))
+    p.then(() => loadedTabs.current.add(tab)).finally(() => setLoading(false))
   }, [tab, loadMine, loadCommunity, loadCoach])
 
   // Chargé en tâche de fond dès le montage (pas seulement au clic sur l'onglet)
   // pour afficher tout de suite le badge de séances coach en attente.
-  useEffect(() => { loadCoach() }, [loadCoach])
+  useEffect(() => { loadCoach().then(() => loadedTabs.current.add('coach')) }, [loadCoach])
 
   const tabStyle = (t: 'mine' | 'community' | 'coach'): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: 7,

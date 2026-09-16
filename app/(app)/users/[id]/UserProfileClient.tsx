@@ -101,9 +101,9 @@ export default function UserProfileClient({ userId }: { userId: string }) {
                 style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 'var(--r-md)', textDecoration: 'none' }}>
                 <div style={{ width: 60, height: 60, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {w.imageUrl ? (
-                    <img src={w.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block' }} />
+                    <img src={w.imageUrl} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block' }} />
                   ) : (
-                    <img src="/logo.svg" alt="" style={{ width: '40%', height: '40%', objectFit: 'contain', opacity: 0.18, display: 'block' }} />
+                    <img src="/logo.svg" alt="" loading="lazy" decoding="async" style={{ width: '40%', height: '40%', objectFit: 'contain', opacity: 0.18, display: 'block' }} />
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>

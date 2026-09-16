@@ -37,7 +37,7 @@ export interface Workout {
   public?: boolean
   difficultyOverride?: string | null
   userId?: string | null
-  user?: { id: string; email: string; firstName?: string | null; lastName?: string | null; avatarUrl?: string | null } | null
+  user?: { id: string; email: string; firstName?: string | null; lastName?: string | null; hasAvatar?: boolean } | null
   _count?: { savedBy: number }
   movements: WorkoutMovement[]
   blocks: WorkoutBlock[]

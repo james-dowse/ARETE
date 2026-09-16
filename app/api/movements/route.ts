@@ -34,11 +34,26 @@ export async function GET(req: NextRequest) {
     where.favorites = { some: { userId } }
   }
 
+  // Projection de liste : ni `description` ni `imageUrl`. Aucune des deux n'est
+  // affichée dans la bibliothèque ni dans le sélecteur — seule la fiche détail
+  // les utilise, et elle passe par /api/movements/[id]. Les embarquer ici
+  // faisait transiter tout le texte du référentiel à chaque frappe de recherche.
   const movements = await prisma.movement.findMany({
     where,
     orderBy: [{ name: 'asc' }],
+    select: {
+      id: true, name: true, bioType: true, complexity: true,
+      equipment: true, videoUrl: true, custom: true, createdByUserId: true,
+    },
   })
-  return NextResponse.json(movements)
+
+  // Le référentiel ne bouge qu'en administration : laisser le navigateur le
+  // garder quelques secondes évite de tout relire à chaque ouverture du
+  // sélecteur. Pas de cache sur la vue « favoris », qui suit une action
+  // utilisateur et doit rester immédiate.
+  return NextResponse.json(movements, {
+    headers: favoritesOnly ? undefined : { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=300' },
+  })
 }
 
 export async function POST(req: NextRequest) {

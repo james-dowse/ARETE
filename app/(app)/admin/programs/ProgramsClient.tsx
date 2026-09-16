@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { Star, X, Search, Trash2, CheckCircle2, Plus } from 'lucide-react'
+import { avatarSrc } from '@/lib/avatar'
 
 interface Assignment {
   id: string
@@ -9,7 +10,7 @@ interface Assignment {
   createdAt: string
   done: boolean
   workout: { id: string; name: string; duration: number | null }
-  assignedTo: { id: string; email: string; firstName: string | null; lastName: string | null; avatarUrl: string | null }
+  assignedTo: { id: string; email: string; firstName: string | null; lastName: string | null; hasAvatar?: boolean }
   assignedBy: { firstName: string | null; lastName: string | null; email: string }
 }
 
@@ -92,7 +93,7 @@ export default function ProgramsClient() {
               <div key={user.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ width: 28, height: 28, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--gold)' }}>
-                    {user.avatarUrl ? <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : displayName(user)[0].toUpperCase()}
+                    {avatarSrc(user) ? <img src={avatarSrc(user)!} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : displayName(user)[0].toUpperCase()}
                   </div>
                   <span style={{ fontWeight: 700, fontSize: 14, flex: 1 }}>{displayName(user)}</span>
                   {pending > 0 && (
@@ -148,7 +149,7 @@ export default function ProgramsClient() {
 }
 
 interface SearchWorkout { id: string; name: string; duration?: number | null }
-interface SearchUser { id: string; firstName: string | null; lastName: string | null; email: string; avatarUrl: string | null }
+interface SearchUser { id: string; firstName: string | null; lastName: string | null; email: string; hasAvatar?: boolean }
 
 function NewAssignmentModal({ onClose, onAssigned }: { onClose: () => void; onAssigned: () => void }) {
   const [userQuery, setUserQuery] = useState('')

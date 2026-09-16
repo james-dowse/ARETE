@@ -22,6 +22,9 @@ model Movement {
   createdByUserId  String?
   workoutMovements WorkoutMovement[]
   favorites        FavoriteMovement[]
+
+  @@index([name])
+  @@index([custom, name])
 }
 
 model Workout {
@@ -52,6 +55,13 @@ model Workout {
   assignments AssignedWorkout[]
   template    WorkoutTemplate?  @relation(fields: [templateId], references: [id])
   user        InvitedUser?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // SQLite n'indexe pas les clés étrangères automatiquement : sans ces index,
+  // chaque filtre de liste et chaque jointure faisait un parcours complet de
+  // table — et chaque suppression en cascade aussi.
+  @@index([userId, createdAt])
+  @@index([public, createdAt])
+  @@index([templateId])
 }
 
 model WorkoutBlock {
@@ -64,6 +74,8 @@ model WorkoutBlock {
   superset     Boolean           @default(false)
   workout      Workout           @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   movements    WorkoutMovement[]
+
+  @@index([workoutId, order])
 }
 
 model WorkoutMovement {
@@ -79,6 +91,10 @@ model WorkoutMovement {
   movement   Movement      @relation(fields: [movementId], references: [id])
   workout    Workout       @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   block      WorkoutBlock? @relation(fields: [blockId], references: [id])
+
+  @@index([workoutId, order])
+  @@index([blockId])
+  @@index([movementId])
 }
 
 model WorkoutTemplate {
@@ -89,6 +105,8 @@ model WorkoutTemplate {
   blocks    TemplateBlock[]
   workouts  Workout[]
   user      InvitedUser?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
 }
 
 model TemplateBlock {
@@ -100,6 +118,8 @@ model TemplateBlock {
   count      Int
   order      Int
   template   WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
 }
 
 model InvitedUser {
@@ -163,6 +183,9 @@ model AssignedWorkout {
   createdAt    DateTime    @default(now())
 
   @@index([assignedToId])
+
+  @@index([workoutId])
+  @@index([assignedById])
 }
 
 // Abonnement à un profil (pas à un workout précis) — sert uniquement à
@@ -178,6 +201,8 @@ model Follow {
   followed      InvitedUser @relation("Followed", fields: [followedId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, followedId])
+
+  @@index([followedId])
 }
 
 model WeekPlan {
@@ -198,6 +223,9 @@ model WeekPlanEntry {
   order      Int       @default(0)
   weekPlan   WeekPlan  @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
   workout    Workout   @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@index([weekPlanId, dayOfWeek, order])
+  @@index([workoutId])
 }
 
 model FavoriteMovement {
@@ -209,6 +237,8 @@ model FavoriteMovement {
   movement   Movement    @relation(fields: [movementId], references: [id], onDelete: Cascade)
 
   @@unique([userId, movementId])
+
+  @@index([movementId])
 }
 
 model SavedWorkout {
@@ -222,6 +252,8 @@ model SavedWorkout {
   lastViewedAt DateTime?
 
   @@unique([workoutId, userId])
+
+  @@index([userId, savedAt])
 }
 
 model WorkoutSession {
@@ -233,6 +265,9 @@ model WorkoutSession {
   user      InvitedUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
   workout   Workout      @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   sets      SessionSet[]
+
+  @@index([userId, doneAt])
+  @@index([workoutId])
 }
 
 model SessionSet {
@@ -260,6 +295,8 @@ model FavoriteWorkout {
   workout   Workout     @relation(fields: [workoutId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workoutId])
+
+  @@index([workoutId])
 }
 
 model AttributeOption {
@@ -323,4 +360,8 @@ model WorkoutShare {
   status         String       @default("pending")
   createdAt      DateTime     @default(now())
   acceptedAt     DateTime?
+
+  @@index([workoutId])
+  @@index([sharedToUserId])
+  @@index([sharedByUserId])
 }

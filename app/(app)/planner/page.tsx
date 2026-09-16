@@ -145,8 +145,8 @@ function WorkoutPickerModal({ dayLabel, onPick, onClose }: {
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
                 <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {w.imageUrl
-                    ? <img src={w.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%' }} />
-                    : <img src="/logo.svg" alt="" style={{ width: '45%', height: '45%', objectFit: 'contain', opacity: 0.18 }} />}
+                    ? <img src={w.imageUrl} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%' }} />
+                    : <img src="/logo.svg" alt="" loading="lazy" decoding="async" style={{ width: '45%', height: '45%', objectFit: 'contain', opacity: 0.18 }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

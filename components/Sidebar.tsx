@@ -31,7 +31,7 @@ const AUTO_COLLAPSE_BELOW = 1024
 interface SearchResult {
   workouts: { id: string; name: string; duration?: number | null; movements: { movement: { bioType: string } }[] }[]
   movements: { id: string; name: string; bioType: string; complexity: string }[]
-  users: { id: string; firstName: string | null; lastName: string | null; avatarUrl: string | null }[]
+  users: { id: string; firstName: string | null; lastName: string | null; hasAvatar?: boolean }[]
 }
 
 interface NotifItem {
@@ -75,11 +75,33 @@ export default function Sidebar() {
     }).catch(() => {})
   }, [])
 
+  // Sondage des notifications suspendu quand l'onglet (ou l'application, sur
+  // mobile) n'est pas au premier plan : sans ça, une app ouverte en arrière-plan
+  // continuait à interroger le serveur toutes les minutes indéfiniment — coût
+  // réseau et batterie pour un badge que personne ne regarde. On rattrape le
+  // retard au retour au premier plan.
   useEffect(() => {
     if (!loggedIn) return
-    fetchNotifs()
-    const id = setInterval(fetchNotifs, 60000)
-    return () => clearInterval(id)
+    let id: ReturnType<typeof setInterval> | null = null
+
+    const start = () => {
+      if (id !== null) return
+      fetchNotifs()
+      id = setInterval(fetchNotifs, 60000)
+    }
+    const stop = () => {
+      if (id === null) return
+      clearInterval(id)
+      id = null
+    }
+    const onVisibility = () => (document.visibilityState === 'visible' ? start() : stop())
+
+    onVisibility()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      stop()
+    }
   }, [loggedIn, fetchNotifs])
 
   const openNotifs = () => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserId } from '@/lib/session'
+import { getAvatarOwnerIds, withHasAvatar } from '@/lib/avatar-server'
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim()
@@ -8,7 +9,7 @@ export async function GET(req: NextRequest) {
 
   const userId = await getCurrentUserId()
 
-  const [workouts, movements, users] = await Promise.all([
+  const [workouts, movements, users, avatarOwners] = await Promise.all([
     userId
       ? prisma.workout.findMany({
           where: {
@@ -36,11 +37,18 @@ export async function GET(req: NextRequest) {
             NOT: { id: userId },
             OR: [{ firstName: { contains: q } }, { lastName: { contains: q } }],
           },
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+          // Pas d'`avatarUrl` (data URI base64) dans une recherche qui repart à
+          // chaque frappe : l'image passe par /api/users/[id]/avatar.
+          select: { id: true, firstName: true, lastName: true },
           take: 6,
         })
-      : Promise.resolve([]),
-  ])
+      : Promise.resolve([] as never[]),
+    getAvatarOwnerIds(),
+  ]) as [unknown[], unknown[], { id: string }[], Set<string>]
 
-  return NextResponse.json({ workouts, movements, users })
+  return NextResponse.json({
+    workouts,
+    movements,
+    users: users.map(u => withHasAvatar(u, avatarOwners)),
+  })
 }

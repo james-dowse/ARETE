@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { isAdmin } from '@/lib/admin'
+import { invalidateAvatarOwners } from '@/lib/avatar-server'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
@@ -30,5 +31,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
     select: { id: true, email: true, firstName: true, lastName: true, bio: true, avatarUrl: true },
   })
+  if (avatarUrl !== undefined) invalidateAvatarOwners()
   return NextResponse.json(updated)
 }

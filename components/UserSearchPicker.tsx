@@ -8,7 +8,9 @@ export interface FoundUser {
   firstName: string | null
   lastName: string | null
   email: string
-  avatarUrl: string | null
+  // `hasAvatar` plutôt que l'image : la recherche repart à chaque frappe, on ne
+  // veut pas retransporter un data URI base64 par résultat (voir lib/avatar.ts).
+  hasAvatar?: boolean
 }
 
 export default function UserSearchPicker({ onSelect, placeholder, autoFocus }: {

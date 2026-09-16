@@ -1,4 +1,5 @@
 import AppShell from '@/components/AppShell'
+import AttributesSync from '@/components/AttributesSync'
 import { syncAttributesFromDb } from '@/lib/attributes-server'
 
 // Layout partagé par toutes les pages de l'app connectée.
@@ -15,7 +16,18 @@ import { syncAttributesFromDb } from '@/lib/attributes-server'
 // COMPLEXITY_COLORS était SSR avec les valeurs anglaises par défaut, puis
 // re-rendue par React au montage une fois <AttributesSync/> arrivé côté
 // client — un flash de contenu incorrect à chaque chargement de page.
+//
+// Le référentiel est en plus transmis à <AttributesSync/> : rendu avant
+// {children}, il applique les mêmes valeurs au bundle client AVANT le premier
+// rendu. Sans ça, le HTML serveur (valeurs françaises) et le premier rendu
+// client (valeurs anglaises par défaut) divergeaient, et React jetait tout le
+// HTML serveur pour re-rendre l'arbre entier — à chaque page.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  await syncAttributesFromDb()
-  return <AppShell>{children}</AppShell>
+  const attributes = await syncAttributesFromDb()
+  return (
+    <>
+      <AttributesSync initial={attributes} />
+      <AppShell>{children}</AppShell>
+    </>
+  )
 }

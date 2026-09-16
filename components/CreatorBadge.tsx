@@ -1,8 +1,14 @@
+import { avatarSrc } from '@/lib/avatar'
+
 interface CreatorUser {
+  id?: string | null
   firstName?: string | null
   lastName?: string | null
   email?: string
+  // Les listes ne transportent plus le data URI (voir lib/avatar.ts) : elles
+  // envoient `hasAvatar`, et l'image est chargée depuis /api/users/[id]/avatar.
   avatarUrl?: string | null
+  hasAvatar?: boolean
 }
 
 export function creatorName(user: CreatorUser | null | undefined): string {
@@ -30,6 +36,7 @@ function HelmetWatermark({ size }: { size: number }) {
 
 export default function CreatorBadge({ user, size = 28 }: { user: CreatorUser | null | undefined; size?: number }) {
   const name = creatorName(user)
+  const src = avatarSrc(user)
   return (
     <div
       title={name || undefined}
@@ -39,8 +46,8 @@ export default function CreatorBadge({ user, size = 28 }: { user: CreatorUser | 
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >
-      {user?.avatarUrl ? (
-        <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      {src ? (
+        <img src={src} alt="" loading="lazy" decoding="async" width={size} height={size} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
       ) : (
         <HelmetWatermark size={Math.round(size * 0.65)} />
       )}

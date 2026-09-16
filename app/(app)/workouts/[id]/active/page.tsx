@@ -48,8 +48,12 @@ export default function ActivePage() {
       return next
     })
 
+  // Mise à jour dans un effet, pas en plein rendu : écrire dans une ref pendant
+  // le rendu est une mutation que React peut jeter si le rendu est abandonné
+  // (mode concurrent). Un tick de retard sur un compteur de secondes est sans
+  // conséquence — c'est déjà le traitement appliqué à `doneRef` juste en dessous.
   const elapsedRef = useRef(elapsed)
-  elapsedRef.current = elapsed
+  useEffect(() => { elapsedRef.current = elapsed }, [elapsed])
   const doneRef = useRef(done)
   useEffect(() => { doneRef.current = done }, [done])
 
@@ -166,6 +170,11 @@ export default function ActivePage() {
       note,
       logInputs,
       startedAt: startedAtRef.current,
+      // Le nom est persisté ici pour que la bannière « séance en cours »
+      // (components/ResumeSessionBanner.tsx) l'affiche sans avoir à recharger
+      // la séance complète — elle tirait tout le workout, ses blocs et tous ses
+      // mouvements, juste pour ce libellé.
+      name: workout.name,
     }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done, supersetBlocs, note, logInputs, started, workout])

@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Karla, Newsreader } from "next/font/google";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
-import AttributesSync from "@/components/AttributesSync";
 import { ToastProvider } from "@/components/Toast";
 import { ConfirmProvider } from "@/components/ConfirmDialog";
 import "./globals.css";
@@ -38,7 +37,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" className={`h-full ${inter.variable} ${fraunces.variable}`}>
       <body className="min-h-full flex">
         <ServiceWorkerRegister />
-        <AttributesSync />
+        {/* <AttributesSync/> a été déplacé dans app/(app)/layout.tsx, qui peut
+            lui passer le référentiel déjà chargé côté serveur. Ici, il partait
+            systématiquement chercher /api/attributes au montage — y compris sur
+            la page de connexion et les pages d'invitation, qui n'utilisent
+            aucune valeur de référentiel. */}
         <ToastProvider>
           <ConfirmProvider>{children}</ConfirmProvider>
         </ToastProvider>

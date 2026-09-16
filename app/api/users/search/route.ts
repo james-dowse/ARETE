@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserId } from '@/lib/session'
+import { getAvatarOwnerIds, withHasAvatar } from '@/lib/avatar-server'
 
 // Recherche de profil par nom OU email — contrairement à /api/search (qui exclut
 // l'email pour la découverte publique de profils à suivre), ce point d'entrée
@@ -24,9 +25,12 @@ export async function GET(req: NextRequest) {
         { email: { contains: q } },
       ],
     },
-    select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true },
+    // Pas d'`avatarUrl` : data URI base64, répété pour chaque résultat à chaque
+    // frappe au clavier. L'image passe par /api/users/[id]/avatar (cacheable).
+    select: { id: true, firstName: true, lastName: true, email: true },
     take: 8,
-  })
+  }) as { id: string }[]
 
-  return NextResponse.json({ users })
+  const avatarOwners = await getAvatarOwnerIds()
+  return NextResponse.json({ users: users.map(u => withHasAvatar(u, avatarOwners)) })
 }

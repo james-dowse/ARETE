@@ -1,3 +1,5 @@
+import { FALLBACK_ATTRIBUTE_COLOR } from './color'
+
 // Ces types documentent les valeurs par défaut (seed) — la liste réelle peut être
 // étendue/renommée en base via Admin > Référentiels, d'où le typage `string` des
 // tableaux ci-dessous plutôt qu'un union type figé.
@@ -160,7 +162,11 @@ export function applyAttributeOverrides(rows: {
     targetArray.push(...sorted.map(o => o.value))
     if (colorMap) {
       for (const key of Object.keys(colorMap)) delete colorMap[key]
-      sorted.forEach(o => { if (o.color) colorMap[o.value] = o.color })
+      // Repli systématique : une option enregistrée sans couleur laissait la map
+      // sans entrée, et tous les écrans qui composent une couleur à partir d'elle
+      // (`${color}18`, readableAccent(color)…) recevaient `undefined` — au mieux
+      // une bordure invalide, au pire un plantage de rendu de la page entière.
+      sorted.forEach(o => { colorMap[o.value] = o.color || FALLBACK_ATTRIBUTE_COLOR })
     }
     if (iconMap) {
       for (const key of Object.keys(iconMap)) delete iconMap[key]

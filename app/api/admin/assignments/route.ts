@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { isAdmin } from '@/lib/admin'
+import { getAvatarOwnerIds, withHasAvatar } from '@/lib/avatar-server'
 
 // GET — vue d'ensemble de tous les WOD assignés, tous users confondus (dashboard
 // de pilotage admin). La complétion se déduit comme dans /api/assignments : une
@@ -17,19 +18,24 @@ export async function GET() {
     orderBy: { createdAt: 'desc' },
     include: {
       workout: { select: { id: true, name: true, duration: true } },
-      assignedTo: { select: { id: true, email: true, firstName: true, lastName: true, avatarUrl: true } },
+      // `avatarUrl` (data URI base64) exclu : l'image passe par
+      // /api/users/[id]/avatar, mise en cache une fois par utilisateur.
+      assignedTo: { select: { id: true, email: true, firstName: true, lastName: true } },
       assignedBy: { select: { firstName: true, lastName: true, email: true } },
     },
-  }) as ({ workoutId: string; assignedToId: string; createdAt: Date } & Record<string, unknown>)[]
+  }) as ({ workoutId: string; assignedToId: string; createdAt: Date; assignedTo: { id: string } } & Record<string, unknown>)[]
 
-  const sessions = await prisma.workoutSession.findMany({
-    where: { workoutId: { in: assignments.map(a => a.workoutId) } },
-    select: { userId: true, workoutId: true, doneAt: true },
-  }) as { userId: string; workoutId: string; doneAt: Date }[]
+  const [sessions, avatarOwners] = await Promise.all([
+    prisma.workoutSession.findMany({
+      where: { workoutId: { in: assignments.map(a => a.workoutId) } },
+      select: { userId: true, workoutId: true, doneAt: true },
+    }) as Promise<{ userId: string; workoutId: string; doneAt: Date }[]>,
+    getAvatarOwnerIds(),
+  ])
 
   const result = assignments.map(a => {
     const done = sessions.some(s => s.userId === a.assignedToId && s.workoutId === a.workoutId && s.doneAt >= a.createdAt)
-    return { ...a, done }
+    return { ...a, assignedTo: withHasAvatar(a.assignedTo, avatarOwners), done }
   })
 
   return NextResponse.json(result)

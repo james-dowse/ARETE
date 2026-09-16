@@ -3,8 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { sendInvitationEmail, sendRelayEmail } from '@/lib/email'
 import { getCurrentUser } from '@/lib/session'
 import { isAdmin } from '@/lib/admin'
+import { getAvatarOwnerIds, withHasAvatar } from '@/lib/avatar-server'
 
-const appUrl = () => process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3040'
+const appUrl =() => process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3040'
 
 async function requireAdmin() {
   const user = await getCurrentUser()
@@ -16,10 +17,22 @@ async function requireAdmin() {
 export async function GET() {
   const deny = await requireAdmin()
   if (deny) return deny
+  // Projection explicite plutôt qu'un `findMany` nu : celui-ci renvoyait aussi
+  // `loginToken` / `loginTokenExp` (jetons de connexion magique, valables pour
+  // ouvrir une session au nom de l'utilisateur) et `avatarUrl` (data URI base64
+  // complet) pour chaque compte. Aucun des deux n'est utilisé par l'écran admin
+  // — seul `token`, le jeton d'invitation, sert à composer le lien d'invitation.
   const users = await prisma.invitedUser.findMany({
     orderBy: { invitedAt: 'desc' },
-  })
-  return NextResponse.json(users)
+    select: {
+      id: true, email: true, token: true, status: true,
+      invitedAt: true, acceptedAt: true,
+      firstName: true, lastName: true, bio: true,
+    },
+  }) as { id: string }[]
+
+  const avatarOwners = await getAvatarOwnerIds()
+  return NextResponse.json(users.map(u => withHasAvatar(u, avatarOwners)))
 }
 
 // POST — inviter un nouvel utilisateur (ou renvoyer l'invitation)

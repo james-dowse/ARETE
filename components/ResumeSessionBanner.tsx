@@ -10,9 +10,16 @@ interface ActiveSession { id: string; name: string | null; startedAt: number; do
 // Sans workoutId : scanne toutes les séances (dashboard). Avec workoutId : seulement celle-là.
 export default function ResumeSessionBanner({ workoutId }: { workoutId?: string }) {
   const [session, setSession] = useState<ActiveSession | null>(null)
+  // Rafraîchi toutes les minutes : le libellé « démarrée il y a … » se figeait
+  // sur la valeur du premier rendu tant que la page restait ouverte.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(t)
+  }, [])
 
   useEffect(() => {
-    const found: { id: string; startedAt: number; doneSets: number }[] = []
+    const found: ActiveSession[] = []
     const stale: string[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
@@ -23,7 +30,7 @@ export default function ResumeSessionBanner({ workoutId }: { workoutId?: string 
         const s = JSON.parse(localStorage.getItem(key) ?? '')
         if (s?.startedAt && Date.now() - s.startedAt < MAX_AGE_MS) {
           const doneSets = Object.values((s.done ?? {}) as Record<string, number>).reduce((a, b) => a + b, 0)
-          found.push({ id, startedAt: s.startedAt, doneSets })
+          found.push({ id, startedAt: s.startedAt, doneSets, name: typeof s.name === 'string' ? s.name : null })
         } else {
           stale.push(key)
         }
@@ -32,15 +39,23 @@ export default function ResumeSessionBanner({ workoutId }: { workoutId?: string 
     stale.forEach(k => localStorage.removeItem(k))
     if (found.length === 0) return
     const latest = found.sort((a, b) => b.startedAt - a.startedAt)[0]
-    setSession({ ...latest, name: null })
+    setSession(latest)
+
+    // Le nom est normalement déjà dans l'état persisté (la page de séance
+    // l'écrit) : on ne recharge la séance que pour les sessions démarrées avant
+    // cette version, sinon on tirait tout le workout — blocs et mouvements
+    // compris — pour un simple libellé.
+    if (latest.name) return
     fetch(`/api/workouts/${latest.id}`)
       .then(r => (r.ok ? r.json() : null))
       .then(w => { if (w?.name) setSession(s => (s && s.id === latest.id ? { ...s, name: w.name } : s)) })
       .catch(() => {})
   }, [workoutId])
 
+  // `now` figé au montage plutôt que `Date.now()` en plein rendu : la durée
+  // affichée reste stable entre deux rendus et le composant redevient pur.
+  const min = session ? Math.max(1, Math.round((now - session.startedAt) / 60000)) : 0
   if (!session) return null
-  const min = Math.max(1, Math.round((Date.now() - session.startedAt) / 60000))
 
   return (
     <Link href={`/workouts/${session.id}/active`} style={{ textDecoration: 'none', display: 'block', marginBottom: 20 }}>
