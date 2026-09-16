@@ -271,12 +271,25 @@ export default function ActivePage() {
 
   const hasBlocks = !!(workout && workout.blocks.length > 0)
 
+  // Groupes affichés pendant la séance : les blocs, plus un groupe final pour
+  // les mouvements rattachés à aucun bloc.
+  //
+  // Sans ce dernier, une séance comportant des blocs mais dont certains
+  // mouvements ont `blockId = null` les faisait purement et simplement
+  // disparaître de l'écran : la liste ne montrait plus que des en-têtes de
+  // blocs vides, et il devenait impossible de s'entraîner.
+  const orphanMovements: WM[] = workout && hasBlocks
+    ? workout.movements.filter(wm => !wm.blockId || !workout.blocks.some(b => b.id === wm.blockId))
+    : []
+  const displayBlocks: (Block | null)[] = workout
+    ? (hasBlocks ? [...workout.blocks, ...(orphanMovements.length > 0 ? [null] : [])] : [null])
+    : []
+
   // Current movement = next to do, superset-aware (picks active movement in current round)
   const currentWm = (() => {
     if (!workout) return null
-    const blocks = hasBlocks ? workout.blocks : [null as null]
-    for (const block of blocks) {
-      const movs = block ? workout.movements.filter(wm => wm.blockId === block.id) : workout.movements
+    for (const block of displayBlocks) {
+      const movs = block ? workout.movements.filter(wm => wm.blockId === block.id) : (hasBlocks ? orphanMovements : workout.movements)
       const incomplete = movs.filter(m => (done[m.id] ?? 0) < (m.sets ?? 3))
       if (incomplete.length === 0) continue
       if (block && supersetBlocs.has(block.id)) {
@@ -464,7 +477,13 @@ export default function ActivePage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
 
               {/* Cadre vidéo (ou placeholder si pas de vidéo) */}
-              <div style={{ position: 'relative', flex: '1 1 480px', minWidth: 280, aspectRatio: '16 / 10', borderRadius: 18, overflow: 'hidden', background: 'radial-gradient(ellipse at 38% 30%, #3a3428 0%, #221f1a 45%, #0e0d0a 100%)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              {/* Format suivant l'écran plutôt qu'un 16/10 fixe : les démos
+                  d'exercice sont très souvent tournées en vertical, et un embed
+                  YouTube ne peut pas être recadré en `cover` — une vidéo
+                  verticale se retrouvait avec d'énormes bandes noires
+                  latérales sur téléphone. Le 4/5 mobile les réduit nettement
+                  tout en gardant le 16/10 éditorial sur grand écran. */}
+              <div className="wod-video-stage" style={{ position: 'relative', flex: '1 1 480px', minWidth: 280, borderRadius: 18, overflow: 'hidden', background: 'radial-gradient(ellipse at 38% 30%, #3a3428 0%, #221f1a 45%, #0e0d0a 100%)', border: '1px solid rgba(255,255,255,0.08)' }}>
                 {currentEmbed ? (
                   currentEmbed.type === 'video' ? (
                     <video key={currentEmbed.url} src={currentEmbed.url} autoPlay muted loop playsInline controls
@@ -582,8 +601,8 @@ export default function ActivePage() {
 
       {/* ── Movements ── */}
       <div style={{ flex: 1, padding: '16px 16px 160px', maxWidth: 680, margin: '0 auto', width: '100%' }}>
-        {(hasBlocks ? workout.blocks : [null]).map((block, bi) => {
-          const movs = hasBlocks ? workout.movements.filter(wm => wm.blockId === block!.id) : workout.movements
+        {displayBlocks.map((block, bi) => {
+          const movs = block ? workout.movements.filter(wm => wm.blockId === block.id) : (hasBlocks ? orphanMovements : workout.movements)
           const isSuperset = !!(block?.id && supersetBlocs.has(block.id))
           const completedRounds = isSuperset ? Math.min(...movs.map(m => done[m.id] ?? 0)) : 0
           const maxRounds = isSuperset ? Math.max(...movs.map(m => m.sets ?? 3)) : 0
@@ -596,7 +615,7 @@ export default function ActivePage() {
               {hasBlocks && (
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10, paddingLeft: 4, gap: 8 }}>
                   <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', flex: 1 }}>
-                    Bloc {bi + 1}{block?.bioType ? ` · ${block.bioType}` : ''}{block?.instructions ? ` · ${block.instructions}` : ''}
+                    {block ? `Bloc ${bi + 1}` : 'Hors bloc'}{block?.bioType ? ` · ${block.bioType}` : ''}{block?.instructions ? ` · ${block.instructions}` : ''}
                     {isSuperset && !blocAllDone && <span style={{ color: 'var(--gold)', marginLeft: 6 }}>· Round {completedRounds + 1}/{maxRounds}</span>}
                     {isSuperset && blocAllDone && <span style={{ color: 'var(--green)', marginLeft: 6 }}>· Terminé</span>}
                   </div>
@@ -811,14 +830,18 @@ export default function ActivePage() {
             <div style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
               {allDone ? '🎉 Toutes les séries terminées !' : `${pct}% · ${doneSets}/${totalSets()} séries`}
             </div>
+            {/* Mousse — « l'accompli » dans la palette. L'or était réservé à la
+                marque et à la progression, et le terracotta sert déjà au bouton
+                de série suivante juste au-dessus : deux actions terracotta
+                simultanées se seraient disputé le regard en pleine séance. */}
             <button onClick={() => setShowFinish(true)}
               style={{
-                padding: '11px 24px', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: 'pointer', flexShrink: 0,
-                background: allDone ? 'var(--green)' : 'rgba(200,165,95,0.15)',
-                border: `1px solid ${allDone ? 'transparent' : 'rgba(200,165,95,0.3)'}`,
-                color: allDone ? '#000' : 'var(--gold)',
-                boxShadow: allDone ? '0 0 20px rgba(187,176,147,0.4)' : 'none',
-                transition: 'all 0.3s',
+                padding: '11px 24px', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: 800, cursor: 'pointer', flexShrink: 0,
+                background: allDone ? 'var(--green)' : 'var(--cypress-ghost)',
+                border: `1px solid ${allDone ? 'transparent' : 'var(--cypress-light)'}`,
+                color: allDone ? 'var(--ink)' : 'var(--cypress-light)',
+                boxShadow: allDone ? '0 0 20px rgba(134,160,107,0.35)' : 'none',
+                transition: 'all var(--t-med) var(--ease)',
               }}>
               {allDone ? '🏁 Terminer la séance' : 'Terminer'}
             </button>

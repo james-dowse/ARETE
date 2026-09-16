@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserId } from '@/lib/session'
 import { getAvatarOwnerIds, withHasAvatar } from '@/lib/avatar-server'
-import { WORKOUT_SELECT } from '@/lib/workout-select'
+import { WORKOUT_SELECT, withCover } from '@/lib/workout-select'
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     ]) as [{ source: string; savedAt: Date; lastViewedAt: Date | null; workoutId: string; workout: Record<string, unknown> }[], { workoutId: string }[], Set<string>]
     const favSet = new Set(favIds.map(f => f.workoutId))
     const result = rows.map(r => ({
-      ...r.workout,
+      ...withCover(r.workout as { imageUrl?: string | null; movements?: { movement?: { videoUrl?: string | null } | null }[] }),
       user: withHasAvatar(r.workout.user as { id: string } | null, avatarOwners),
       _savedSource: r.source,
       _savedAt: r.savedAt,
@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
 
   // Transformer savedBy → isSaved (booléen)
   const result = workouts.map(w => ({
-    ...w,
+    ...withCover(w as { imageUrl?: string | null; movements?: { movement?: { videoUrl?: string | null } | null }[] }),
     user: withHasAvatar(w.user as { id: string } | null, avatarOwners),
     isSaved: needsSavedBy && Array.isArray((w as { savedBy?: { id: string }[] }).savedBy) && (w as { savedBy?: { id: string }[] }).savedBy!.length > 0,
     isFavorite: needsFavorites ? favSet.has(w.id) : undefined,

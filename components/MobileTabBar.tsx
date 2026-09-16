@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Zap, BookOpen, Calendar, Library, UserCircle } from 'lucide-react'
+import { LayoutDashboard, Zap, BookOpen, Calendar, Library } from 'lucide-react'
 
 // Barre d'onglets mobile — convention native plutôt que la sidebar rail
 // repliée (52px), inutilisable au pouce. Masquée en desktop via CSS
@@ -12,7 +12,9 @@ const TABS = [
   { href: '/workouts',  label: 'Séances',    icon: BookOpen },
   { href: '/planner',   label: 'Planning',   icon: Calendar },
   { href: '/library',   label: 'Biblio',     icon: Library },
-  { href: '/profile',   label: 'Profil',     icon: UserCircle },
+  // Cinq entrées, pas six : au-delà, les cibles tactiles passent sous les
+  // 48 px recommandés sur un écran de 360 px et les libellés se tronquent.
+  // Le profil reste accessible depuis la barre latérale et le tableau de bord.
 ]
 
 export default function MobileTabBar() {

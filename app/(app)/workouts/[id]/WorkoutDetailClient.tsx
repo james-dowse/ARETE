@@ -7,6 +7,7 @@ import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, COMPLEXITIES, effec
 import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
 import { useToast } from '@/components/Toast'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
+import OverflowMenu from '@/components/OverflowMenu'
 import { readableAccent } from '@/lib/color'
 import { useConfirm } from '@/components/ConfirmDialog'
 import Link from 'next/link'
@@ -612,48 +613,31 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {!editMode ? (
               <>
+                {/* Deux actions en clair, le reste dans le menu « … ». Huit
+                    boutons de poids identique sur deux rangées rendaient
+                    « Démarrer » invisible. Terracotta plein : la palette la
+                    réserve à « l'action, le maintenant » — elle était en or,
+                    couleur de la marque et de la progression. */}
                 <button onClick={() => router.push(`/workouts/${initial.id}/active`)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'rgba(200,165,95,0.12)', border: '1px solid rgba(200,165,95,0.35)', borderRadius: 9, color: 'var(--gold)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                  <PlayCircle size={14} /> Démarrer
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', background: 'var(--accent)', border: '1px solid transparent', borderRadius: 'var(--r-sm)', color: 'var(--on-accent)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--elev-1)' }}>
+                  <PlayCircle size={15} /> Démarrer
                 </button>
                 <button onClick={handleLogSession} disabled={loggingSession}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(187,176,147,0.1)', border: '1px solid rgba(187,176,147,0.3)', borderRadius: 9, color: 'var(--green)', fontSize: 13, fontWeight: 600, cursor: loggingSession ? 'wait' : 'pointer' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 15px', background: 'none', border: '1px solid var(--cypress-light)', borderRadius: 'var(--r-sm)', color: 'var(--green)', fontSize: 13, fontWeight: 600, cursor: loggingSession ? 'wait' : 'pointer' }}>
                   <CheckCircle2 size={14} /> {loggingSession ? '…' : 'J\'ai fait'}
                 </button>
-                <button onClick={() => window.open(`/workouts/${initial.id}/print`, '_blank')}
-                  title="Exporter en PDF"
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>
-                  <FileText size={14} />
-                </button>
                 <button onClick={() => setShowAddToWeek(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', borderRadius: 9, color: 'var(--gold)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 15px', background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', color: 'var(--text-muted)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                   <CalendarPlus size={14} /> Planning
                 </button>
-                <button onClick={() => setShowShare(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                  <Share2 size={14} /> Recommander
-                </button>
-                {isAdmin && (
-                  <button onClick={() => setShowAssign(true)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--crimson-ghost)', border: '1px solid var(--crimson-border)', borderRadius: 9, color: 'var(--crimson-bright)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                    <UserPlus size={14} /> Assigner
-                  </button>
-                )}
-                <button onClick={handleDuplicate} disabled={duplicating}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: duplicating ? 'wait' : 'pointer', opacity: duplicating ? 0.7 : 1 }}>
-                  <Copy size={14} /> {duplicating ? 'Copie…' : 'Dupliquer'}
-                </button>
-                <button onClick={handleEnterEdit}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                  <Pencil size={14} /> Modifier
-                </button>
-                <button onClick={handleDelete} disabled={deleting}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 9, color: deleting ? 'var(--text-dim)' : 'var(--red)', fontSize: 13, fontWeight: 600, cursor: deleting ? 'wait' : 'pointer', opacity: deleting ? 0.6 : 1, transition: 'all 0.15s' }}
-                  onMouseEnter={e => { if (!deleting) { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor = 'var(--red)' } }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'var(--border)' }}
-                >
-                  <Trash2 size={14} />
-                </button>
+                <OverflowMenu items={[
+                  { label: 'Recommander', icon: <Share2 size={14} />, onClick: () => setShowShare(true) },
+                  ...(isAdmin ? [{ label: 'Assigner à un utilisateur', icon: <UserPlus size={14} />, onClick: () => setShowAssign(true) }] : []),
+                  { label: 'Exporter en PDF', icon: <FileText size={14} />, onClick: () => window.open(`/workouts/${initial.id}/print`, '_blank') },
+                  { label: duplicating ? 'Copie…' : 'Dupliquer', icon: <Copy size={14} />, onClick: () => handleDuplicate(), disabled: duplicating },
+                  { label: 'Modifier', icon: <Pencil size={14} />, onClick: () => handleEnterEdit() },
+                  { label: deleting ? 'Suppression…' : 'Supprimer', icon: <Trash2 size={14} />, onClick: () => handleDelete(), danger: true, disabled: deleting },
+                ]} />
               </>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 9 }}>

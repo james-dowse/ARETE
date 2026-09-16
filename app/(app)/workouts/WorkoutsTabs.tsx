@@ -8,6 +8,8 @@ import { stripHtmlMultiline } from '@/lib/html'
 import { readableAccent } from '@/lib/color'
 import DifficultyImageTint, { DIFFICULTY_TINT_IMG_FILTER } from '@/components/DifficultyImageTint'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
+import FilterPanel, { FilterGroup, type ActiveFilter } from '@/components/FilterPanel'
+import OverflowMenu from '@/components/OverflowMenu'
 import { useConfirm } from '@/components/ConfirmDialog'
 import { useToast } from '@/components/Toast'
 import { Zap, Users, User, Share2, X, CheckCircle2, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search, ArrowUpDown } from 'lucide-react'
@@ -28,6 +30,9 @@ interface Workout {
   createdAt: string
   duration?: number | null
   imageUrl?: string | null
+  // Couverture calculée côté serveur : imageUrl, sinon la vignette de la
+  // première vidéo de démonstration de la séance (lib/workout-select.ts).
+  coverUrl?: string | null
   imagePosition?: string | null
   movements: WorkoutMovementItem[]
   blocks?: (DurationBlock & { order?: number; bioType?: string | null })[]
@@ -65,6 +70,14 @@ const DURATION_PRESET_LABELS: Record<Exclude<DurationPreset, 'all' | 'custom'>, 
   '30': '~30 min',
   '45': '~45 min',
   '60': '~60 min',
+}
+
+// Libellé lisible d'une fourchette de durée personnalisée, pour la pastille de
+// filtre actif (le panneau étant replié, la pastille est la seule trace).
+function durationLabel(mode: 'between' | 'lte' | 'gte', min: string, max: string): string {
+  if (mode === 'lte') return `≤ ${max || '?'} min`
+  if (mode === 'gte') return `≥ ${min || '?'} min`
+  return `${min || '?'}–${max || '?'} min`
 }
 
 // Tolérance ±5 min sur les presets ronds : une séance à 28 min ne doit pas être
@@ -259,8 +272,10 @@ function WorkoutCard({
   const estMin = estimateWorkoutMinutes(toDurationMovements(w.movements), w.blocks)
   const { columns: previewColumns, hiddenBlocksCount } = buildCardPreview(w)
 
-  async function handleDuplicate(e: React.MouseEvent) {
-    e.preventDefault(); e.stopPropagation()
+  // `e` optionnel : ces actions sont aussi déclenchées depuis le menu « … »,
+  // qui n'a pas d'événement de carte à neutraliser.
+  async function handleDuplicate(e?: React.MouseEvent) {
+    e?.preventDefault(); e?.stopPropagation()
     setDuplicating(true)
     const res = await fetch(`/api/workouts/${w.id}/duplicate`, { method: 'POST' })
     const copy = await res.json()
@@ -268,8 +283,8 @@ function WorkoutCard({
     router.push(`/workouts/${copy.id}`)
   }
 
-  async function handleDelete(e: React.MouseEvent) {
-    e.preventDefault(); e.stopPropagation()
+  async function handleDelete(e?: React.MouseEvent) {
+    e?.preventDefault(); e?.stopPropagation()
     const savedCount = w._count?.savedBy ?? 0
     const msg = savedCount > 0
       ? `Supprimer cette séance ? ${savedCount} utilisateur${savedCount > 1 ? 's ont' : ' a'} sauvegardé ce workout et perdra${savedCount > 1 ? 'ont' : ''} l'accès.`
@@ -307,14 +322,26 @@ function WorkoutCard({
     <div className="card card-interactive" style={{ borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
       <Link href={`/workouts/${w.id}`} style={{ textDecoration: 'none', display: 'block', padding: '18px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'stretch', gap: 14 }}>
-          <div style={{ position: 'relative', width: 90, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {w.imageUrl ? (
+          {/* Couverture : l'image de la séance, sinon la vignette de sa première
+              vidéo de démonstration (lib/workout-select.ts). Faute des deux, une
+              plaque teintée par la difficulté plutôt que le même logo délavé sur
+              toutes les cartouches — une liste doit se lire au coup d'œil. */}
+          <div className="wod-card-cover" style={{
+            position: 'relative', borderRadius: 'var(--r-sm)', overflow: 'hidden', flexShrink: 0,
+            alignSelf: 'flex-start',
+            border: '1px solid var(--border)',
+            background: difficulty
+              ? `linear-gradient(145deg, ${COMPLEXITY_COLORS[difficulty]}26 0%, var(--bg-elevated) 70%)`
+              : 'var(--bg-elevated)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {w.coverUrl ? (
               <>
-                <img src={w.imageUrl} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block', filter: difficulty ? DIFFICULTY_TINT_IMG_FILTER : undefined }} />
+                <img src={w.coverUrl} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block', filter: difficulty ? DIFFICULTY_TINT_IMG_FILTER : undefined }} />
                 <DifficultyImageTint difficulty={difficulty} />
               </>
             ) : (
-              <img src="/logo.svg" alt="" loading="lazy" decoding="async" style={{ width: '40%', height: '40%', objectFit: 'contain', opacity: 0.18, display: 'block' }} />
+              <img src="/logo.svg" alt="" loading="lazy" decoding="async" style={{ width: '38%', height: '38%', objectFit: 'contain', opacity: 0.22, display: 'block' }} />
             )}
           </div>
 
@@ -322,7 +349,7 @@ function WorkoutCard({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ fontWeight: 700, fontSize: 15 }}>{w.name}</div>
+                  <div className="display" style={{ fontWeight: 700, fontSize: 17, lineHeight: 1.2, letterSpacing: '-0.005em' }}>{w.name}</div>
                   {isFavorite && <Star size={12} fill="var(--gold)" color="var(--gold)" style={{ flexShrink: 0 }} />}
                 </div>
                 {w.description && stripHtmlMultiline(w.description) && (
@@ -348,9 +375,14 @@ function WorkoutCard({
                   )}
                 </div>
               </div>
+              {/* La durée estimée prime : c'est ce sur quoi on choisit une
+                  séance. Le nombre de mouvements n'était pas légendé et se
+                  lisait comme un score. */}
               <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-dim)' }}>{w.movements.length}</div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--orange)', marginTop: 1 }}>{fmtMin(estMin)}</div>
+                <div className="display" style={{ fontSize: 20, fontWeight: 700, color: 'var(--gold)', lineHeight: 1.1 }}>{fmtMin(estMin)}</div>
+                <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-dim)', marginTop: 2, whiteSpace: 'nowrap' }}>
+                  {w.movements.length} mouv.
+                </div>
               </div>
             </div>
           </div>
@@ -395,70 +427,54 @@ function WorkoutCard({
       </Link>
 
       {showFooter && (
-        <div style={{ borderTop: '1px solid var(--border)', padding: '8px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-          {/* Gauche : favori + actions contextuelles */}
-          <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ borderTop: '1px solid var(--border)', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+          {/* Une seule action primaire en clair. Le reste passe dans le menu
+              « … » : sept boutons de même poids rendaient « Démarrer »
+              indiscernable et débordaient de l'écran sur téléphone. */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {(context === 'mine' || context === 'saved') && (
               <button onClick={handleToggleFavorite} disabled={toggling}
                 title={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, background: isFavorite ? 'rgba(200,165,95,0.12)' : 'none', border: `1px solid ${isFavorite ? 'rgba(200,165,95,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 9px', color: isFavorite ? 'var(--gold)' : 'var(--text-muted)', fontSize: 12, cursor: toggling ? 'default' : 'pointer', transition: 'all 0.15s' }}>
-                <Star size={12} fill={isFavorite ? 'var(--gold)' : 'none'} />
+                aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', color: isFavorite ? 'var(--gold)' : 'var(--text-muted)', cursor: toggling ? 'default' : 'pointer', transition: 'color var(--t-fast) var(--ease)' }}>
+                <Star size={14} fill={isFavorite ? 'var(--gold)' : 'none'} />
               </button>
             )}
             {context === 'community' && (
               <button onClick={e => { e.preventDefault(); handleToggleSave() }} disabled={saving}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, background: isSaved ? 'rgba(200,165,95,0.1)' : 'none', border: `1px solid ${isSaved ? 'rgba(200,165,95,0.4)' : 'var(--border)'}`, borderRadius: 6, padding: '5px 10px', color: isSaved ? 'var(--gold)' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: saving ? 'default' : 'pointer', transition: 'all 0.15s' }}>
-                {isSaved ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: `1px solid ${isSaved ? 'var(--gold-border)' : 'var(--border)'}`, borderRadius: 'var(--r-sm)', padding: '7px 12px', color: isSaved ? 'var(--gold)' : 'var(--text-muted)', fontSize: 12.5, fontWeight: 600, cursor: saving ? 'default' : 'pointer', transition: 'color var(--t-fast) var(--ease)' }}>
+                {isSaved ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
                 {isSaved ? 'Sauvegardé' : 'Sauvegarder'}
-              </button>
-            )}
-            {context === 'saved' && (
-              <button onClick={e => { e.preventDefault(); handleToggleSave() }} disabled={saving}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}>
-                <X size={11} /> Retirer
-              </button>
-            )}
-            {context === 'mine' && onShare && (
-              <button onClick={e => { e.preventDefault(); onShare() }}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}>
-                <Share2 size={12} /> Recommander
               </button>
             )}
           </div>
 
-          {/* Droite : Démarrer → Semaine → Dupliquer → Modifier → Supprimer */}
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {/* Terracotta plein : c'est « l'action, le maintenant » de la
+                palette. Elle était en or, la couleur réservée à la marque et à
+                la progression — et strictement identique au bouton Planning. */}
             <button onClick={e => { e.preventDefault(); router.push(`/workouts/${w.id}/active`) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(200,165,95,0.12)', border: '1px solid rgba(200,165,95,0.35)', borderRadius: 6, padding: '5px 11px', color: 'var(--gold)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-              <PlayCircle size={13} /> Démarrer
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)', border: '1px solid transparent', borderRadius: 'var(--r-sm)', padding: '7px 15px', color: 'var(--on-accent)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--elev-1)' }}>
+              <PlayCircle size={14} /> Démarrer
             </button>
             {(context === 'mine' || context === 'saved') && (
               <button onClick={e => { e.preventDefault(); setAddingToWeek(true) }}
                 title="Ajouter au planning"
-                style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', borderRadius: 6, padding: '5px 10px', color: 'var(--gold)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                <CalendarPlus size={12} /> Planning
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '7px 12px', color: 'var(--text-muted)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+                <CalendarPlus size={13} /> Planning
               </button>
             )}
-            {context === 'mine' && (
-              <>
-                <button onClick={handleDuplicate} disabled={duplicating}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: duplicating ? 'wait' : 'pointer', opacity: duplicating ? 0.6 : 1 }}>
-                  <Copy size={12} /> {duplicating ? '…' : 'Dupliquer'}
-                </button>
-                <button onClick={e => { e.preventDefault(); router.push(`/workouts/${w.id}?edit=1`) }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                  <Pencil size={12} /> Modifier
-                </button>
-                <button onClick={handleDelete} disabled={deleting}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: deleting ? 'var(--text-dim)' : 'var(--red)', fontSize: 12, cursor: deleting ? 'wait' : 'pointer', opacity: deleting ? 0.6 : 1 }}
-                  onMouseEnter={e => { if (!deleting) { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor = 'var(--red)' } }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'var(--border)' }}>
-                  <Trash2 size={12} />
-                </button>
-              </>
-            )}
+            <OverflowMenu items={[
+              ...(context === 'mine' && onShare ? [{ label: 'Recommander', icon: <Share2 size={14} />, onClick: onShare }] : []),
+              ...(context === 'mine' ? [
+                { label: duplicating ? 'Duplication…' : 'Dupliquer', icon: <Copy size={14} />, onClick: () => handleDuplicate(), disabled: duplicating },
+                { label: 'Modifier', icon: <Pencil size={14} />, onClick: () => router.push(`/workouts/${w.id}?edit=1`) },
+                { label: deleting ? 'Suppression…' : 'Supprimer', icon: <Trash2 size={14} />, onClick: () => handleDelete(), danger: true, disabled: deleting },
+              ] : []),
+              ...(context === 'saved' ? [
+                { label: saving ? 'Retrait…' : 'Retirer de mes séances', icon: <X size={14} />, onClick: () => handleToggleSave(), disabled: saving },
+              ] : []),
+            ]} />
           </div>
         </div>
       )}
@@ -628,6 +644,41 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   allSrc.forEach(w => w.tags?.split(',').map(t => t.trim()).filter(Boolean).forEach(t => allTagsSet.add(t)))
   const availableTags = Array.from(allTagsSet).sort()
 
+  // Résumé des filtres actifs, affiché en permanence à côté du bouton
+  // « Filtrer » : le panneau est replié, mais on doit toujours voir ce qui
+  // restreint la liste — et pouvoir le retirer d'un clic.
+  const activeFilterPills: ActiveFilter[] = [
+    ...[...bioFilters].map(bt => ({
+      key: `bio:${bt}`, label: bt, color: BIO_TYPE_COLORS[bt],
+      onRemove: () => toggleInSet(bioFilters, setBioFilters, bt),
+    })),
+    ...[...difficultyFilters].map(c => ({
+      key: `diff:${c}`, label: c, color: readableAccent(COMPLEXITY_COLORS[c]),
+      onRemove: () => toggleInSet(difficultyFilters, setDifficultyFilters, c),
+    })),
+    ...(durationPreset !== 'all' ? [{
+      key: 'duration',
+      label: durationPreset === 'custom'
+        ? durationLabel(durationCustomMode, durationCustomMin, durationCustomMax)
+        : DURATION_PRESET_LABELS[durationPreset],
+      color: 'var(--gold)',
+      onRemove: () => { setDurationPreset('all'); setDurationCustomMin(''); setDurationCustomMax('') },
+    }] : []),
+    ...[...activeTags].map(tag => ({
+      key: `tag:${tag}`, label: `#${tag}`, color: 'var(--crimson-bright)',
+      onRemove: () => toggleInSet(activeTags, setActiveTags, tag),
+    })),
+  ]
+
+  const clearAllFilters = () => {
+    setBioFilters(new Set())
+    setDifficultyFilters(new Set())
+    setActiveTags(new Set())
+    setDurationPreset('all')
+    setDurationCustomMin('')
+    setDurationCustomMax('')
+  }
+
   // Filtre local, multi-sélection : recherche texte + type biomécanique + difficulté + tags,
   // tous appliqués côté client. À l'intérieur d'un critère c'est un OU (une séance "Tirage"
   // OU "Poussée" matche si les deux sont cochés), entre critères c'est un ET.
@@ -682,9 +733,10 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
 
   return (
     <>
-      {/* Tabs + compteur dynamique */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-        <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, boxShadow: 'var(--shadow-sm)' }}>
+      {/* Tabs + compteur dynamique. `flexWrap` : sur 375 px le compteur passait
+          hors écran, tronqué au milieu d'un mot. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, rowGap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: 4, boxShadow: 'var(--shadow-sm)' }}>
           <button style={tabStyle('mine')} onClick={() => setTab('mine')}><User size={14} /> Mes séances</button>
           <button style={tabStyle('community')} onClick={() => setTab('community')}><Users size={14} /> Communauté</button>
           {assignments.length > 0 && (
@@ -753,8 +805,11 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
         )}
       </div>
 
-      {/* Filtre type biomécanique (multi-sélection) */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+      {/* Filtres repliés par défaut — voir components/FilterPanel.tsx pour le
+          pourquoi (mur de pastilles avant le premier contenu sur mobile). */}
+      <FilterPanel active={activeFilterPills} onClearAll={clearAllFilters}>
+
+      <FilterGroup title="Type de mouvement">
         {BIO_TYPES.map(bt => {
           const active = bioFilters.has(bt)
           return (
@@ -772,16 +827,9 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
             >{BIO_TYPE_ICONS[bt]} {bt}</button>
           )
         })}
-        {bioFilters.size > 0 && (
-          <button
-            onClick={() => setBioFilters(new Set())}
-            style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'none', border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-          ><X size={11} /> Tout</button>
-        )}
-      </div>
+      </FilterGroup>
 
-      {/* Filtre difficulté (multi-sélection) */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+      <FilterGroup title="Difficulté">
         {COMPLEXITIES.map(c => {
           const active = difficultyFilters.has(c)
           const color = COMPLEXITY_COLORS[c]
@@ -800,16 +848,9 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
             >{c}</button>
           )
         })}
-        {difficultyFilters.size > 0 && (
-          <button
-            onClick={() => setDifficultyFilters(new Set())}
-            style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'none', border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-          ><X size={11} /> Tout</button>
-        )}
-      </div>
+      </FilterGroup>
 
-      {/* Filtre durée */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+      <FilterGroup title="Durée">
         {(['lt30', '30', '45', '60'] as const).map(p => {
           const active = durationPreset === p
           return (
@@ -870,18 +911,10 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>min</span>
           </div>
         )}
+      </FilterGroup>
 
-        {durationPreset !== 'all' && (
-          <button
-            onClick={() => { setDurationPreset('all'); setDurationCustomMin(''); setDurationCustomMax('') }}
-            style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'none', border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-          ><X size={11} /> Tout</button>
-        )}
-      </div>
-
-      {/* Filtre tags */}
       {availableTags.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+        <FilterGroup title="Étiquettes">
           {availableTags.map(tag => (
             <button
               key={tag}
@@ -895,14 +928,10 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
               }}
             >#{tag}</button>
           ))}
-          {activeTags.size > 0 && (
-            <button
-              onClick={() => setActiveTags(new Set())}
-              style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'none', border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-            ><X size={11} /> Tout</button>
-          )}
-        </div>
+        </FilterGroup>
       )}
+
+      </FilterPanel>
 
       </>}
 
@@ -925,9 +954,13 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
         <>
           {!hasAnything && (
             <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: 44, marginBottom: 14 }}>📭</div>
-              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucune séance</div>
-              <div style={{ fontSize: 13, marginBottom: 24 }}>Génère et sauvegarde ta première séance</div>
+              {/* Composé plutôt qu'un emoji posé au centre : c'est le tout
+                  premier écran que voit un compte neuf. */}
+              <img src="/logo.svg" alt="" width={56} height={56} style={{ opacity: 0.22, marginBottom: 18 }} />
+              <div className="display" style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Rien à l&apos;entraînement</div>
+              <div style={{ fontSize: 'var(--fs-body)', marginBottom: 26, maxWidth: 380, marginLeft: 'auto', marginRight: 'auto' }}>
+                Le générateur compose une séance à partir de tes contraintes — durée, matériel, niveau.
+              </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Link href="/generator">
                   <button style={{ padding: '11px 26px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7 }}>

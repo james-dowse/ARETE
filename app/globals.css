@@ -623,3 +623,69 @@ h1,
   .r-grid-3 { grid-template-columns: 1fr !important; }
   .r-lib-grid { grid-template-columns: 1fr !important; }
 }
+
+/* ── Scène vidéo de la séance active ──────────────────────────────────
+   Le cadre suivait un 16/10 fixe. Les démonstrations d'exercice sont le
+   plus souvent tournées au téléphone, donc verticales ; un embed YouTube
+   ne pouvant pas être recadré en `cover`, elles s'affichaient avec de
+   larges bandes noires latérales — d'autant plus visibles sur mobile, où
+   la scène occupe toute la largeur. */
+.wod-video-stage { aspect-ratio: 16 / 10; }
+
+@media (max-width: 768px) {
+  .wod-video-stage { aspect-ratio: 4 / 5; }
+}
+
+/* ══ Échelle typographique ═════════════════════════════════════════════
+   Cinq niveaux, pas davantage. L'application comptait plus de 850 tailles
+   de police posées à la main en style inline — 10, 10.5, 11, 11.5, 12,
+   12.5, 13, 13.5, 14, 15 px pour quatre rôles réels. Aucune n'était
+   fausse, mais rien n'était aligné : c'est ce qui donnait l'impression
+   d'un assemblage plutôt que d'un dessin.
+
+   Convention pour tout nouveau code : utiliser ces variables (ou les
+   classes ci-dessous) plutôt qu'un nombre. */
+:root {
+  --fs-micro: 11px;   /* capitales d'étiquette, badges, légendes */
+  --fs-sm:    12.5px; /* métadonnées, actions secondaires */
+  --fs-body:  14px;   /* texte courant, libellés de contrôle */
+  --fs-lg:    17px;   /* titres de cartouche, sous-sections */
+  --fs-h2:    22px;   /* titres de section */
+  --fs-h1:    32px;   /* titre de page */
+
+  --lh-tight: 1.2;
+  --lh-body:  1.6;
+
+  /* Un seul interlettrage pour toutes les capitales : elles en portaient
+     six différents (0.02 → 0.18em) selon l'écran. */
+  --ls-caps: 0.1em;
+}
+
+/* Micro-libellé en capitales — le motif le plus répété de l'interface. */
+.t-micro {
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.t-sm   { font-size: var(--fs-sm); }
+.t-body { font-size: var(--fs-body); }
+.t-lg   { font-size: var(--fs-lg); font-weight: 700; line-height: var(--lh-tight); }
+
+/* ── Couverture de cartouche de séance ────────────────────────────────
+   Taille fixe plutôt qu'étirée sur la hauteur de la carte : en colonne
+   étroite le texte passe sur trois lignes, et une vignette étirée rendait
+   la cartouche démesurément haute — deux séances par écran de téléphone. */
+.wod-card-cover {
+  width: 104px;
+  aspect-ratio: 4 / 5;
+}
+
+@media (max-width: 768px) {
+  .wod-card-cover {
+    width: 84px;
+    aspect-ratio: 1;
+  }
+}

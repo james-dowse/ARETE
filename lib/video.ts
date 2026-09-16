@@ -80,3 +80,29 @@ export function extractEmbedVideoId(embedUrl: string): string | null {
   const m = embedUrl.match(/\/embed\/([^/?]+)/)
   return m ? m[1] : null
 }
+
+// Vignette YouTube d'une URL de démonstration.
+//
+// Sert de couverture de secours pour les séances sans image : les cartouches
+// affichaient toutes le même logo délavé sur un carré vide, donc une liste de
+// séances était visuellement indifférenciée. Les vignettes YouTube sont
+// servies gratuitement par `i.ytimg.com`, sans clé ni stockage : une séance
+// dont le premier mouvement a une vidéo hérite donc d'une couverture réelle.
+//
+// `hqdefault` plutôt que `maxresdefault` : toujours présent, y compris sur les
+// vidéos anciennes ou de faible définition, où `maxresdefault` renvoie 404.
+export function youtubeThumbnail(url: string | null | undefined): string | null {
+  if (!url) return null
+  const id = getYouTubeId(url) || null
+  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null
+}
+
+// Première vignette exploitable parmi les mouvements d'une séance.
+export function derivedCover(movements: { movement?: { videoUrl?: string | null } | null }[] | undefined): string | null {
+  if (!movements) return null
+  for (const m of movements) {
+    const thumb = youtubeThumbnail(m.movement?.videoUrl)
+    if (thumb) return thumb
+  }
+  return null
+}

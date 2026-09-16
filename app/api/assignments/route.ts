@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
-import { WORKOUT_SELECT } from '@/lib/workout-select'
+import { WORKOUT_SELECT, withCover } from '@/lib/workout-select'
 import { getAvatarOwnerIds, withHasAvatar } from '@/lib/avatar-server'
 
 export async function GET() {
@@ -35,7 +35,8 @@ export async function GET() {
 
   const result = assignments.map(a => {
     const done = sessions.some(s => s.workoutId === a.workoutId && s.doneAt >= a.createdAt)
-    return { ...a, workout: { ...a.workout, user: withHasAvatar(a.workout.user, avatarOwners) }, done }
+    const workout = a.workout as { user: { id: string } | null; imageUrl?: string | null; movements?: { movement?: { videoUrl?: string | null } | null }[] }
+    return { ...a, workout: { ...withCover(workout), user: withHasAvatar(workout.user, avatarOwners) }, done }
   })
 
   return NextResponse.json(result)

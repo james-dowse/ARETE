@@ -3,6 +3,9 @@ import MovementModal from '@/components/MovementModal'
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, EQUIPMENT_ICONS } from '@/lib/types'
 import { useState, useEffect, useCallback } from 'react'
 import { Search, X, Star, BookOpen, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react'
+import FilterPanel, { FilterGroup, type ActiveFilter } from '@/components/FilterPanel'
+import { readableAccent } from '@/lib/color'
+import { youtubeThumbnail } from '@/lib/video'
 
 type SortOption = 'name' | 'name-desc' | 'complexity' | 'complexity-desc'
 
@@ -131,6 +134,28 @@ export default function LibraryPage() {
     (complexityFilters.size === 0 || complexityFilters.has(m.complexity)) &&
     (equipmentFilters.size === 0 || (m.equipment != null && equipmentFilters.has(m.equipment)))
 
+  // Résumé permanent des filtres actifs, le panneau étant replié.
+  const activeFilterPills: ActiveFilter[] = [
+    ...[...bioFilters].map(bt => ({
+      key: `bio:${bt}`, label: bt, color: BIO_TYPE_COLORS[bt],
+      onRemove: () => toggleInSet(bioFilters, setBioFilters, bt),
+    })),
+    ...[...complexityFilters].map(c => ({
+      key: `cx:${c}`, label: c, color: readableAccent(COMPLEXITY_COLORS[c]),
+      onRemove: () => toggleInSet(complexityFilters, setComplexityFilters, c),
+    })),
+    ...[...equipmentFilters].map(eq => ({
+      key: `eq:${eq}`, label: eq, color: 'var(--text-muted)',
+      onRemove: () => toggleInSet(equipmentFilters, setEquipmentFilters, eq),
+    })),
+  ]
+
+  const clearAllFilters = () => {
+    setBioFilters(new Set())
+    setComplexityFilters(new Set())
+    setEquipmentFilters(new Set())
+  }
+
   const filtered = sorted.filter(matchesFilters)
   const displayed = tab === 'favorites' ? filtered.filter(m => favIds.has(m.id)) : filtered
 
@@ -199,11 +224,12 @@ export default function LibraryPage() {
               </div>
             </div>
 
-            {/* Multi-sélection : clique plusieurs types pour les combiner (OR) */}
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {bioFilters.size > 0 && (
-                <button onClick={() => setBioFilters(new Set())} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}><X size={11} /> Tout</button>
-              )}
+            {/* Filtres repliés par défaut : la bibliothèque alignait 35 pastilles
+                avant le premier mouvement (voir components/FilterPanel.tsx).
+                Multi-sélection : plusieurs types se combinent en OU. */}
+            <FilterPanel active={activeFilterPills} onClearAll={clearAllFilters}>
+
+            <FilterGroup title="Type de mouvement">
               {BIO_TYPES.map(bt => {
                 const active = bioFilters.has(bt)
                 const color = BIO_TYPE_COLORS[bt]
@@ -213,12 +239,9 @@ export default function LibraryPage() {
                   </button>
                 )
               })}
-            </div>
+            </FilterGroup>
 
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {complexityFilters.size > 0 && (
-                <button onClick={() => setComplexityFilters(new Set())} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}><X size={11} /> Tout</button>
-              )}
+            <FilterGroup title="Difficulté">
               {COMPLEXITIES.map(c => {
                 const active = complexityFilters.has(c)
                 const color = COMPLEXITY_COLORS[c]
@@ -228,12 +251,9 @@ export default function LibraryPage() {
                   </button>
                 )
               })}
-            </div>
+            </FilterGroup>
 
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {equipmentFilters.size > 0 && (
-                <button onClick={() => setEquipmentFilters(new Set())} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}><X size={11} /> Tout</button>
-              )}
+            <FilterGroup title="Équipement">
               {EQUIPMENT_TYPES.map(eq => {
                 const active = equipmentFilters.has(eq)
                 return (
@@ -242,7 +262,9 @@ export default function LibraryPage() {
                   </button>
                 )
               })}
-            </div>
+            </FilterGroup>
+
+            </FilterPanel>
           </div>
         )}
 
@@ -310,9 +332,16 @@ export default function LibraryPage() {
         )}
 
         {!loading && displayed.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>{tab === 'favorites' ? '⭐' : '🔍'}</div>
-            <div>{tab === 'favorites' ? 'Aucun favori encore — clique sur ★ sur un mouvement' : 'Aucun mouvement trouvé'}</div>
+          <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--text-muted)' }}>
+            {tab === 'favorites'
+              ? <Star size={34} style={{ opacity: 0.3, marginBottom: 14 }} />
+              : <Search size={34} style={{ opacity: 0.3, marginBottom: 14 }} />}
+            <div className="display" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+              {tab === 'favorites' ? 'Aucun favori' : 'Aucun mouvement'}
+            </div>
+            <div style={{ fontSize: 'var(--fs-body)' }}>
+              {tab === 'favorites' ? 'L’étoile sur une fiche de mouvement l’ajoute ici.' : 'Aucun résultat pour cette recherche ou ces filtres.'}
+            </div>
           </div>
         )}
       </div>
@@ -325,6 +354,7 @@ export default function LibraryPage() {
 }
 
 function MovementCard({ movement: m, isFav, onFav, onClick }: { movement: Movement; isFav: boolean; onFav: (id: string) => void; onClick: () => void }) {
+  const thumb = youtubeThumbnail(m.videoUrl)
   return (
     <div
       style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', transition: 'border-color 0.15s', position: 'relative' }}
@@ -332,8 +362,24 @@ function MovementCard({ movement: m, isFav, onFav, onClick }: { movement: Moveme
       onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
     >
       <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 8, background: `${BIO_TYPE_COLORS[m.bioType] || '#fff'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
-          {BIO_TYPE_ICONS[m.bioType] || '⚡'}
+        {/* Vignette de la démonstration quand elle existe : la bibliothèque est
+            avant tout un catalogue visuel, et toutes les lignes portaient
+            jusqu'ici la même pastille ⚡ (repli des types sans icône dans le
+            référentiel) — du bruit, aucune information. */}
+        <div style={{
+          position: 'relative', width: 38, height: 38, borderRadius: 'var(--r-xs)', overflow: 'hidden', flexShrink: 0,
+          background: `${BIO_TYPE_COLORS[m.bioType] || '#fff'}18`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+        }}>
+          {thumb ? (
+            <img src={thumb} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          ) : BIO_TYPE_ICONS[m.bioType] ? (
+            BIO_TYPE_ICONS[m.bioType]
+          ) : (
+            <span style={{ fontSize: 14, fontWeight: 800, color: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)' }}>
+              {m.name.trim().charAt(0).toUpperCase()}
+            </span>
+          )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
