@@ -48,6 +48,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             entre dans le champ — plusieurs centaines de millisecondes en 4G. */}
         <link rel="preconnect" href="https://i.ytimg.com" crossOrigin="" />
         <link rel="dns-prefetch" href="https://i.ytimg.com" />
+        {/* Couvertures de séance choisies par les auteurs (Google Drive). */}
+        <link rel="preconnect" href="https://lh3.googleusercontent.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
       </head>
       <body className="min-h-full flex">
         <ServiceWorkerRegister />

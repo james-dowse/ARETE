@@ -638,26 +638,35 @@ export default function ActivePage() {
                   const isResting = rest?.wmId === wm.id
                   const color = BIO_TYPE_COLORS[wm.movement.bioType] || '#888'
 
-                  // Trois registres : sombre = contexte · ivoire = maintenant · or = agir
-                  const onIvory = (isCurrent || isActiveInRound) && !isComplete
-                  const cardBg = isComplete ? 'var(--cypress-ghost)' : isDoneInRound ? 'rgba(58,94,72,0.15)' : onIvory ? 'var(--ivory-card)' : 'var(--bg-card)'
-                  const cardBorder = isComplete ? 'rgba(127,184,148,0.30)' : isDoneInRound ? 'rgba(127,184,148,0.18)' : onIvory ? 'var(--gold)' : isResting ? 'var(--gold-border)' : 'var(--border)'
-                  const nameColor = isComplete || isDoneInRound ? 'var(--green)' : onIvory ? 'var(--ink)' : 'var(--text-muted)'
-                  const subColor = onIvory ? 'var(--ink-muted)' : 'rgba(255,255,255,0.45)'
-                  const dimColor = onIvory ? 'var(--ink-dim)' : 'rgba(255,255,255,0.25)'
-                  const timedColor = onIvory ? '#2F6FA7' : 'var(--blue)'
+                  // Trois registres : sombre = contexte · terracotta = maintenant · mousse = fait.
+                  //
+                  // Le mouvement actif était rendu sur une plaque ivoire (#F5F1E8)
+                  // bordée d'or. Sur un écran de séance en plein écran quasi noir,
+                  // cela donnait un rectangle blanc éblouissant — pénible le soir —
+                  // et en contradiction avec le reste de la charte, où « le
+                  // maintenant » est le terracotta : le bouton d'action collant en
+                  // haut de page et l'anneau de repos l'emploient déjà. Le contraste
+                  // qui rendait la carte repérable est conservé, mais par la bordure
+                  // et le halo plutôt qu'en inversant la luminosité.
+                  const isNow = (isCurrent || isActiveInRound) && !isComplete
+                  const cardBg = isComplete ? 'var(--cypress-ghost)' : isDoneInRound ? 'rgba(58,94,72,0.15)' : isNow ? 'var(--crimson-ghost)' : 'var(--bg-card)'
+                  const cardBorder = isComplete ? 'rgba(127,184,148,0.30)' : isDoneInRound ? 'rgba(127,184,148,0.18)' : isNow ? 'var(--crimson)' : isResting ? 'var(--crimson-border)' : 'var(--border)'
+                  const nameColor = isComplete || isDoneInRound ? 'var(--green)' : isNow ? 'var(--text-primary)' : 'var(--text-muted)'
+                  const subColor = isNow ? 'rgba(240,235,225,0.72)' : 'rgba(255,255,255,0.45)'
+                  const dimColor = isNow ? 'rgba(240,235,225,0.45)' : 'rgba(255,255,255,0.25)'
+                  const timedColor = 'var(--blue)'
 
                   return (
                     <div key={wm.id} style={{
                       background: cardBg,
                       border: `1px solid ${cardBorder}`,
                       borderRadius: 'var(--r-md)', padding: '14px 16px',
-                      boxShadow: onIvory ? 'var(--elev-2)' : 'none',
+                      boxShadow: isNow ? '0 0 0 1px var(--crimson-border), 0 6px 24px rgba(180,85,45,0.20)' : 'none',
                       transition: 'border-color 0.2s, background 0.2s, box-shadow 0.2s',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                        <span style={{ flex: 1, fontSize: 15, fontWeight: onIvory ? 700 : 600, color: nameColor }}>
+                        <span style={{ flex: 1, fontSize: 15, fontWeight: isNow ? 700 : 600, color: nameColor }}>
                           {wm.movement.name}
                         </span>
                         {(isComplete || isDoneInRound) && (
@@ -671,9 +680,12 @@ export default function ActivePage() {
                           {Array.from({ length: target }).map((_, i) => (
                             <span key={i} className="tnum" style={{
                               width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700,
-                              background: i < setsNow ? (isComplete ? 'var(--green)' : (wm.duration != null ? timedColor : 'var(--gold)')) : (onIvory ? 'rgba(14,12,8,0.06)' : 'rgba(255,255,255,0.07)'),
-                              color: i < setsNow ? (isComplete ? '#0E0C08' : 'var(--ink)') : (onIvory ? 'var(--ink-dim)' : 'rgba(255,255,255,0.3)'),
-                              border: `1px solid ${i < setsNow ? 'transparent' : (onIvory ? 'rgba(14,12,8,0.18)' : 'rgba(255,255,255,0.1)')}`,
+                              // Une série faite est une série faite : mousse dans tous les cas.
+                              // Elle était or pour un mouvement en répétitions et bleu pour un
+                              // mouvement chronométré — deux couleurs pour un même état.
+                              background: i < setsNow ? 'var(--green)' : (isNow ? 'rgba(240,235,225,0.08)' : 'rgba(255,255,255,0.07)'),
+                              color: i < setsNow ? 'var(--ink)' : (isNow ? 'rgba(240,235,225,0.55)' : 'rgba(255,255,255,0.3)'),
+                              border: `1px solid ${i < setsNow ? 'transparent' : (isNow ? 'rgba(240,235,225,0.22)' : 'rgba(255,255,255,0.1)')}`,
                               transition: 'all 0.2s',
                             }}>
                               {i + 1}
@@ -697,9 +709,9 @@ export default function ActivePage() {
                         const isPR = lp?.bestWeight != null && Number.isFinite(w) && w > 0 && w > lp.bestWeight
                         const inpStyle: React.CSSProperties = {
                           width: 62, textAlign: 'center', borderRadius: 8, padding: '7px 6px', fontSize: 14, fontWeight: 700, outline: 'none',
-                          background: onIvory ? 'rgba(14,12,8,0.06)' : 'rgba(255,255,255,0.06)',
-                          border: `1px solid ${onIvory ? 'rgba(14,12,8,0.18)' : 'rgba(255,255,255,0.12)'}`,
-                          color: onIvory ? 'var(--ink)' : '#fff',
+                          background: isNow ? 'rgba(240,235,225,0.08)' : 'rgba(255,255,255,0.06)',
+                          border: `1px solid ${isNow ? 'rgba(240,235,225,0.22)' : 'rgba(255,255,255,0.12)'}`,
+                          color: 'var(--text-primary)',
                         }
                         return (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -725,8 +737,8 @@ export default function ActivePage() {
                       {/* Exercise timer in-card (timed mode, currently running) */}
                       {wm.duration != null && exerciseTimer?.wmId === wm.id && (
                         <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
-                          <ProgressRing progress={exerciseTimer.sec / exerciseTimer.total} size={96} stroke={5} color={timedColor} track={onIvory ? 'rgba(14,12,8,0.10)' : 'rgba(99,179,237,0.15)'}>
-                            <span className="tnum display" style={{ fontSize: 27, fontWeight: 700, color: timedColor }}>{exerciseTimer.sec}</span>
+                          <ProgressRing progress={exerciseTimer.sec / exerciseTimer.total} size={96} stroke={5} color="var(--crimson-bright)" track={'rgba(240,235,225,0.12)'}>
+                            <span className="tnum display" style={{ fontSize: 27, fontWeight: 700, color: 'var(--text-primary)' }}>{exerciseTimer.sec}</span>
                           </ProgressRing>
                         </div>
                       )}
@@ -739,18 +751,23 @@ export default function ActivePage() {
                               onClick={() => handleSet(wm)}
                               disabled={isComplete || (isSuperset && wm.id !== activeMovId) || exerciseTimer?.wmId === wm.id}
                               style={{
-                                flex: 1, padding: '13px', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: onIvory ? 800 : 700,
+                                flex: 1, padding: '13px', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: isNow ? 800 : 700,
                                 cursor: isComplete || exerciseTimer?.wmId === wm.id ? 'default' : 'pointer',
-                                background: isComplete ? 'var(--cypress-ghost)' : exerciseTimer?.wmId === wm.id ? 'transparent' : onIvory ? timedColor : 'rgba(99,179,237,0.12)',
-                                border: `1px solid ${isComplete ? 'rgba(127,184,148,0.25)' : onIvory ? 'transparent' : 'rgba(99,179,237,0.3)'}`,
-                                color: isComplete ? 'var(--green)' : exerciseTimer?.wmId === wm.id ? timedColor : onIvory ? '#F1EAD8' : 'var(--blue)',
+                                // Terracotta comme le bouton de série : c'est le même geste,
+                                // « fais cet exercice maintenant ». Le caractère chronométré
+                                // est déjà porté par le libellé (« ▶ Démarrer · 60s ») — il
+                                // n'a pas besoin d'un bleu acier qui n'a aucun rôle dans la
+                                // charte et qui formait un pavé délavé sur la carte active.
+                                background: isComplete ? 'var(--cypress-ghost)' : exerciseTimer?.wmId === wm.id ? 'transparent' : isNow ? 'var(--accent)' : 'var(--crimson-ghost)',
+                                border: `1px solid ${isComplete ? 'rgba(127,184,148,0.25)' : isNow && exerciseTimer?.wmId !== wm.id ? 'transparent' : 'var(--crimson-border)'}`,
+                                color: isComplete ? 'var(--green)' : isNow && exerciseTimer?.wmId !== wm.id ? 'var(--on-accent)' : 'var(--crimson-bright)',
                                 transition: 'all 0.15s',
                               }}>
                               {isComplete ? '✓ Terminé' : exerciseTimer?.wmId === wm.id ? '⏱ En cours…' : `▶ Démarrer · ${wm.duration}s`}
                             </button>
                             {exerciseTimer?.wmId === wm.id && (
                               <button onClick={() => setExerciseTimer(e => e ? { ...e, sec: 0 } : null)}
-                                style={{ minHeight: 44, padding: '10px 16px', borderRadius: 'var(--r-sm)', fontSize: 12, cursor: 'pointer', background: 'transparent', border: `1px solid ${onIvory ? 'rgba(14,12,8,0.2)' : 'rgba(99,179,237,0.2)'}`, color: timedColor }}
+                                style={{ minHeight: 44, padding: '10px 16px', borderRadius: 'var(--r-sm)', fontSize: 12, cursor: 'pointer', background: 'transparent', border: '1px solid var(--crimson-border)', color: 'var(--crimson-bright)' }}
                                 title="Valider maintenant sans attendre la fin du timer">
                                 ✓ Skip
                               </button>
@@ -761,21 +778,24 @@ export default function ActivePage() {
                             <button onClick={() => handleSet(wm)} disabled={isComplete || (isSuperset && wm.id !== activeMovId)}
                               style={{
                                 flex: 1, padding: '13px', borderRadius: 'var(--r-sm)', fontSize: 14, cursor: isComplete ? 'default' : 'pointer',
-                                fontWeight: onIvory ? 800 : 700,
-                                letterSpacing: onIvory ? '0.03em' : 0,
-                                textTransform: onIvory ? 'uppercase' : 'none',
-                                // Or massif pour le mouvement actif : le geste principal de la séance
-                                background: isComplete ? 'var(--cypress-ghost)' : onIvory ? 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)' : 'rgba(200,165,95,0.10)',
-                                border: `1px solid ${isComplete ? 'rgba(127,184,148,0.25)' : onIvory ? 'transparent' : 'rgba(200,165,95,0.3)'}`,
-                                color: isComplete ? 'var(--green)' : onIvory ? '#0E0C08' : 'var(--gold)',
-                                boxShadow: onIvory ? '0 2px 0 rgba(14,12,8,0.25)' : 'none',
+                                fontWeight: isNow ? 800 : 700,
+                                letterSpacing: isNow ? '0.03em' : 0,
+                                textTransform: isNow ? 'uppercase' : 'none',
+                                // Terracotta plein pour le mouvement actif : geste principal de
+                                // la séance, identique à celui du bouton collant en haut de
+                                // page — qui était déjà terracotta. L'or était employé ici
+                                // alors qu'il appartient à la marque et à la progression.
+                                background: isComplete ? 'var(--cypress-ghost)' : isNow ? 'var(--accent)' : 'var(--crimson-ghost)',
+                                border: `1px solid ${isComplete ? 'rgba(127,184,148,0.25)' : isNow ? 'transparent' : 'var(--crimson-border)'}`,
+                                color: isComplete ? 'var(--green)' : isNow ? 'var(--on-accent)' : 'var(--crimson-bright)',
+                                boxShadow: isNow ? 'var(--elev-1)' : 'none',
                                 transition: 'all 0.15s',
                               }}>
                               {isComplete ? '✓ Terminé' : `Série ${setsNow + 1} / ${target}`}
                             </button>
                             {setsNow > 0 && !isComplete && (
                               <button onClick={() => handleUndo(wm)}
-                                style={{ minWidth: 44, minHeight: 44, padding: '10px 16px', borderRadius: 'var(--r-sm)', fontSize: 14, cursor: 'pointer', background: 'transparent', border: `1px solid ${onIvory ? 'rgba(14,12,8,0.2)' : 'rgba(255,255,255,0.1)'}`, color: onIvory ? 'var(--ink-muted)' : 'rgba(255,255,255,0.35)' }}>
+                                style={{ minWidth: 44, minHeight: 44, padding: '10px 16px', borderRadius: 'var(--r-sm)', fontSize: 14, cursor: 'pointer', background: 'transparent', border: `1px solid ${isNow ? 'rgba(240,235,225,0.22)' : 'rgba(255,255,255,0.1)'}`, color: isNow ? 'rgba(240,235,225,0.6)' : 'rgba(255,255,255,0.35)' }}>
                                 ↩
                               </button>
                             )}
@@ -791,20 +811,35 @@ export default function ActivePage() {
         })}
       </div>
 
-      {/* ── Rest timer overlay — panneau ivoire, le « maintenant » ── */}
+      {/* ── Minuteur de repos ──────────────────────────────────────────────
+          Panneau sombre, pas ivoire. L'écran de séance est un plein écran
+          quasi noir : un cartouche clair y perçait un trou lumineux, à contre-
+          emploi de la charte — et éblouissant quand on s'entraîne le soir.
+          L'anneau porte désormais le terracotta, comme le petit anneau de
+          repos déjà présent dans le bandeau vidéo de ce même écran : le repos
+          est bien « le maintenant », il n'a aucune raison d'être traité
+          autrement à deux endroits de la même page. */}
       {rest && (
-        <div className="modal-in panel-ivory" style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 20, borderRadius: 'var(--r-lg)', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 20, minWidth: 280 }}>
-          <ProgressRing progress={rest.sec / rest.total} size={60} stroke={4} color="var(--gold-dim)" track="rgba(14,12,8,0.10)">
-            <span className="tnum display" style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>{rest.sec}</span>
+        <div className="modal-in" style={{
+          position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 20,
+          borderRadius: 'var(--r-lg)', padding: '14px 20px',
+          display: 'flex', alignItems: 'center', gap: 18, minWidth: 288, maxWidth: 'calc(100vw - 32px)',
+          background: 'rgba(29,25,20,0.94)',
+          border: '1px solid var(--crimson-border)',
+          boxShadow: 'var(--elev-3)',
+          backdropFilter: 'blur(12px)',
+        }}>
+          <ProgressRing progress={rest.sec / rest.total} size={58} stroke={4} color="var(--crimson-bright)" track="rgba(240,235,225,0.10)">
+            <span className="tnum display" style={{ fontSize: 19, fontWeight: 700, color: 'var(--text-primary)' }}>{rest.sec}</span>
           </ProgressRing>
-          <div style={{ flex: 1 }}>
-            <div className="display" style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 2 }}>Repos</div>
-            <div style={{ fontSize: 11, color: 'var(--ink-muted)' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 'var(--fs-micro)', fontWeight: 800, letterSpacing: 'var(--ls-caps)', textTransform: 'uppercase', color: 'var(--crimson-bright)', marginBottom: 3 }}>Repos</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {workout.movements.find(wm => wm.id === rest.wmId)?.movement.name}
             </div>
           </div>
           <button onClick={() => setRest(null)}
-            style={{ padding: '8px 15px', borderRadius: 'var(--r-sm)', background: 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)', border: 'none', color: '#0E0C08', fontSize: 12, fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 0 rgba(14,12,8,0.25)' }}>
+            style={{ padding: '9px 15px', borderRadius: 'var(--r-sm)', background: 'none', border: '1px solid var(--border-plus)', color: 'var(--text-muted)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
             Passer
           </button>
         </div>

@@ -1,4 +1,5 @@
 'use client'
+import { sizedImage, sizedImageSrcSet } from '@/lib/image'
 import RichEditor from '@/components/RichEditor'
 import LibraryPicker from '@/components/LibraryPicker'
 import DifficultyImageTint, { DIFFICULTY_TINT_IMG_FILTER } from '@/components/DifficultyImageTint'
@@ -57,7 +58,9 @@ export function toDurationMovement(wm: WorkoutMovement): DurationMovement {
 export function WorkoutImage({ src, position, difficulty }: { src: string; position?: string | null; difficulty?: string | null }) {
   return (
     <div style={{ position: 'relative', marginBottom: 22, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
-      <img src={src} alt="" style={{ width: '100%', maxHeight: 320, objectFit: 'cover', objectPosition: position || '50% 50%', display: 'block', filter: difficulty ? DIFFICULTY_TINT_IMG_FILTER : undefined }} />
+      {/* Bandeau : large mais borné à 320 px de haut — inutile d'y servir
+          l'original de 3,2 Mo (voir lib/image.ts). */}
+      <img src={sizedImage(src, { width: 1000, height: 640 }) ?? src} srcSet={sizedImageSrcSet(src, { width: 1000, height: 640 })} alt="" style={{ width: '100%', maxHeight: 320, objectFit: 'cover', objectPosition: position || '50% 50%', display: 'block', filter: difficulty ? DIFFICULTY_TINT_IMG_FILTER : undefined }} />
       <DifficultyImageTint difficulty={difficulty ?? null} />
     </div>
   )

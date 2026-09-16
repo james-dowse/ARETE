@@ -6,6 +6,7 @@ import { BIO_TYPES, COMPLEXITIES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_CO
 import { estimateWorkoutMinutes, type DurationBlock } from '@/lib/duration'
 import { stripHtmlMultiline } from '@/lib/html'
 import { thumbnailSrcSet } from '@/lib/video'
+import { coverSources } from '@/lib/image'
 import { readableAccent } from '@/lib/color'
 import DifficultyImageTint, { DIFFICULTY_TINT_IMG_FILTER } from '@/components/DifficultyImageTint'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
@@ -338,13 +339,20 @@ function WorkoutCard({
           }}>
             {w.coverUrl ? (
               <>
-                <img
-                  src={w.coverUrl}
-                  srcSet={thumbnailSrcSet(w.coverUrl)}
-                  sizes="(max-width: 768px) 84px, 104px"
-                  alt="" loading="lazy" decoding="async"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block', filter: difficulty ? DIFFICULTY_TINT_IMG_FILTER : undefined }}
-                />
+                {(() => {
+                  // Dimensionnée à la taille d'affichage : ces couvertures
+                  // Google Drive pèsent 3,2 Mo en pleine résolution.
+                  const cover = coverSources(w.coverUrl, { width: 104, height: 130 })
+                  return (
+                    <img
+                      src={cover.src ?? undefined}
+                      srcSet={cover.srcSet}
+                      sizes={cover.sizes}
+                      alt="" loading="lazy" decoding="async"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block', filter: difficulty ? DIFFICULTY_TINT_IMG_FILTER : undefined }}
+                    />
+                  )
+                })()}
                 <DifficultyImageTint difficulty={difficulty} />
               </>
             ) : (

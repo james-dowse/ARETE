@@ -1,4 +1,5 @@
 'use client'
+import { sizedImage, sizedImageSrcSet } from '@/lib/image'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Clock, UserPlus, UserCheck, Bell, BellOff } from 'lucide-react'
@@ -101,7 +102,7 @@ export default function UserProfileClient({ userId }: { userId: string }) {
                 style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 'var(--r-md)', textDecoration: 'none' }}>
                 <div style={{ width: 60, height: 60, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {w.imageUrl ? (
-                    <img src={w.imageUrl} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block' }} />
+                    <img src={sizedImage(w.imageUrl, { width: 60, height: 60 }) ?? undefined} srcSet={sizedImageSrcSet(w.imageUrl, { width: 60, height: 60 })} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block' }} />
                   ) : (
                     <img src="/logo.svg" alt="" loading="lazy" decoding="async" style={{ width: '40%', height: '40%', objectFit: 'contain', opacity: 0.18, display: 'block' }} />
                   )}
