@@ -76,3 +76,30 @@ Quelques réflexes qui comptent plus que le reste :
   et re-rendait l'arbre côté client.
 
 Historique et procédure de bascule : [MIGRATION-DB.md](MIGRATION-DB.md).
+
+# Design
+
+La palette **Basalte** (`app/globals.css`) attribue un rôle à chaque teinte —
+et ce rôle prime sur le goût du moment :
+
+- **Terracotta** (`--accent` / `--crimson`) : l'action, le maintenant. Démarrer,
+  Nouveau, série suivante, onglet actif. Une seule action primaire par écran.
+- **Or** (`--gold`) : la marque et la progression. Anneaux, séries, statistiques,
+  durée estimée. Jamais un bouton d'action — l'or utilisé partout ne signifie
+  plus rien, et c'est ce qui rendait « Démarrer » indiscernable de « Planning ».
+- **Mousse** (`--cypress-light` / `--green`) : l'accompli. Séance terminée,
+  badge « Publié », séries validées.
+
+Trois règles de mise en page qui reviennent :
+
+- **Pas de mur de filtres.** Les pastilles de filtre sont repliées derrière
+  `components/FilterPanel.tsx` ; seuls les filtres actifs restent visibles.
+- **Une action primaire, le reste dans `components/OverflowMenu.tsx`.** Sept
+  boutons de poids identique ne hiérarchisent rien et débordent sur 375 px.
+- **Une liste doit se lire au coup d'œil.** Les cartouches de séance tirent une
+  couverture de la vignette vidéo de leur premier mouvement (`withCover`,
+  `lib/workout-select.ts`) plutôt que d'afficher toutes le même logo.
+
+Tailles de police, rayons et espacements : utiliser les variables
+(`--fs-*`, `--r-*`, `--sp-*`) et non des nombres. L'application en comptait plus
+de 850 posés à la main, avec dix tailles pour quatre rôles réels.

@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Search, X, Star, BookOpen, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react'
 import FilterPanel, { FilterGroup, type ActiveFilter } from '@/components/FilterPanel'
 import { readableAccent } from '@/lib/color'
-import { youtubeThumbnail } from '@/lib/video'
+import { youtubeThumbnail, thumbnailSrcSet } from '@/lib/video'
 
 type SortOption = 'name' | 'name-desc' | 'complexity' | 'complexity-desc'
 
@@ -372,7 +372,13 @@ function MovementCard({ movement: m, isFav, onFav, onClick }: { movement: Moveme
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
         }}>
           {thumb ? (
-            <img src={thumb} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <img
+              src={thumb}
+              srcSet={thumbnailSrcSet(thumb)}
+              sizes="38px"
+              alt="" loading="lazy" decoding="async"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
           ) : BIO_TYPE_ICONS[m.bioType] ? (
             BIO_TYPE_ICONS[m.bioType]
           ) : (

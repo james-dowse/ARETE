@@ -1,4 +1,4 @@
-const CACHE = 'arete-v1'
+const CACHE = 'arete-v2'
 const SHELL = ['/generator', '/offline']
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()))
@@ -10,6 +10,29 @@ self.addEventListener('fetch', (e) => {
   const { request } = e
   if (request.method !== 'GET') return
   const url = new URL(request.url)
+
+  // Vignettes de démonstration YouTube : cache d'abord, durablement.
+  // Ce sont les couvertures des cartouches et des lignes de bibliothèque,
+  // immuables pour un identifiant de vidéo donné, et le seul poste d'images de
+  // l'application. Les conserver évite de les retélécharger à chaque ouverture
+  // sur un réseau mobile, et garde les listes lisibles hors connexion.
+  if (url.hostname === 'i.ytimg.com') {
+    e.respondWith(
+      caches.open(CACHE).then(async c => {
+        const cached = await c.match(request)
+        if (cached) return cached
+        try {
+          const res = await fetch(request)
+          if (res && (res.ok || res.type === 'opaque')) c.put(request, res.clone())
+          return res
+        } catch {
+          return Response.error()
+        }
+      })
+    )
+    return
+  }
+
   if (url.origin !== self.location.origin) return
 
   // Navigations : réseau d'abord, on met en cache les pages de séance active

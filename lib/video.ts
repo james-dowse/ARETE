@@ -97,6 +97,33 @@ export function youtubeThumbnail(url: string | null | undefined): string | null 
   return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null
 }
 
+// Jeu de sources pour `srcset` : le navigateur choisit la définition adaptée à
+// la taille réelle d'affichage et à la densité de l'écran.
+//
+// Une vignette de cartouche fait 84 px sur téléphone : y servir le hqdefault
+// (480×360, ~20 Ko) revenait à télécharger 22 images inutilement lourdes sur
+// un réseau mobile. Le mqdefault (320×180, ~8 Ko) suffit à cette taille, et le
+// hqdefault reste disponible pour les écrans à forte densité.
+export function youtubeThumbnailSrcSet(url: string | null | undefined): string | null {
+  if (!url) return null
+  const id = getYouTubeId(url)
+  if (!id) return null
+  return `https://i.ytimg.com/vi/${id}/mqdefault.jpg 320w, https://i.ytimg.com/vi/${id}/hqdefault.jpg 480w`
+}
+
+// Vrai si l'URL de couverture est une vignette YouTube (donc déclinable en
+// plusieurs définitions) — une image téléversée par l'auteur ne l'est pas.
+export function isYouTubeThumbnail(url: string | null | undefined): boolean {
+  return !!url && url.startsWith('https://i.ytimg.com/vi/')
+}
+
+// Décline une URL de vignette YouTube déjà construite en `srcset`.
+export function thumbnailSrcSet(url: string | null | undefined): string | undefined {
+  if (!isYouTubeThumbnail(url)) return undefined
+  const id = url!.slice('https://i.ytimg.com/vi/'.length).split('/')[0]
+  return `https://i.ytimg.com/vi/${id}/mqdefault.jpg 320w, https://i.ytimg.com/vi/${id}/hqdefault.jpg 480w`
+}
+
 // Première vignette exploitable parmi les mouvements d'une séance.
 export function derivedCover(movements: { movement?: { videoUrl?: string | null } | null }[] | undefined): string | null {
   if (!movements) return null
