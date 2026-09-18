@@ -26,6 +26,11 @@ npm run dev:local        # port 3051, base prisma/dev.db
 npm run db:sync-local    # rejoue les migrations sur prisma/dev.db
 ```
 
+Pour piloter depuis le téléphone une session qui tourne vraiment sur le PC —
+avec le dossier, `.env.local` et la base locale sous la main, ce qu'une session
+cloud n'a pas : `npm run remote-control`. Procédure et dépannage :
+[SESSION-WINDOWS.md](SESSION-WINDOWS.md).
+
 # Migrations
 
 `npm run deploy` ne joue **pas** les migrations : le schéma est appliqué à la

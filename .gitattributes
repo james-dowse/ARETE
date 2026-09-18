@@ -1,0 +1,2 @@
+# Les scripts de lancement Windows doivent garder des fins de ligne CRLF.
+*.cmd text eol=crlf

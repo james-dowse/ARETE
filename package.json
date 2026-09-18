@@ -11,6 +11,7 @@
     "seed": "npx tsx prisma/seed.ts",
     "deploy": "node scripts/deploy.mjs",
     "dev:local": "node scripts/dev-local.mjs",
+    "remote-control": "node scripts/remote-control.mjs",
     "db:sync-local": "node scripts/dev-db-sync.mjs",
     "db:from-prod": "node scripts/dev-db-from-prod.mjs"
   },
