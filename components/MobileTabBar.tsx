@@ -11,7 +11,7 @@ const TABS = [
   { href: '/generator', label: 'Générer',    icon: Zap },
   { href: '/workouts',  label: 'Séances',    icon: BookOpen },
   { href: '/planner',   label: 'Planning',   icon: Calendar },
-  { href: '/library',   label: 'Biblio',     icon: Library },
+  { href: '/library',   label: 'Syllabus',   icon: Library },
   // Cinq entrées, pas six : au-delà, les cibles tactiles passent sous les
   // 48 px recommandés sur un écran de 360 px et les libellés se tronquent.
   // Le profil reste accessible depuis la barre latérale et le tableau de bord.

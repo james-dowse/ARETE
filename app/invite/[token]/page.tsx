@@ -21,8 +21,9 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
           <Image src="/logo.svg" alt="ARETE" width={52} height={52} />
         </div>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 4, color: 'var(--gold)', marginBottom: 32 }}>
-          ARETE
+        <div style={{ marginBottom: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <div className="brandmark" style={{ fontSize: 34, color: 'var(--gold)' }}>ἀρετή</div>
+          <span className="brand-latin">Arete</span>
         </div>
 
         {!invite ? (

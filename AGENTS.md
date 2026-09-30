@@ -103,3 +103,23 @@ Trois règles de mise en page qui reviennent :
 Tailles de police, rayons et espacements : utiliser les variables
 (`--fs-*`, `--r-*`, `--sp-*`) et non des nombres. L'application en comptait plus
 de 850 posés à la main, avec dix tailles pour quatre rôles réels.
+
+## Le logotype
+
+La marque s’écrit **ἀρετή** — classe `.brandmark`, jamais en dur. Trois
+règles, dans cet ordre d’importance :
+
+- **Bas de casse, toujours.** En capitales, ΑΡΕΤΗ est graphiquement
+  identique à un « APETH » latin (le rhô est un P, l’êta un H) : le lecteur
+  y voit une coquille, pas du grec. Seul le bas de casse se lit comme grec.
+- **EB Garamond, sous-ensembles `greek` + `greek-ext` uniquement.** Karla et
+  Newsreader ne portent aucun glyphe grec ; sans cette police, le mot
+  retombe sur une sérif système différente à chaque OS. L’esprit doux de ἀ
+  (U+1F00) vit dans `greek-ext` : les deux sous-ensembles sont nécessaires,
+  aucun autre ne l’est. Toute racine de rendu qui déclare son propre `<html>`
+  — `app/(app)/workouts/[id]/print/layout.tsx` — doit redéclarer la police,
+  sinon le PDF sort un carré vide à la place de l’alpha.
+- **Le grec est le logotype, pas le vocabulaire.** Dans une phrase française
+  (« un autre utilisateur ARETE »), dans un `alt`, dans le titre d’onglet et
+  dans le manifeste PWA, on garde **ARETE** en latin : c’est ce que le système
+  d’exploitation sait rendre et ce que l’utilisateur sait chercher.

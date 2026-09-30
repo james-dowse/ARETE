@@ -79,7 +79,10 @@ export default function LoginClient() {
 
         <div style={{ textAlign: 'center', marginBottom: 36, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
           <Image src="/logo.svg" alt="" width={52} height={52} priority style={{ opacity: 0.95 }} />
-          <h1 style={{ fontSize: 15, fontWeight: 800, margin: 0, letterSpacing: '0.30em', color: 'var(--gold)' }}>ARETE</h1>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <h1 className="brandmark" style={{ fontSize: 42, margin: 0, color: 'var(--gold)' }}>ἀρετή</h1>
+            <span className="brand-latin">Arete</span>
+          </div>
           <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13.5, lineHeight: 1.5, maxWidth: 280 }}>
             {step === 'email'
               ? 'Entre ton adresse email : tu recevras un code de connexion.'

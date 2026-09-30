@@ -13,7 +13,7 @@ const allNav = [
   { href: '/generator',   label: 'Générateur',    icon: Zap,             admin: false },
   { href: '/workouts',    label: 'Mes Séances',   icon: BookOpen,        admin: false },
   { href: '/planner',     label: 'Planning',      icon: Calendar,        admin: false },
-  { href: '/library',     label: 'Bibliothèque',  icon: Library,         admin: false },
+  { href: '/library',     label: 'Syllabus',      icon: Library,         admin: false },
   { href: '/resources',   label: 'Ressources',    icon: Link2,           admin: false },
   { href: '/progression', label: 'Progression',   icon: TrendingUp,      admin: false },
   { href: '/profile',     label: 'Mon profil',    icon: UserCircle,      admin: false },
@@ -235,7 +235,7 @@ export default function Sidebar() {
         <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 10 }}>
           <Image src="/logo.svg" alt="ARETE" width={26} height={26} style={{ flexShrink: 0, opacity: 0.9 }} />
           <div style={{ overflow: 'hidden', width: collapsed ? 0 : 'auto', opacity: collapsed ? 0 : 1, transition: 'opacity 0.15s, width 0.22s', whiteSpace: 'nowrap' }}>
-            <div style={{ fontWeight: 800, fontSize: 13, letterSpacing: '0.18em', color: 'var(--gold)', lineHeight: 1 }}>ARETE</div>
+            <div className="brandmark" style={{ fontSize: 20, color: 'var(--gold)', lineHeight: 1.45 }}>ἀρετή</div>
           </div>
         </Link>
       </div>

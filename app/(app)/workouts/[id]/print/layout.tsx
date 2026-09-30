@@ -1,6 +1,19 @@
+import { EB_Garamond } from 'next/font/google'
+
+// Ce gabarit declare son propre <html> : c est une racine a part, qui
+// n herite ni de globals.css ni des polices du layout racine. Sans cette
+// declaration, le logotype grec retomberait sur une serif systeme et
+// l esprit doux de l alpha sortirait en carre vide a l impression.
+const brandFont = EB_Garamond({
+  subsets: ['greek', 'greek-ext'],
+  weight: ['500'],
+  variable: '--font-brand',
+  display: 'swap',
+})
+
 export default function PrintLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
+    <html lang="fr" className={brandFont.variable}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,7 +23,7 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; color: #111; font-size: 13px; line-height: 1.5; padding: 32px 40px; max-width: 800px; margin: 0 auto; }
 
           .brand-bar { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px; margin-bottom: 18px; border-bottom: 2px solid #C9A535; }
-          .brand-word { font-size: 12px; font-weight: 800; letter-spacing: 0.3em; color: #C9A535; }
+          .brand-word { font-family: var(--font-brand), 'EB Garamond', Georgia, serif; font-size: 20px; font-weight: 500; letter-spacing: 0.05em; color: #C9A535; }
           .brand-sub { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.08em; }
 
           .cover { display: block; width: 100%; height: 160px; object-fit: cover; border-radius: 10px; margin-bottom: 18px; border: 1px solid #e5e7eb; }

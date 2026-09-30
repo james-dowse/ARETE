@@ -1280,7 +1280,7 @@ export default function GeneratorPage() {
                             onClick={() => setAddingToBlockIndex(bi)}
                             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 10px', background: 'var(--bg-elevated)', border: '1px dashed var(--border)', borderRadius: 8, color: 'var(--text-dim)', fontSize: 12, cursor: 'pointer' }}
                           >
-                            <Search size={11} /> Depuis la bibliothèque
+                            <Search size={11} /> Depuis le syllabus
                           </button>
                         </div>}
 

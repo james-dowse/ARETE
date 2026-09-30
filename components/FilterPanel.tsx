@@ -4,7 +4,7 @@ import { SlidersHorizontal, X, ChevronDown } from 'lucide-react'
 
 // Panneau de filtres repliable.
 //
-// Les écrans « Mes séances » et « Bibliothèque » affichaient toutes leurs
+// Les écrans « Mes séances » et « Syllabus » affichaient toutes leurs
 // pastilles de filtre en permanence : sur téléphone, cela représentait 26 à 35
 // pastilles sur 8 rangées, soit environ 1 000 px à faire défiler avant la
 // première séance. On ouvre l'application pour s'entraîner et on tombe sur un

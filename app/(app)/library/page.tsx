@@ -182,7 +182,7 @@ export default function LibraryPage() {
     <>
       <div className="page">
         <div style={{ marginBottom: 28 }}>
-          <h1 className="r-h1">Bibliothèque</h1>
+          <h1 className="r-h1">Syllabus</h1>
           <p className="r-subtitle">
             {loading ? '...' : `${displayed.length} mouvement${displayed.length !== 1 ? 's' : ''}`}
           </p>

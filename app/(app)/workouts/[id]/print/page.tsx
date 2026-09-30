@@ -53,7 +53,7 @@ export default function PrintPage() {
       <button className="print-btn" onClick={() => window.print()}>Imprimer / PDF</button>
 
       <div className="brand-bar">
-        <span className="brand-word">ARETE</span>
+        <span className="brand-word">ἀρετή</span>
         <span className="brand-sub">Fiche d&apos;entraînement</span>
       </div>
 

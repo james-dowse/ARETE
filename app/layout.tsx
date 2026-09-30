@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Karla, Newsreader } from "next/font/google";
+import { Karla, Newsreader, EB_Garamond } from "next/font/google";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { ToastProvider } from "@/components/Toast";
 import { ConfirmProvider } from "@/components/ConfirmDialog";
@@ -26,6 +26,17 @@ const fraunces = Newsreader({
   display: "swap",
 });
 
+// Logotype seul. Karla et Newsreader ne portent aucun glyphe grec : sans cette
+// police, le mot se rendrait dans une serif systeme, differente a chaque OS.
+// Sous-ensembles grec + grec etendu uniquement (l’esprit doux de ἀ vit dans
+// greek-ext) : deux woff2 minuscules, aucun glyphe latin duplique.
+const brandFont = EB_Garamond({
+  subsets: ["greek", "greek-ext"],
+  weight: ["500"],
+  variable: "--font-brand",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "ARETE",
   description: "Training system powered by movement intelligence",
@@ -40,7 +51,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`h-full ${inter.variable} ${fraunces.variable}`}>
+    <html lang="fr" className={`h-full ${inter.variable} ${fraunces.variable} ${brandFont.variable}`}>
       <head>
         {/* Les couvertures de séance et les vignettes de la bibliothèque
             viennent toutes de ce domaine. Ouvrir la connexion pendant l'analyse
