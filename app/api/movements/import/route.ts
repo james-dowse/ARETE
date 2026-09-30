@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { MOVEMENT_ID_PATTERN, nextMovementIds } from '@/lib/movement-id'
 import { normalizeMovementName } from '@/lib/normalize'
 import * as XLSX from 'xlsx'
+import { getCurrentUser } from '@/lib/session'
+import { isAdmin } from '@/lib/admin'
 
 type ErrorType = 'champs_manquants' | 'id_non_conforme' | 'doublon_fichier' | 'erreur_bdd'
 
@@ -22,6 +24,13 @@ const ERROR_LABELS: Record<ErrorType, string> = {
 }
 
 export async function POST(req: NextRequest) {
+  // Le referentiel des mouvements est partage par tous les comptes : toutes
+  // les autres ecritures le protegent (../route.ts, ../bulk, ../[id], ./undo).
+  // L’oubli ici laissait n’importe quel visiteur creer et ecraser des
+  // mouvements pour tout le monde — proxy.ts laisse passer /api sans controle.
+  const user = await getCurrentUser()
+  if (!isAdmin(user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   const form = await req.formData()
   const file = form.get('file') as File | null
   if (!file) return NextResponse.json({ error: 'Fichier manquant' }, { status: 400 })

@@ -7,6 +7,12 @@ import { WORKOUT_SELECT, withCover } from '@/lib/workout-select'
 export async function GET(req: NextRequest) {
   try {
   const currentUserId = await getCurrentUserId()
+  // L’application est sur invitation, et proxy.ts redirige toute page vers
+  // /login : aucun appelant legitime n’est anonyme. Sans ce garde-fou, le
+  // filtre community servait a qui le demandait les identifiants et les
+  // e-mails des auteurs — or le cookie de session n’est que cet identifiant
+  // en clair, et le connaitre suffit a se faire passer pour son proprietaire.
+  if (!currentUserId) return NextResponse.json([])
   const filter = req.nextUrl.searchParams.get('filter') // 'mine' | 'saved' | 'community'
   const tagFilter = req.nextUrl.searchParams.get('tag') // optional tag filter
 

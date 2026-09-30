@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireWorkoutOwner } from '@/lib/authz'
+import { requireWorkoutOwner, requireWorkoutReader } from '@/lib/authz'
 import { sendNewWorkoutEmail, sendWorkoutRemovedEmail, sendWorkoutUpdatedEmail } from '@/lib/email'
 import { getAvatarOwnerIds, withHasAvatar } from '@/lib/avatar-server'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  // Cette route renvoie l’e-mail et l’identifiant de l’auteur, plus les notes
+  // de la seance : elle exige desormais un lecteur legitime.
+  const auth = await requireWorkoutReader(id)
+  if (!auth.ok) return auth.response
   const workout = await prisma.workout.findUnique({
     where: { id },
     include: {

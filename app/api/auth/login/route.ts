@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { randomBytes } from 'crypto'
+import { randomBytes, randomInt } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { sendMagicLinkEmail, sendLoginRelayEmail } from '@/lib/email'
 
@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
 
   // Code à 6 chiffres (saisi dans l'app — marche dans les PWA iOS/Android) +
   // suffixe aléatoire pour garder loginToken unique et alimenter le lien magique.
-  const code = String(Math.floor(100000 + Math.random() * 900000))
+  // randomInt et non Math.random : ce code ouvre une session, il ne doit pas
+  // sortir d’un generateur previsible. randomBytes etait deja importe ligne 2.
+  const code = String(randomInt(100000, 1000000))
   const loginToken = `${code}.${randomBytes(24).toString('hex')}`
   await prisma.invitedUser.update({
     where: { id: user.id },
