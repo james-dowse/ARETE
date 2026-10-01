@@ -6,6 +6,10 @@ import { ProgressRing } from '@/components/ui'
 import { useToast } from '@/components/Toast'
 import { getEmbedInfo, extractEmbedVideoId } from '@/lib/video'
 import YouTubeLoopEmbed from '@/components/YouTubeLoopEmbed'
+// La file d'attente locale vit dans ResumeSessionBanner : c'est lui qui la rejoue
+// et qui l'affiche, et il est monté sur le tableau de bord comme sur la page de
+// détail — là où l'on retombe juste après avoir terminé une séance.
+import { enqueuePendingSession, dequeuePendingSession } from '@/components/ResumeSessionBanner'
 
 interface Movement { id: string; name: string; bioType: string; videoUrl?: string | null }
 interface WM { id: string; order: number; sets?: number | null; reps?: string | null; rest?: number | null; duration?: number | null; blockId?: string | null; movement: Movement }
@@ -15,10 +19,70 @@ interface Workout { id: string; name: string; duration?: number | null; movement
 const REST_OPTIONS = [30, 60, 90, 120]
 const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
+// Delai d'expiration pour les appels reseau de cet ecran. `AbortSignal.timeout`
+// n'existe pas avant iOS 16 : sur ces telephones on retombe sur l'ancien
+// comportement (pas de delai) au lieu de lever au moment de l'appel.
+const withTimeout = (ms: number) =>
+  typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(ms) : undefined
+
+// Resume du brouillon local pour l'ecran d'erreur. Meme peremption de 24 h que
+// la restauration plus bas : un brouillon trop vieux ne vaut pas la peine d'etre
+// promis a l'utilisateur. Lecture defensive — localStorage peut etre bloque
+// (navigation privee) ou contenir un reste d'une version anterieure.
+const readDraft = (key: string): { name: string | null; doneSets: number } | null => {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const s = JSON.parse(raw)
+    if (!s?.startedAt || Date.now() - s.startedAt >= 24 * 60 * 60 * 1000) return null
+    const doneSets = Object.values((s.done ?? {}) as Record<string, number>).reduce((a, b) => a + b, 0)
+    return { name: typeof s.name === 'string' ? s.name : null, doneSets }
+  } catch { return null }
+}
+
+// Une saisie = une série. Les champs restent des chaînes tant qu'on tape : un
+// nombre forcerait à choisir entre « vide » et 0, or 0 kg n'est pas une absence
+// de charge et fausserait moyennes et records.
+interface SetEntry { weight: string; reps: string }
+
+// Clavier français : la virgule est ce qui sort du pavé numérique iOS. Illisible
+// ou vide → null, jamais 0 : une charge non renseignée doit rester null en base.
+const num = (v: string | null | undefined): number | null => {
+  if (v == null) return null
+  const t = v.trim().replace(',', '.')
+  if (!t) return null
+  const n = Number(t)
+  return Number.isFinite(n) ? n : null
+}
+
+// Le localStorage est une entrée non fiable : JSON tronqué, séance démarrée sur
+// une autre version, bricolage manuel. L'écran de séance ne doit jamais planter
+// sur ce qu'il y relit — au pire il repart sur une saisie vide.
+const normalizePerfLog = (raw: unknown): Record<string, SetEntry[]> => {
+  const out: Record<string, SetEntry[]> = {}
+  if (!raw || typeof raw !== 'object') return out
+  for (const [wmId, rows] of Object.entries(raw as Record<string, unknown>)) {
+    if (!Array.isArray(rows)) continue
+    out[wmId] = rows.map(r => {
+      const o = (r ?? {}) as { weight?: unknown; reps?: unknown }
+      return { weight: typeof o.weight === 'string' ? o.weight : '', reps: typeof o.reps === 'string' ? o.reps : '' }
+    })
+  }
+  return out
+}
+
 export default function ActivePage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [workout, setWorkout] = useState<Workout | null>(null)
+  // Trois registres d'echec, parce qu'ils n'appellent pas la meme issue :
+  // requireWorkoutReader (lib/authz.ts) repond 401 sans session et 404 pour une
+  // seance absente ou privee d'un autre — reessayer donnerait exactement la meme
+  // reponse. Seul 'network' (coupure, expiration, 5xx) merite un nouvel essai.
+  const [loadError, setLoadError] = useState<'auth' | 'denied' | 'network' | null>(null)
+  // Brouillon present au moment de l'echec : de quoi affirmer que les series
+  // deja cochees ne sont pas perdues, au lieu d'afficher un echec nu.
+  const [draft, setDraft] = useState<{ name: string | null; doneSets: number } | null>(null)
 
   const [done, setDone] = useState<Record<string, number>>({})
   const [rest, setRest] = useState<{ sec: number; total: number; wmId: string } | null>(null)
@@ -31,14 +95,34 @@ export default function ActivePage() {
   const [showFinish, setShowFinish] = useState(false)
   const [supersetBlocs, setSupersetBlocs] = useState<Set<string>>(new Set())
   const [exerciseTimer, setExerciseTimer] = useState<{ wmId: string; sec: number; total: number } | null>(null)
-  // Log de performance : une charge + reps par mouvement (clé = wmId)
-  const [logInputs, setLogInputs] = useState<Record<string, { weight: string; reps: string }>>({})
+  // Log de performance : une entrée par SÉRIE (clé = wmId, index = n° de série − 1).
+  // Un seul couple par mouvement recopié n fois à l'enregistrement écrivait une
+  // charge fausse dès qu'on montait entre deux séries, et cette donnée inventée
+  // remontait ensuite dans le badge PR et dans l'indice « Dernière ».
+  const [perfLog, setPerfLog] = useState<Record<string, SetEntry[]>>({})
   // Dernière perf par movementId : { last: {weight, reps}, bestWeight } — indices "la dernière fois"
   const [lastPerf, setLastPerf] = useState<Record<string, { last: { weight: number | null; reps: number | null } | null; bestWeight: number | null }>>({})
-  const setLog = (wmId: string, field: 'weight' | 'reps', value: string) =>
-    setLogInputs(prev => {
-      const cur = prev[wmId] ?? { weight: '', reps: '' }
-      return { ...prev, [wmId]: { ...cur, [field]: value } }
+  // Les trous sont comblés par des entrées vides : saisir la série 3 avant la 2
+  // ne doit pas décaler vers le bas les valeurs déjà tapées.
+  const setLog = (wmId: string, index: number, field: 'weight' | 'reps', value: string) =>
+    setPerfLog(prev => {
+      const rows = [...(prev[wmId] ?? [])]
+      while (rows.length <= index) rows.push({ weight: '', reps: '' })
+      rows[index] = { ...rows[index], [field]: value }
+      return { ...prev, [wmId]: rows }
+    })
+
+  // Reprendre la série précédente est un geste de l'utilisateur, pas une
+  // supposition de l'application : trois séries à charge constante se tapent en
+  // un appui, sans que l'écran lui souffle jamais de ne pas progresser.
+  const copyPrevSet = (wmId: string, index: number) =>
+    setPerfLog(prev => {
+      const rows = [...(prev[wmId] ?? [])]
+      const src = rows[index - 1]
+      if (!src) return prev
+      while (rows.length <= index) rows.push({ weight: '', reps: '' })
+      rows[index] = { ...src }
+      return { ...prev, [wmId]: rows }
     })
 
   const toggleSuperset = (blockId: string) =>
@@ -116,9 +200,54 @@ export default function ActivePage() {
     }
   }, [started])
 
+  // Chargement de la seance. Ne rejette jamais : il pose `loadError` et renvoie
+  // null, de sorte qu'aucun appelant ne puisse oublier le filet — c'est
+  // precisement l'oubli qui bloquait cet ecran sur « Chargement… ».
+  const loadWorkout = useCallback(async (): Promise<Workout | null> => {
+    setLoadError(null)
+    try {
+      // Delai d'expiration : hors wifi la requete pouvait rester en suspens sans
+      // jamais echouer. public/sw.js sert les reponses /api/workouts/* deja vues
+      // (stale-while-revalidate), mais quand il n'en a aucune il attend le reseau
+      // indefiniment et aucun `.catch` ne se declenche jamais.
+      const r = await fetch(`/api/workouts/${id}`, { signal: withTimeout(12000) })
+      if (!r.ok) {
+        setDraft(readDraft(storageKey))
+        // 403 est traite comme 404 : la route renvoie deja 404 a la place d'un 403
+        // pour ne pas confirmer l'existence de l'identifiant.
+        setLoadError(r.status === 401 ? 'auth' : r.status === 403 || r.status === 404 ? 'denied' : 'network')
+        return null
+      }
+      const w = await r.json() as Workout
+      // Une reponse 200 mal formee faisait exploser `w.blocks.filter` dans un
+      // `then` sans filet : meme ecran bloque, par un autre chemin.
+      if (!w || !Array.isArray(w.movements) || !Array.isArray(w.blocks)) {
+        setDraft(readDraft(storageKey))
+        setLoadError('network')
+        return null
+      }
+      return w
+    } catch {
+      setDraft(readDraft(storageKey))
+      setLoadError('network')
+      return null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  // Le chemin de chargement complet est depose dans cette ref par l'effet
+  // ci-dessous. « Reessayer » doit le rejouer en entier — restauration du
+  // brouillon et des supersets comprise — et pas seulement le fetch : un nouvel
+  // essai reussi afficherait sinon une seance vierge alors que des series sont
+  // deja cochees en local.
+  const loadRef = useRef<() => void>(() => {})
+
   // load workout + restore session in progress
   useEffect(() => {
-    fetch(`/api/workouts/${id}`).then(r => r.json()).then(w => {
+    loadRef.current = () => loadWorkout().then(w => {
+      // null = echec deja signale par `loadWorkout` : rien a appliquer, et surtout
+      // pas `w.blocks` sur un objet d'erreur.
+      if (!w) return
       setWorkout(w)
 
       // Superset persistés sur le workout (colonne DB) → pré-activés
@@ -134,7 +263,23 @@ export default function ActivePage() {
             if (saved.done) setDone(saved.done)
             if (Array.isArray(saved.superset)) setSupersetBlocs(prev => new Set([...prev, ...saved.superset]))
             if (saved.note) setNote(saved.note)
-            if (saved.logInputs) setLogInputs(saved.logInputs)
+            // Forme v2 : une entrée par série. Avant, `logInputs` ne portait qu'un
+            // couple par mouvement, et rien ne distingue ce qui avait été tapé de
+            // ce que l'ancien pré-remplissage avait recopié de la séance d'avant.
+            // On ne reprend donc ce couple que sur la série 1 : l'étaler sur toutes
+            // les séries validées reconduirait pile la donnée fausse qu'on supprime,
+            // tandis que des séries vides se voient et se corrigent en deux appuis.
+            if (saved.perfLog) {
+              setPerfLog(normalizePerfLog(saved.perfLog))
+            } else if (saved.logInputs && typeof saved.logInputs === 'object') {
+              const migrated: Record<string, SetEntry[]> = {}
+              for (const [wmId, v] of Object.entries(saved.logInputs as Record<string, { weight?: unknown; reps?: unknown }>)) {
+                const weight = typeof v?.weight === 'string' ? v.weight : ''
+                const reps = typeof v?.reps === 'string' ? v.reps : ''
+                if (weight || reps) migrated[wmId] = [{ weight, reps }]
+              }
+              setPerfLog(migrated)
+            }
             startedAtRef.current = saved.startedAt
             setElapsed(Math.max(0, Math.floor((Date.now() - saved.startedAt) / 1000)))
             setStarted(true)
@@ -160,6 +305,11 @@ export default function ActivePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  // Declenchement separe de la definition juste au-dessus : les effets
+  // s'executent dans l'ordre du fichier, la ref est donc deja remplie ici, et le
+  // meme appel reste joignable depuis le bouton « Reessayer ».
+  useEffect(() => { loadRef.current() }, [id])
+
   // persist session state so a refresh/tab close doesn't lose progress
   useEffect(() => {
     if (!started || !workout) return
@@ -168,7 +318,11 @@ export default function ActivePage() {
       done,
       superset: [...supersetBlocs],
       note,
-      logInputs,
+      perfLog,
+      // Marqueur de forme : la saisie est passée d'un couple par mouvement à un
+      // couple par série. Une séance démarrée avant ce déploiement n'a pas ce
+      // champ — elle est reconnue à son `logInputs` et migrée au chargement.
+      v: 2,
       startedAt: startedAtRef.current,
       // Le nom est persisté ici pour que la bannière « séance en cours »
       // (components/ResumeSessionBanner.tsx) l'affiche sans avoir à recharger
@@ -177,32 +331,17 @@ export default function ActivePage() {
       name: workout.name,
     }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [done, supersetBlocs, note, logInputs, started, workout])
+  }, [done, supersetBlocs, note, perfLog, started, workout])
 
   // Dernière perf (indices "la dernière fois" + PR)
   useEffect(() => {
     fetch(`/api/workouts/${id}/last-performance`).then(r => r.json()).then(d => setLastPerf(d || {})).catch(() => {})
   }, [id])
 
-  // Pré-remplit charge/reps depuis la dernière séance (nudge surcharge progressive),
-  // uniquement pour les mouvements pas déjà saisis/restaurés
-  useEffect(() => {
-    if (!workout) return
-    setLogInputs(prev => {
-      const next = { ...prev }
-      let changed = false
-      for (const wm of workout.movements) {
-        if (next[wm.id]?.weight || next[wm.id]?.reps) continue
-        const lp = lastPerf[wm.movement.id]?.last
-        if (lp && (lp.weight != null || lp.reps != null)) {
-          next[wm.id] = { weight: lp.weight != null ? String(lp.weight) : '', reps: lp.reps != null ? String(lp.reps) : '' }
-          changed = true
-        }
-      }
-      return changed ? next : prev
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workout, lastPerf])
+  // Pas de pré-remplissage : `lastPerf` ne sert plus qu'à afficher un indice
+  // (placeholder du champ + ligne « Dernière : … »). Recopier la charge de la
+  // séance précédente dans le champ revenait à proposer de stagner, et à envoyer
+  // en base une valeur que personne n'avait saisie.
 
   // stopwatch — basé sur l'horloge réelle pour survivre à la mise en veille de l'onglet
   useEffect(() => {
@@ -363,35 +502,110 @@ export default function ActivePage() {
 
   const handleFinish = async () => {
     setFinishing(true)
-    // Construit le log de perf : N séries validées par mouvement, à la charge/reps saisie.
-    // Les mouvements chronométrés loggent aussi leurs séries (charge/reps null).
+    // Construit le log de perf : une ligne par série validée, à la charge saisie
+    // POUR CETTE série. Les mouvements chronométrés loggent charge + séries, reps null.
     const sets = workout
       ? workout.movements.flatMap(wm => {
           const n = done[wm.id] ?? 0
           if (n <= 0) return []
-          const li = logInputs[wm.id]
-          const weight = li?.weight?.trim() ? Number(li.weight.replace(',', '.')) : null
-          const reps = li?.reps?.trim() ? Number(li.reps) : (wm.duration != null ? null : (wm.reps ? Number(wm.reps) : null))
+          const rows = perfLog[wm.id] ?? []
+          // Seules les séries validées partent en base. Une ligne saisie puis
+          // annulée (↩) reste en mémoire sans être enregistrée, et réapparaît
+          // telle quelle si la série est refaite.
           return Array.from({ length: n }, (_, i) => ({
             movementId: wm.movement.id,
             setNumber: i + 1,
-            weight: Number.isFinite(weight as number) ? weight : null,
-            reps: Number.isFinite(reps as number) ? reps : null,
+            weight: num(rows[i]?.weight),
+            // À défaut de saisie, la consigne de la séance si c'est un nombre
+            // simple : « 8-12 » ou « 12 par côté » n'est pas une performance,
+            // `num` les rejette plutôt que d'en deviner une.
+            reps: num(rows[i]?.reps) ?? (wm.duration != null ? null : num(wm.reps)),
           }))
         })
       : []
+    // La charge utile est écrite sur l'appareil AVANT l'envoi : c'est tout le
+    // correctif. Si le POST échoue, si l'onglet est tué pendant la requête ou si
+    // iOS suspend la PWA en arrière-plan, la séance existe déjà quelque part, et
+    // ResumeSessionBanner la rejouera au prochain montage ou au retour du réseau.
+    const pendingKey = `${id}:${Date.now()}`
+    enqueuePendingSession({
+      key: pendingKey,
+      workoutId: id,
+      workoutName: workout?.name ?? null,
+      note: note || undefined,
+      sets,
+      finishedAt: Date.now(),
+    })
+    // L'état « séance en cours » s'efface dès la mise en file. Le laisser
+    // proposerait de « reprendre » une séance déjà terminée, et la terminer une
+    // seconde fois créerait un doublon que rien, dans l'application, ne permet
+    // de supprimer.
+    localStorage.removeItem(storageKey)
+
+    // Délai plus large qu'au chargement : la route crée la séance puis insère
+    // toutes ses séries. Et comme elle n'a aucune clé d'idempotence, couper trop
+    // tôt relancerait au rejeu un envoi que le serveur a peut-être déjà commis.
     const res = await fetch(`/api/workouts/${id}/sessions`, {
+      signal: withTimeout(20000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ note: note || undefined, sets }),
     }).catch(() => null)
-    if (!res || !res.ok) {
-      toast('Impossible d\'enregistrer la séance — réessaie.', 'error')
-      setFinishing(false)
-      return
+    // 201 strictement : un `res.ok` large accepterait le 200 d'un portail Wi-Fi
+    // captif, et on retirerait de la file la seule copie de la séance.
+    if (res?.status === 201) {
+      dequeuePendingSession(pendingKey)
+    } else {
+      // Rien n'est perdu et il n'y a rien à refaire : l'ancien « Impossible
+      // d'enregistrer — réessaie » était faux dans les deux sens.
+      toast('Séance enregistrée sur l\'appareil — envoi dès le retour du réseau.', 'info')
     }
-    localStorage.removeItem(storageKey)
     router.push(`/workouts/${id}`)
+  }
+
+  // Sortie de secours. Sans ce bloc, un refus d'acces comme une coupure reseau
+  // laissaient « Chargement… » plein ecran : ni retour, ni nouvel essai, et le
+  // bouton systeme de retour arriere comme seule issue en pleine salle.
+  if (loadError) {
+    const titre = loadError === 'auth' ? 'Session expirée' : loadError === 'denied' ? 'Séance introuvable' : 'Serveur injoignable'
+    const detail = loadError === 'auth'
+      ? 'Reconnecte-toi pour reprendre la séance.'
+      : loadError === 'denied'
+        ? 'Cette séance n’existe plus, ou elle ne t’est pas partagée.'
+        : 'Pas de réponse du serveur. Dès que le réseau revient, la séance repart où tu l’avais laissée.'
+    const btnPrimaire: React.CSSProperties = {
+      minHeight: 44, padding: 'var(--sp-3) var(--sp-6)', borderRadius: 'var(--r-sm)',
+      background: 'var(--accent)', border: 'none', color: 'var(--on-accent)',
+      fontSize: 'var(--fs-body)', fontWeight: 800, cursor: 'pointer', boxShadow: 'var(--elev-1)',
+    }
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 'var(--sp-4)', padding: 'var(--sp-6)', textAlign: 'center' }}>
+        <div className="display" style={{ fontSize: 'var(--fs-h2)', fontWeight: 700, color: 'var(--text-primary)' }}>{titre}</div>
+        <div style={{ fontSize: 'var(--fs-body)', color: 'var(--text-muted)', maxWidth: 340, lineHeight: 1.5 }}>{detail}</div>
+        {draft && (
+          // Mousse : ces series sont de l'accompli, et c'est la seule chose a
+          // rassurer ici — l'echec n'a pas touche le brouillon en localStorage.
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--green)', background: 'var(--cypress-ghost)', border: '1px solid rgba(134,160,107,0.25)', borderRadius: 'var(--r-md)', padding: 'var(--sp-3) var(--sp-4)', maxWidth: 340, lineHeight: 1.5 }}>
+            {draft.name ? `${draft.name} — ` : ''}{draft.doneSets} série{draft.doneSets > 1 ? 's' : ''} déjà cochée{draft.doneSets > 1 ? 's' : ''}, conservée{draft.doneSets > 1 ? 's' : ''} sur ce téléphone.
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap', justifyContent: 'center', marginTop: 'var(--sp-2)' }}>
+          {loadError === 'network' && (
+            // Terracotta, action unique de l'ecran : c'est le seul cas ou un
+            // nouvel essai a une chance d'aboutir, et il rejoue le chargement
+            // complet — brouillon restauré compris.
+            <button onClick={() => loadRef.current()} style={btnPrimaire}>Réessayer</button>
+          )}
+          {loadError === 'auth' && (
+            <button onClick={() => router.push(`/login?redirect=/workouts/${id}/active`)} style={btnPrimaire}>Se reconnecter</button>
+          )}
+          <button onClick={() => router.push(loadError === 'denied' ? '/workouts' : `/workouts/${id}`)}
+            style={{ minHeight: 44, padding: 'var(--sp-3) var(--sp-5)', borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px solid var(--border-plus)', color: 'var(--text-muted)', fontSize: 'var(--fs-body)', fontWeight: 700, cursor: 'pointer' }}>
+            {loadError === 'denied' ? 'Mes séances' : 'Retour à la séance'}
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (!workout) {
@@ -702,34 +916,109 @@ export default function ActivePage() {
                         )}
                       </div>
 
-                      {/* Log de perf : charge × reps + indice "dernière fois" + PR */}
-                      {wm.duration == null && (() => {
+                      {/* ── Saisie, une ligne par série ──────────────────────────
+                          Un couple unique par mouvement enregistrait la même charge
+                          pour toutes les séries : monter de 40 à 50 kg entre la 1re
+                          et la 3e écrivait trois fois la même valeur fausse.
+                          Les lignes s'ouvrent au fur et à mesure (séries faites, plus
+                          la suivante sur le mouvement en cours) : afficher d'emblée
+                          toutes les séries de tous les mouvements ferait un mur de
+                          champs sur un écran de téléphone. */}
+                      {(() => {
                         const lp = lastPerf[wm.movement.id]
-                        const w = Number((logInputs[wm.id]?.weight ?? '').replace(',', '.'))
-                        const isPR = lp?.bestWeight != null && Number.isFinite(w) && w > 0 && w > lp.bestWeight
-                        const inpStyle: React.CSSProperties = {
-                          width: 62, textAlign: 'center', borderRadius: 8, padding: '7px 6px', fontSize: 14, fontWeight: 700, outline: 'none',
+                        const rows = perfLog[wm.id] ?? []
+                        const hasHint = !!(lp?.last && (lp.last.weight != null || lp.last.reps != null))
+                        // Séries faites + la suivante quand c'est le mouvement actif :
+                        // on remplit après avoir soulevé, pas avant la séance.
+                        const visibleRows = Math.min(target, isNow ? setsNow + 1 : setsNow)
+                        if (visibleRows === 0 && !hasHint) return null
+                        // Le PR se juge sur la série la plus lourde SAISIE : c'est
+                        // très souvent la dernière qui bat le record, pas la première.
+                        const topTyped = rows.reduce((max, r) => {
+                          const v = num(r?.weight)
+                          return v != null && v > max ? v : max
+                        }, 0)
+                        const isPR = lp?.bestWeight != null && topTyped > 0 && topTyped > lp.bestWeight
+                        const fieldStyle: React.CSSProperties = {
+                          textAlign: 'center', borderRadius: 'var(--r-sm)', padding: '11px 6px', minHeight: 44,
+                          fontSize: 'var(--fs-body)', fontWeight: 700, outline: 'none',
                           background: isNow ? 'rgba(240,235,225,0.08)' : 'rgba(255,255,255,0.06)',
                           border: `1px solid ${isNow ? 'rgba(240,235,225,0.22)' : 'rgba(255,255,255,0.12)'}`,
                           color: 'var(--text-primary)',
                         }
+                        const borderDim = isNow ? 'rgba(240,235,225,0.22)' : 'rgba(255,255,255,0.12)'
                         return (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                            <input type="number" inputMode="decimal" placeholder="kg" value={logInputs[wm.id]?.weight ?? ''}
-                              onChange={e => setLog(wm.id, 'weight', e.target.value)} style={inpStyle} />
-                            <span style={{ color: dimColor, fontSize: 13, fontWeight: 700 }}>kg&nbsp;×</span>
-                            <input type="number" inputMode="numeric" placeholder="reps" value={logInputs[wm.id]?.reps ?? ''}
-                              onChange={e => setLog(wm.id, 'reps', e.target.value)} style={{ ...inpStyle, width: 56 }} />
-                            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                              {isPR && (
-                                <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 20, background: 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)', color: '#0E0C08' }}>🏆 PR</span>
-                              )}
-                              {lp?.last && (lp.last.weight != null || lp.last.reps != null) && (
-                                <span style={{ fontSize: 11, color: dimColor, whiteSpace: 'nowrap' }}>
-                                  Dernière&nbsp;: {lp.last.weight != null ? `${lp.last.weight}kg` : ''}{lp.last.weight != null && lp.last.reps != null ? ' × ' : ''}{lp.last.reps != null ? lp.last.reps : ''}
-                                </span>
-                              )}
-                            </div>
+                          <div style={{ marginBottom: 'var(--sp-3)' }}>
+                            {/* La dernière charge connue est un indice — placeholder grisé
+                                et rappel « Dernière : … » — jamais une valeur posée dans
+                                le champ. Le PR reste en or : la progression, pas l'action. */}
+                            {(hasHint || isPR) && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-2)' }}>
+                                {hasHint && (
+                                  <span style={{ fontSize: 'var(--fs-micro)', color: dimColor, whiteSpace: 'nowrap' }}>
+                                    Dernière&nbsp;: {lp!.last!.weight != null ? `${lp!.last!.weight}kg` : ''}{lp!.last!.weight != null && lp!.last!.reps != null ? ' × ' : ''}{lp!.last!.reps != null ? lp!.last!.reps : ''}
+                                  </span>
+                                )}
+                                {isPR && (
+                                  <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-micro)', fontWeight: 800, padding: '2px 7px', borderRadius: 'var(--r-full)', background: 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)', color: '#0E0C08' }}>🏆 PR</span>
+                                )}
+                              </div>
+                            )}
+                            {Array.from({ length: visibleRows }).map((_, i) => {
+                              const row = rows[i]
+                              const isPending = i >= setsNow
+                              // Proposé seulement quand il y a de quoi reprendre et que la
+                              // ligne est encore vide : un bouton inerte ou destructeur
+                              // n'a rien à faire sous le pouce en pleine série.
+                              const canCopy = i > 0 && num(rows[i - 1]?.weight) != null && !row?.weight
+                              return (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginTop: i === 0 ? 0 : 'var(--sp-2)' }}>
+                                  {/* Mousse = l'accompli ; la série à venir reste neutre. Le
+                                      terracotta est déjà pris par « Série suivante » juste
+                                      en dessous — deux actions terracotta sur la même carte
+                                      se disputeraient le regard. */}
+                                  <span className="tnum" style={{
+                                    width: 20, flexShrink: 0, textAlign: 'center',
+                                    fontSize: 'var(--fs-micro)', fontWeight: 800,
+                                    color: isPending ? dimColor : 'var(--green)',
+                                  }}>{i + 1}</span>
+                                  {/* type="text" + inputMode plutôt que type="number" : ce
+                                      dernier refuse la virgule du pavé numérique iOS, change
+                                      de valeur à la molette et affiche des flèches minuscules
+                                      — intenable à une main entre deux séries. */}
+                                  <input type="text" inputMode="decimal" enterKeyHint="next"
+                                    aria-label={`Charge série ${i + 1} — ${wm.movement.name}`}
+                                    placeholder={lp?.last?.weight != null ? String(lp.last.weight) : 'kg'}
+                                    value={row?.weight ?? ''}
+                                    onChange={e => setLog(wm.id, i, 'weight', e.target.value)}
+                                    style={{ ...fieldStyle, width: 74 }} />
+                                  {wm.duration != null ? (
+                                    // Mouvement chronométré : la durée est la consigne, mais la
+                                    // charge n'avait aucun champ — une planche lestée était
+                                    // tout simplement impossible à enregistrer.
+                                    <span style={{ color: dimColor, fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap' }}>kg&nbsp;·&nbsp;{wm.duration}s</span>
+                                  ) : (
+                                    <>
+                                      <span style={{ color: dimColor, fontSize: 'var(--fs-sm)', fontWeight: 700 }}>kg&nbsp;×</span>
+                                      <input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done"
+                                        aria-label={`Répétitions série ${i + 1} — ${wm.movement.name}`}
+                                        placeholder={lp?.last?.reps != null ? String(lp.last.reps) : 'reps'}
+                                        value={row?.reps ?? ''}
+                                        onChange={e => setLog(wm.id, i, 'reps', e.target.value)}
+                                        style={{ ...fieldStyle, width: 66 }} />
+                                    </>
+                                  )}
+                                  {canCopy && (
+                                    <button type="button" onClick={() => copyPrevSet(wm.id, i)}
+                                      title="Reprendre la saisie de la série précédente"
+                                      aria-label={`Reprendre la saisie de la série ${i}`}
+                                      style={{ marginLeft: 'auto', minWidth: 44, minHeight: 44, borderRadius: 'var(--r-sm)', background: 'transparent', border: `1px solid ${borderDim}`, color: isNow ? 'rgba(240,235,225,0.6)' : 'rgba(255,255,255,0.35)', fontSize: 'var(--fs-body)', cursor: 'pointer' }}>
+                                      ↑
+                                    </button>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         )
                       })()}

@@ -755,7 +755,11 @@ export function DuplicatesTab() {
       })
       if (!res.ok) { const d = await res.json(); toast(d.error || 'Échec de la fusion', 'error'); return }
       setData(prev => prev ? prev.filter(g => g.key !== key) : prev)
-      toast('Mouvements fusionnés ✓')
+      // Le nombre de séries reportées est le seul retour qui atteste que l'historique
+      // de charges a suivi le mouvement conservé ; un « ✓ » muet avait déjà laissé
+      // passer la perte sans que personne ne la remarque.
+      const { sets = 0 } = await res.json().catch(() => ({ sets: 0 }))
+      toast(sets > 0 ? `Fusion ✓ · ${sets} série${sets > 1 ? 's' : ''} reportée${sets > 1 ? 's' : ''}` : 'Mouvements fusionnés ✓')
     } catch {
       toast('Erreur réseau', 'error')
     } finally {

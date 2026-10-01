@@ -30,27 +30,40 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   if (!userId) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   const { id: workoutId } = await params
   const body = await req.json().catch(() => ({}))
-  const session = await prisma.workoutSession.create({
-    data: { userId, workoutId, note: body.note || null },
-  })
-
   // Log de performance par série (optionnel — rétro-compatible avec l'ancien "J'ai fait")
   const sets: IncomingSet[] = Array.isArray(body.sets) ? body.sets : []
-  if (sets.length > 0) {
-    await prisma.sessionSet.createMany({
-      data: sets
-        .filter(s => s.movementId && Number.isFinite(s.setNumber))
-        .map(s => ({
-          sessionId: session.id,
-          movementId: s.movementId,
-          setNumber: s.setNumber,
-          reps: s.reps == null ? null : Math.round(s.reps),
-          weight: s.weight == null ? null : s.weight,
-          rpe: s.rpe == null ? null : Math.round(s.rpe),
-          completed: s.completed ?? true,
-        })),
+  const rows = sets
+    .filter(s => s.movementId && Number.isFinite(s.setNumber))
+    .map(s => ({
+      movementId: s.movementId,
+      setNumber: s.setNumber,
+      reps: s.reps == null ? null : Math.round(s.reps),
+      weight: s.weight == null ? null : s.weight,
+      rpe: s.rpe == null ? null : Math.round(s.rpe),
+      completed: s.completed ?? true,
+    }))
+
+  // Les deux écritures sous une même transaction. Un échec du createMany
+  // laissait jusqu'ici une séance sans aucune série : elle comptait comme faite
+  // dans les statistiques et dans « la dernière fois », son contenu était perdu,
+  // et rien ne la distinguait d'une séance où l'on n'avait rien noté. Un échec
+  // franc vaut mieux — le client sait désormais garder la charge utile et
+  // rejouer l'envoi.
+  const session = await prisma.$transaction(async txArg => {
+    // Même contournement que dans app/api/workouts/route.ts : sous TS strict, le
+    // type du client de transaction de Prisma 7 perd ses délégués de modèle,
+    // alors que son comportement à l'exécution est correct.
+    const tx = txArg as unknown as typeof prisma
+    const created = await tx.workoutSession.create({
+      data: { userId, workoutId, note: body.note || null },
     })
-  }
+    if (rows.length > 0) {
+      await tx.sessionSet.createMany({
+        data: rows.map(r => ({ ...r, sessionId: created.id })),
+      })
+    }
+    return created
+  })
 
   return NextResponse.json(session, { status: 201 })
 }
