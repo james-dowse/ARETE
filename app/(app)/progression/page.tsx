@@ -28,6 +28,9 @@ function parisMonday(d: Date): Date {
 const WEEKS_SHOWN = 12
 
 export default async function ProgressionPage() {
+  // Un echec de lecture ne doit pas se deguiser en « aucune seance » : un
+  // utilisateur qui en a 200 verrait son historique disparaitre sans un mot.
+  let chargementEchoue = false
   await syncAttributesFromDb()
   const user = await getCurrentUser()
 
@@ -46,7 +49,7 @@ export default async function ProgressionPage() {
             select: { id: true, name: true, movements: { select: { movement: { select: { bioType: true } } } } },
           },
         },
-      }).catch(() => [])
+      }).catch(() => { chargementEchoue = true; return [] })
     : []) as ProgressionSession[]
 
   const totalSessions = sessions.length
@@ -96,6 +99,16 @@ export default async function ProgressionPage() {
         {!user ? (
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
             Connecte-toi pour voir ta progression.
+          </div>
+        ) : chargementEchoue ? (
+          <div style={{ padding: '80px 0', textAlign: 'center' }}>
+            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--red)', marginBottom: 12 }}>
+              — Historique indisponible —
+            </div>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', maxWidth: 360, margin: '0 auto' }}>
+              Tes séances n&apos;ont pas pu être lues. Elles sont intactes : recharge la page
+              dans un instant.
+            </div>
           </div>
         ) : totalSessions === 0 ? (
           <div style={{ padding: '80px 0', textAlign: 'center' }}>

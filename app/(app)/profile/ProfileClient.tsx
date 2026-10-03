@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { Camera, Trash2, Save, Check } from 'lucide-react'
+import { useToast } from '@/components/Toast'
 
 interface Profile {
   id: string; email: string
@@ -14,6 +15,7 @@ export default function ProfileClient() {
   const [lastName, setLastName] = useState('')
   const [bio, setBio] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const toast = useToast()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -55,12 +57,17 @@ export default function ProfileClient() {
 
   async function handleSave() {
     setSaving(true); setSaved(false)
-    await fetch('/api/profile', {
+    // La mousse dit l’accompli : ne la montrer que si le serveur a confirme.
+    // Sans ce controle, un 500 ou une coupure reseau affichait « enregistre »
+    // et la modification etait perdue en silence.
+    const res = await fetch('/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ firstName, lastName, bio }),
-    })
-    setSaving(false); setSaved(true)
+    }).catch(() => null)
+    setSaving(false)
+    if (!res || !res.ok) { toast('Enregistrement impossible — reessaie.', 'error'); return }
+    setSaved(true)
     setTimeout(() => setSaved(false), 3000)
   }
 

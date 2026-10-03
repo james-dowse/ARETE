@@ -967,7 +967,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
       {/* ── Onglet MES WORKOUTS ── */}
       {!loading && tab === 'mine' && (
         <>
-          {!hasAnything && (
+          {!hasAnything && !fetchError && (
             <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)' }}>
               {/* Composé plutôt qu'un emoji posé au centre : c'est le tout
                   premier écran que voit un compte neuf. */}
