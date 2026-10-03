@@ -1,5 +1,6 @@
 import AppShell from '@/components/AppShell'
 import AttributesSync from '@/components/AttributesSync'
+import TemperatureSync from '@/components/TemperatureSync'
 import { syncAttributesFromDb } from '@/lib/attributes-server'
 
 // Layout partagé par toutes les pages de l'app connectée.
@@ -27,6 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <>
       <AttributesSync initial={attributes} />
+      <TemperatureSync />
       <AppShell>{children}</AppShell>
     </>
   )

@@ -845,23 +845,23 @@ html[data-temp="froid"] {
 
 /* On cree, on lance, on fait. La braise prend dans la matiere. */
 html[data-temp="forge"] {
-  --bg-canvas:     #240F03;
-  --bg-card:       #321A13;
-  --bg-card-solid: #321A13;
-  --bg-elevated:   #3F221A;
-  --border:        #552F24;
-  --heat-glow:     rgba(180,85,45,0.22);
+  --bg-canvas:     #260F03;
+  --bg-card:       #371507;
+  --bg-card-solid: #371507;
+  --bg-elevated:   #471D11;
+  --border:        #652E1D;
+  --heat-glow:     rgba(180,85,45,0.26);
 }
 
 /* C’est accompli. Le jaune de chauffe — et le bouton d’action n’a plus rien
    a declencher. */
 html[data-temp="or"] {
   --bg-canvas:     #251900;
-  --bg-card:       #2E1F00;
-  --bg-card-solid: #2E1F00;
-  --bg-elevated:   #3C2B0D;
-  --border:        #523C14;
-  --heat-glow:     rgba(201,165,53,0.20);
+  --bg-card:       #2F1F00;
+  --bg-card-solid: #2F1F00;
+  --bg-elevated:   #3E2B04;
+  --border:        #563E0E;
+  --heat-glow:     rgba(201,165,53,0.22);
 }
 
 /* La bordure forte suit la faible : impossible qu’un filet reste froid quand
