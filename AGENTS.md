@@ -123,3 +123,43 @@ règles, dans cet ordre d’importance :
   (« un autre utilisateur ARETE »), dans un `alt`, dans le titre d’onglet et
   dans le manifeste PWA, on garde **ARETE** en latin : c’est ce que le système
   d’exploitation sait rendre et ce que l’utilisateur sait chercher.
+
+## Le fil conducteur : la forge
+
+ARETE se lit comme un atelier. Ce n’est pas une image plaquée : le tableau de
+bord dit déjà « Forger », et la palette encode une thermodynamique — terracotta
+la braise (ce qui est chaud, le maintenant), or le métal à température (la marque,
+la progression), mousse la pièce trempée (l’accompli), basalte la pierre sur
+laquelle on travaille. La forge n’invente pas ces rôles : elle explique pourquoi
+ils sont justes.
+
+**La forge gouverne ce que l’application fait. Elle ne gouverne presque jamais ce
+qu’elle appelle les choses.**
+
+Légitime : la logique des températures, le rythme (la chauffe, la frappe, la
+trempe, le repos sont des durées et des silences, pas des mots à afficher), la
+trace (un mouvement travaillé cinquante fois ne se présente pas comme un
+mouvement jamais essayé). Dans tous ces cas, personne ne dira jamais « tiens, une
+forge » — et c’est le signe que ça marche.
+
+Illégitime dès que l’utilisateur doit reconnaître la métaphore pour comprendre
+l’interface. Pas de marteaux en icône, pas d’étincelles, pas de dégradé orange
+décoratif, pas de « forger » employé comme verbe partout.
+
+### Renommer : le test
+
+Un mot nouveau se mérite quand il **dit quelque chose de plus** que l’ancien.
+Jamais quand il recolore le même sens.
+
+- « Bibliothèque » → « Syllabus » : retenu. Une bibliothèque est un stock passif,
+  un syllabus un programme ordonné qu’on parcourt dans un but. Le mot neuf porte
+  une information que l’ancien n’avait pas.
+- « Mes séances » → « Mes ouvrages » : rejeté. Ne dit rien de plus, drape.
+- « Terminer » → « Tremper » : rejeté. Transforme un bouton en devinette ;
+  l’utilisateur doit traduire avant d’agir.
+
+Second critère, pour trancher vite : distinguer **le mot qui nomme** du **mot qui
+commente**. « Forger ta séance » tient debout, parce que forger est littéralement
+ce qu’on fait — on lui donne sa forme. « Ton métal est chaud » en message d’état,
+c’est l’application qui se regarde parler. Une application qui commente son
+utilisateur vieillit en trois séances.

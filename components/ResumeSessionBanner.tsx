@@ -236,7 +236,7 @@ export default function ResumeSessionBanner({ workoutId }: { workoutId?: string 
             Démarrée il y a {min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60 ? `${min % 60} min` : ''}`} · {session.doneSets} série{session.doneSets > 1 ? 's' : ''} faite{session.doneSets > 1 ? 's' : ''}
           </div>
         </div>
-        <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: '#0E0C08', background: 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)', borderRadius: 'var(--r-sm)', padding: '9px 16px', letterSpacing: 0.3, boxShadow: '0 2px 0 rgba(14,12,8,0.25)' }}>
+        <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, background: 'var(--accent)', color: 'var(--on-accent)', borderRadius: 'var(--r-sm)', padding: '9px 16px', letterSpacing: 0.3, boxShadow: 'var(--elev-1)' }}>
           Reprendre →
         </span>
       </div>

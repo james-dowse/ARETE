@@ -243,7 +243,7 @@ export default function LibraryPicker({ currentName, currentId, onPick, onClose 
                   Annuler
                 </button>
                 <button onClick={handleCreateCustom} disabled={creatingCustom || !customName.trim()}
-                  style={{ padding: '7px 14px', background: 'var(--gold)', border: 'none', borderRadius: 7, color: 'var(--ink)', fontSize: 12.5, fontWeight: 700, cursor: creatingCustom ? 'default' : 'pointer', opacity: !customName.trim() ? 0.6 : 1 }}>
+                  style={{ padding: '7px 14px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 7, fontSize: 12.5, fontWeight: 700, cursor: creatingCustom ? 'default' : 'pointer', opacity: !customName.trim() ? 0.6 : 1 }}>
                   {creatingCustom ? '…' : 'Ajouter'}
                 </button>
               </div>

@@ -239,7 +239,7 @@ function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: string; on
         <button
           onClick={handleAdd}
           disabled={selected === null || saving}
-          style={{ width: '100%', padding: '11px', background: 'var(--gold)', color: 'var(--ink)', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: selected === null || saving ? 'default' : 'pointer', opacity: selected === null ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+          style={{ width: '100%', padding: '11px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: selected === null || saving ? 'default' : 'pointer', opacity: selected === null ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
         >
           <CalendarPlus size={14} />
           {saving ? 'Ajout…' : selected !== null ? `Ajouter — ${DAYS_FR[selected]}` : 'Choisir un jour'}
@@ -562,7 +562,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
     if (p.get('imported') === '1') {
-      toast('Séance sauvegardée ✓ ✓')
+      toast('Séance sauvegardée')
       window.history.replaceState({}, '', '/workouts')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1116,7 +1116,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                   context="community"
                   onToggleSave={saved => {
                     setCommunityWorkouts(prev => prev.map(x => x.id === w.id ? { ...x, isSaved: saved } : x))
-                    if (saved) toast('Séance sauvegardée ✓ ✓')
+                    if (saved) toast('Séance sauvegardée')
                   }}
                   onShare={() => setSharingWorkout(w)}
                 />

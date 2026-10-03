@@ -116,7 +116,7 @@ export default async function ProgressionPage() {
               — Aucune séance enregistrée encore —
             </div>
             <Link href="/workouts" style={{ textDecoration: 'none' }}>
-              <button style={{ padding: '12px 32px', background: 'var(--gold)', color: 'var(--ink)', border: 'none', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
+              <button style={{ padding: '12px 32px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
                 Voir mes séances
               </button>
             </Link>
