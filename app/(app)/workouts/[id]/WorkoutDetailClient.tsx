@@ -559,6 +559,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     initial.blocks.forEach(b => { blockMovementsMap[b.id] = [] })
     initial.movements.forEach(wm => { if (wm.blockId && blockMovementsMap[wm.blockId]) blockMovementsMap[wm.blockId].push(wm) })
   }
+  // Tout ce que la boucle par bloc ne montrera jamais : `blockId` nul, ou
+  // pointant vers un bloc qui n'existe plus.
+  const orphanMovements = hasBlocks
+    ? initial.movements.filter(wm => !wm.blockId || !blockMovementsMap[wm.blockId])
+    : []
   const blockEditStatesMap: Record<string, { es: EditState; orig: WorkoutMovement; absIdx: number }[]> = {}
   if (hasBlocks && editMode) {
     initial.blocks.forEach(b => { blockEditStatesMap[b.id] = [] })
@@ -953,6 +958,18 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                   ))}
                 </>
               : initial.movements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} lastPerf={lastPerf[wm.movement.id]} />)
+          )}
+          {/* Les mouvements rattachés à aucun bloc. Sans ce rattrapage, une séance
+              qui a des blocs mais dont les mouvements portent `blockId = null`
+              affichait ses en-têtes de bloc et pas un seul mouvement : la fiche
+              paraissait vide alors que la séance était complète. Même défaut que
+              celui déjà corrigé sur l'écran de séance active. */}
+          {!editMode && hasBlocks && orphanMovements.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+              {orphanMovements.map((wm, i) => (
+                <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} lastPerf={lastPerf[wm.movement.id]} />
+              ))}
+            </div>
           )}
           {editMode && !hasBlocks && (
             <button onClick={() => setAddingToBlockId('__flat__')}
