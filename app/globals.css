@@ -805,3 +805,74 @@ h1,
   color: var(--text-muted);
   line-height: 1;
 }
+
+/* ══ L’AXE DE TEMPERATURE ══════════════════════════════════════════════
+
+   Trois crans le long du parcours : le froid (rien n’est entrepris), la forge
+   (on cree, on lance, on fait), l’or (c’est accompli).
+
+   CE QUI NE BOUGE JAMAIS, et c’est ce qui en fait un axe plutot que trois
+   themes : aucune couleur de premier plan ne change d’un cran a l’autre.
+   Terracotta, or, mousse et les trois niveaux de texte gardent leur valeur
+   exacte. Un theme redefinit les roles ; un axe ne redefinit que la surface
+   sous eux. Regle verifiable sur une capture : entre un ecran forge et un
+   ecran or, AUCUN element ne doit passer de non-or a or — seules les surfaces
+   en dessous changent.
+
+   CALIBRAGE. Les valeurs ne sont pas choisies a l’oeil mais calculees en
+   L*C*h sous deux contraintes simultanees :
+     • ecart percu d’au moins 8 (dE76) entre crans voisins, sur chacune des
+       quatre surfaces. Obtenu : 9,4 au minimum, 26 au maximum. Une premiere
+       tentative qui ne faisait varier que le sol tombait a 2,1 entre la forge
+       et l’or — sous le seuil ou l’oeil separe deux couleurs, donc invisible.
+     • contraste AA tenu aux trois crans. Le plus serre est l’etiquette en
+       capitales, blanc a 51 % compose sur la carte : 4,71 / 4,53 / 4,51. C’est
+       lui qui plafonne la clarte de la carte au cran chaud.
+   L’or de la marque reste #C9A535 partout, a 7,44 / 6,90 / 6,80 sur la carte.
+
+   Sans attribut data-temp, rien ne change : l’axe est opt-in.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Rien n’est entrepris. L’enclume froide : teinte presque nulle. */
+html[data-temp="froid"] {
+  --bg-canvas:     #0F0C09;
+  --bg-card:       #1B1917;
+  --bg-card-solid: #1B1917;
+  --bg-elevated:   #24211E;
+  --border:        #312E2A;
+  --heat-glow:     rgba(180,85,45,0);
+}
+
+/* On cree, on lance, on fait. La braise prend dans la matiere. */
+html[data-temp="forge"] {
+  --bg-canvas:     #240F03;
+  --bg-card:       #321A13;
+  --bg-card-solid: #321A13;
+  --bg-elevated:   #3F221A;
+  --border:        #552F24;
+  --heat-glow:     rgba(180,85,45,0.22);
+}
+
+/* C’est accompli. Le jaune de chauffe — et le bouton d’action n’a plus rien
+   a declencher. */
+html[data-temp="or"] {
+  --bg-canvas:     #251900;
+  --bg-card:       #2E1F00;
+  --bg-card-solid: #2E1F00;
+  --bg-elevated:   #3C2B0D;
+  --border:        #523C14;
+  --heat-glow:     rgba(201,165,53,0.20);
+}
+
+/* La bordure forte suit la faible : impossible qu’un filet reste froid quand
+   son voisin chauffe. */
+html[data-temp] {
+  --border-plus: color-mix(in srgb, var(--border) 88%, var(--text-primary));
+}
+
+/* Le passage se fait entre deux ecrans, jamais sous les yeux : une teinte qui
+   derive pendant qu’on regarde se lit comme un defaut d’affichage. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-temp] body,
+  html[data-temp] .main-grid { transition: background-color 420ms cubic-bezier(0.4, 0, 0.2, 1); }
+}
