@@ -29,14 +29,19 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     select: { movementId: true, reps: true, weight: true, setNumber: true, sessionId: true, createdAt: true },
   }) as { movementId: string; reps: number | null; weight: number | null; setNumber: number; sessionId: string; createdAt: Date }[]
 
+  // `createdAt` était déjà sélectionné plus haut et jeté : le coût de la
+  // requête est inchangé, seule la réponse gagne un champ. Il permet de dire
+  // depuis quand un mouvement n’a pas été touché — et de le dire aussi quand
+  // la réponse est « jamais ».
   const result: Record<string, {
     last: { weight: number | null; reps: number | null } | null
+    lastAt: Date | null
     bestWeight: number | null
   }> = {}
 
   for (const mid of movementIds) {
     const mine = rows.filter(r => r.movementId === mid)
-    if (mine.length === 0) { result[mid] = { last: null, bestWeight: null }; continue }
+    if (mine.length === 0) { result[mid] = { last: null, lastAt: null, bestWeight: null }; continue }
     // Dernière séance = celle du set le plus récent
     const lastSessionId = mine[0].sessionId
     const lastSessionSets = mine.filter(r => r.sessionId === lastSessionId)
@@ -45,6 +50,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     const bestWeight = mine.reduce((max, r) => (r.weight != null && r.weight > max ? r.weight : max), -Infinity)
     result[mid] = {
       last: { weight: top.weight ?? null, reps: top.reps ?? null },
+      lastAt: mine[0].createdAt,
       bestWeight: Number.isFinite(bestWeight) ? bestWeight : null,
     }
   }

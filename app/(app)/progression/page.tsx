@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
 import { syncAttributesFromDb } from '@/lib/attributes-server'
-import { CheckCircle2, Flame, TrendingUp } from 'lucide-react'
+import { CheckCircle2, TrendingUp } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,12 +68,9 @@ export default async function ProgressionPage() {
   })
   const maxWeekCount = Math.max(...weekBuckets.map(b => b.count), 1)
 
-  // ── Streak (semaines consécutives avec au moins une séance, jusqu'à cette semaine) ──
-  let currentStreak = 0
-  for (let i = weekBuckets.length - 1; i >= 0; i--) {
-    if (weekBuckets[i].count > 0) currentStreak++
-    else break
-  }
+  // Semaines travaillées, et non semaines de suite : une série interrompue
+  // retombe a zero et transforme un retour en échec affiché.
+  const weeksWorked = weekBuckets.filter(b => b.count > 0).length
 
   // ── Répartition par type biomécanique (sur toutes les séances chargées) ──
   const bioCounts: Record<string, number> = {}
@@ -128,15 +125,15 @@ export default async function ProgressionPage() {
               {[
                 { value: totalSessions, label: 'Séances au total', icon: CheckCircle2 },
                 { value: weekSessionCount, label: 'Cette semaine', icon: TrendingUp },
-                { value: currentStreak, label: `Semaine${currentStreak !== 1 ? 's' : ''} de suite`, icon: Flame },
+                { value: weeksWorked, label: `Semaine${weeksWorked !== 1 ? 's' : ''} travaillée${weeksWorked !== 1 ? 's' : ''}`, icon: CheckCircle2 },
               ].map(({ value, label, icon: Icon }, i) => (
                 <div key={label} style={{
                   background: 'var(--bg-card)', padding: '24px 28px',
-                  borderTop: i === 2 ? '2px solid var(--gold)' : '2px solid transparent',
+                  borderTop: '2px solid transparent',
                   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)',
                 }}>
-                  <Icon size={16} style={{ color: i === 2 ? 'var(--gold)' : 'var(--text-dim)', marginBottom: 10 }} />
-                  <div style={{ fontSize: 44, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color: i === 2 ? 'var(--gold)' : 'var(--text-primary)' }}>
+                  <Icon size={16} style={{ color: 'var(--text-dim)', marginBottom: 10 }} />
+                  <div style={{ fontSize: 44, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--text-primary)' }}>
                     {value}
                   </div>
                   <div style={{ ...SECTION_LABEL_GOLD, color: 'var(--text-muted)', marginTop: 8 }}>{label}</div>

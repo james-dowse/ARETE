@@ -27,7 +27,7 @@ import {
 } from './parts'
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin }: { workout: Workout; backTo?: string; isAdmin?: boolean }) {
+export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin, passages = 0, dernierPassage = null }: { workout: Workout; backTo?: string; isAdmin?: boolean; passages?: number; dernierPassage?: string | null }) {
   const router = useRouter()
 
   const [editMode, setEditMode] = useState(false)
@@ -598,8 +598,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin 
               <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, wordBreak: 'break-word' }}>{initial.name}</h1>
             )}
             <div style={{ display: 'flex', gap: 14, marginTop: 8, flexWrap: 'wrap' }}>
+              {/* La date de création ne répond à aucune question qu'on se pose en
+                  ouvrant une séance. Le nombre de fois où on l'a faite, si. */}
               <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                {new Date(initial.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                {passages === 0
+                  ? 'Jamais faite'
+                  : `${passages}${passages === 1 ? 're' : 'e'} passage${dernierPassage ? ` · dernière fois le ${new Date(dernierPassage).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : ''}`}
               </span>
               {initial.duration && <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-muted)' }}><Clock size={12} /> {initial.duration} min</span>}
               {initial.user && (

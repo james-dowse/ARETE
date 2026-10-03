@@ -177,13 +177,25 @@ export function ImageEditZone({ url, position, onUrlChange, onPositionChange }: 
 }
 
 // ─── View Row ─────────────────────────────────────────────────────────────────
-export interface LastPerf { last: { weight: number | null; reps: number | null } | null; bestWeight: number | null }
+export interface LastPerf { last: { weight: number | null; reps: number | null } | null; lastAt?: Date | string | null; bestWeight: number | null }
 
 export function MovementRowView({ wm, index, onMovementClick, lastPerf }: { wm: WorkoutMovement; index: number; onMovementClick: (id: string) => void; lastPerf?: LastPerf }) {
   const m = wm.movement
   const hasSetsReps = wm.sets || wm.reps || wm.duration != null
   const lp = lastPerf?.last
   const hasLast = !!lp && (lp.weight != null || lp.reps != null)
+  // « jamais travaillé » n'est affiché que si le serveur a bien répondu pour ce
+  // mouvement : sans cette distinction, un chargement en cours ressemblerait à
+  // une absence d'historique.
+  const jours = lastPerf?.lastAt
+    ? Math.floor((Date.now() - new Date(lastPerf.lastAt).getTime()) / 86_400_000)
+    : null
+  const depuis = jours == null
+    ? (lastPerf && !hasLast ? 'jamais travaillé' : null)
+    : jours === 0 ? "aujourd'hui"
+    : jours === 1 ? 'hier'
+    : jours < 31 ? `il y a ${jours} j`
+    : `il y a ${Math.round(jours / 30)} mois`
   return (
     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', flexShrink: 0 }}>{index + 1}</div>
@@ -219,13 +231,24 @@ export function MovementRowView({ wm, index, onMovementClick, lastPerf }: { wm: 
               </>
             )}
           </div>
-          {hasLast && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, fontSize: 11, color: 'var(--text-muted)' }}>
-              <span style={{ opacity: 0.7 }}>↩</span>
-              <span style={{ fontWeight: 600 }}>Dernière fois&nbsp;:</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
-                {lp!.weight != null ? `${lp!.weight} kg` : ''}{lp!.weight != null && lp!.reps != null ? ' × ' : ''}{lp!.reps != null ? `${lp!.reps} reps` : ''}
-              </span>
+          {/* Depuis quand, et pas seulement combien : un mouvement laissé de côté
+              depuis sept mois ne se charge pas comme un mouvement fait la semaine
+              dernière. Et quand la réponse est « jamais », c’est encore une
+              information — la seule de cette ligne qui apprenne quelque chose. */}
+          {(hasLast || depuis) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, fontSize: 11, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+              {hasLast ? (
+                <>
+                  <span style={{ opacity: 0.7 }}>↩</span>
+                  <span style={{ fontWeight: 600 }}>Dernière fois&nbsp;:</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
+                    {lp!.weight != null ? `${lp!.weight} kg` : ''}{lp!.weight != null && lp!.reps != null ? ' × ' : ''}{lp!.reps != null ? `${lp!.reps} reps` : ''}
+                  </span>
+                  {depuis && <span style={{ color: 'var(--text-dim)' }}>· {depuis}</span>}
+                </>
+              ) : (
+                <span style={{ color: 'var(--text-dim)' }}>jamais travaillé</span>
+              )}
             </div>
           )}
         </div>

@@ -951,16 +951,15 @@ export default function ActivePage() {
                           <div style={{ marginBottom: 'var(--sp-3)' }}>
                             {/* La dernière charge connue est un indice — placeholder grisé
                                 et rappel « Dernière : … » — jamais une valeur posée dans
-                                le champ. Le PR reste en or : la progression, pas l'action. */}
-                            {(hasHint || isPR) && (
+                                le champ. Le record ne se
+                                pose plus a cote sous forme de trophée : c’est la charge saisie
+                                elle-même qui passe en or. La marque est frappée dans la piece. */}
+                            {hasHint && (
                               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-2)' }}>
                                 {hasHint && (
                                   <span style={{ fontSize: 'var(--fs-micro)', color: dimColor, whiteSpace: 'nowrap' }}>
                                     Dernière&nbsp;: {lp!.last!.weight != null ? `${lp!.last!.weight}kg` : ''}{lp!.last!.weight != null && lp!.last!.reps != null ? ' × ' : ''}{lp!.last!.reps != null ? lp!.last!.reps : ''}
                                   </span>
-                                )}
-                                {isPR && (
-                                  <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-micro)', fontWeight: 800, padding: '2px 7px', borderRadius: 'var(--r-full)', background: 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)', color: '#0E0C08' }}>🏆 PR</span>
                                 )}
                               </div>
                             )}
@@ -991,7 +990,12 @@ export default function ActivePage() {
                                     placeholder={lp?.last?.weight != null ? String(lp.last.weight) : 'kg'}
                                     value={row?.weight ?? ''}
                                     onChange={e => setLog(wm.id, i, 'weight', e.target.value)}
-                                    style={{ ...fieldStyle, width: 74 }} />
+                                    style={{ ...fieldStyle, width: 74,
+                                      // L’or sur la seule serie qui bat le record, pas sur
+                                      // toutes : c’est un fait precis, pas une decoration.
+                                      ...(isPR && num(row?.weight) != null && num(row?.weight) === topTyped
+                                        ? { color: 'var(--gold)', borderColor: 'var(--gold-border)' }
+                                        : null) }} />
                                   {wm.duration != null ? (
                                     // Mouvement chronométré : la durée est la consigne, mais la
                                     // charge n'avait aucun champ — une planche lestée était

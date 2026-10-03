@@ -45,31 +45,6 @@ function parisWeekInfo() {
   return { dayIdx, weekStartCandidates: [sundayUTC, mondayUTC], weekBegin: sundayUTC, monday: mondayUTC }
 }
 
-function parisDateKey(d: Date): string {
-  return new Date(d).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }) // YYYY-MM-DD
-}
-
-// Nombre de jours consécutifs (jusqu'à aujourd'hui inclus) avec au moins une séance faite.
-function computeStreak(doneAtDates: Date[]): number {
-  const days = new Set(doneAtDates.map(parisDateKey))
-  const todayKey = parisDateKey(new Date())
-  let cursor = new Date()
-  let streak = 0
-  // Si rien fait aujourd'hui, le streak part d'hier (on ne casse pas le streak avant la fin de la journée).
-  if (!days.has(todayKey)) {
-    cursor.setDate(cursor.getDate() - 1)
-  }
-  for (let i = 0; i < 60; i++) {
-    const key = parisDateKey(cursor)
-    if (days.has(key)) {
-      streak++
-      cursor.setDate(cursor.getDate() - 1)
-    } else {
-      break
-    }
-  }
-  return streak
-}
 
 // ── Échelle typographique de la page d'accueil ──────────────────────────────
 // Trois niveaux seulement, pour que la page se lise d'un coup d'œil :
@@ -113,15 +88,12 @@ export default async function DashboardPage() {
   const monthBegin = new Date()
   monthBegin.setDate(1)
   monthBegin.setHours(0, 0, 0, 0)
-  const streakWindowBegin = new Date()
-  streakWindowBegin.setDate(streakWindowBegin.getDate() - 60)
   const { dayIdx, weekStartCandidates, weekBegin, monday } = parisWeekInfo()
 
   // Un seul aller-retour : ces neuf requêtes sont indépendantes entre elles et
   // ne dépendent que de `user`. Les enchaîner en quatre vagues successives
   // multipliait la latence réseau par quatre sur la page d'accueil.
   type RecentSession = { id: string; doneAt: Date; workout: { id: string; name: string; duration: number | null; movements: { movement: { bioType: string } }[] } }
-  type StreakSession = { doneAt: Date }
   type MonthSession = { workout: { duration: number | null } | null }
   type WeekPlanResult = { entries: { id: string; dayOfWeek: number; order: number; workout: { id: string; name: string; duration: number | null; movements: { id: string; movement: { bioType: string } }[] } }[] } | null
   type SiteContentRow = { id: string; key: string; title: string | null; body: string; active: boolean; updatedAt: Date }
@@ -134,7 +106,7 @@ export default async function DashboardPage() {
   // positions déstructurées (pas seulement celle en cause).
   const [
     movementCount, workoutCount, templateCount, bioStats,
-    recentSessions, streakSessions, monthSessions,
+    recentSessions, monthSessions,
     weekPlan, weekSessionCount, siteContents, resources,
   ] = await Promise.all([
     prisma.movement.count(),
@@ -149,10 +121,6 @@ export default async function DashboardPage() {
       take: 5,
       orderBy: { doneAt: 'desc' },
       include: { workout: { select: { id: true, name: true, duration: true, movements: { select: { movement: { select: { bioType: true } } } } } } },
-    }).catch((): never[] => []) : Promise.resolve([] as never[]),
-    user ? prisma.workoutSession.findMany({
-      where: { userId: user.id, doneAt: { gte: streakWindowBegin } },
-      select: { doneAt: true },
     }).catch((): never[] => []) : Promise.resolve([] as never[]),
     user ? prisma.workoutSession.findMany({
       where: { userId: user.id, doneAt: { gte: monthBegin } },
@@ -172,14 +140,19 @@ export default async function DashboardPage() {
     prisma.resource.findMany({ orderBy: [{ order: 'asc' }, { createdAt: 'desc' }], take: 3 }).catch((): never[] => []),
   ]) as [
     number, number, number, { bioType: string; _count: number }[],
-    RecentSession[], StreakSession[], MonthSession[],
+    RecentSession[], MonthSession[],
     WeekPlanResult, number, SiteContentRow[], ResourceRow[],
   ]
 
   const textContents = siteContents.filter(c => c.key !== 'resources')
   const resourcesEnabled = siteContents.some(c => c.key === 'resources')
 
-  const streak = computeStreak(streakSessions.map(s => s.doneAt))
+  // Depuis quand, et non combien de jours d’affilee : un compteur de serie
+  // retombe a zero apres deux semaines d’arret et accueille le retour par un
+  // reproche. Le fait brut ne juge rien et reste vrai un mauvais jour.
+  const daysSince = recentSessions[0]
+    ? Math.floor((Date.now() - new Date(recentSessions[0].doneAt).getTime()) / 86_400_000)
+    : null
   const monthMinutes = monthSessions.reduce((sum, s) => sum + (s.workout?.duration || 0), 0)
   const monthHours = Math.round(monthMinutes / 60)
   const weekEntries = weekPlan?.entries ?? []
@@ -442,7 +415,7 @@ export default async function DashboardPage() {
         <div className="r-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, marginBottom: 40, background: 'var(--border)' }}>
           {[
             { value: workoutCount, label: 'Séances', gold: false },
-            { value: streak, label: "Jours d'affilée", gold: true },
+            { value: daysSince ?? '—', label: daysSince === 1 ? 'Jour depuis la dernière' : 'Jours depuis la dernière', gold: false },
             { value: movementCount, label: 'Mouvements', gold: false },
             { value: user ? monthHours : templateCount, label: user ? 'Heures ce mois-ci' : 'Templates', gold: false },
           ].map(({ value, label, gold }) => (
