@@ -7,14 +7,10 @@ import { CheckCircle2, TrendingUp } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-const SECTION_LABEL_GOLD: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 700,
-  letterSpacing: '0.10em',
-  textTransform: 'uppercase' as const,
-  color: 'var(--gold-dim)',
-  margin: 0,
-}
+// Le libelle de section a rejoint .t-micro (globals.css) : memes capitales, meme
+// interlettrage que partout ailleurs, au lieu d'un objet de style redessine ici
+// pour quatre appels. Seule la teinte or reste posee au point d'appel, parce que
+// la charte l'attribue a la progression — le sujet meme de cet ecran.
 
 // Lundi (Europe/Paris) de la semaine contenant `d`, retourné en UTC minuit.
 function parisMonday(d: Date): Date {
@@ -86,12 +82,13 @@ export default async function ProgressionPage() {
   return (
     <>
       <div className="page">
-        <div style={{ marginBottom: 32 }}>
+        <header style={{ marginBottom: 'var(--sp-6)' }}>
+          <div className="t-micro" style={{ marginBottom: 6 }}>SUIVI</div>
           <h1 className="r-h1">Progression</h1>
           <p className="r-subtitle">
             {totalSessions} séance{totalSessions !== 1 ? 's' : ''} enregistrée{totalSessions !== 1 ? 's' : ''}
           </p>
-        </div>
+        </header>
 
         {!user ? (
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -99,21 +96,24 @@ export default async function ProgressionPage() {
           </div>
         ) : chargementEchoue ? (
           <div style={{ padding: '80px 0', textAlign: 'center' }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--red)', marginBottom: 12 }}>
+            <div className="t-micro" style={{ color: 'var(--red)', marginBottom: 'var(--sp-3)' }}>
               — Historique indisponible —
             </div>
-            <div style={{ fontSize: 14, color: 'var(--text-muted)', maxWidth: 360, margin: '0 auto' }}>
+            <div className="t-body" style={{ color: 'var(--text-muted)', maxWidth: 360, margin: '0 auto' }}>
               Tes séances n&apos;ont pas pu être lues. Elles sont intactes : recharge la page
               dans un instant.
             </div>
           </div>
         ) : totalSessions === 0 ? (
           <div style={{ padding: '80px 0', textAlign: 'center' }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 24 }}>
+            <div className="t-micro" style={{ marginBottom: 'var(--sp-6)' }}>
               — Aucune séance enregistrée encore —
             </div>
             <Link href="/workouts" style={{ textDecoration: 'none' }}>
-              <button style={{ padding: '12px 32px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
+              {/* .btn porte la geometrie et le survol, pas la teinte : .btn-primary est
+                  or, et la charte reserve l'or a la progression — l'action est
+                  terracotta. */}
+              <button className="btn btn-md" style={{ background: 'var(--accent)', color: 'var(--on-accent)', textTransform: 'uppercase', letterSpacing: 'var(--ls-caps)' }}>
                 Voir mes séances
               </button>
             </Link>
@@ -133,17 +133,19 @@ export default async function ProgressionPage() {
                   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)',
                 }}>
                   <Icon size={16} style={{ color: 'var(--text-dim)', marginBottom: 10 }} />
-                  <div style={{ fontSize: 44, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--text-primary)' }}>
+                  {/* Un grand chiffre : le seul emploi legitime de la serif, avec les
+                      titres. .tnum les aligne d'une tuile a l'autre. */}
+                  <div className="display tnum" style={{ fontSize: 44, color: 'var(--text-primary)' }}>
                     {value}
                   </div>
-                  <div style={{ ...SECTION_LABEL_GOLD, color: 'var(--text-muted)', marginTop: 8 }}>{label}</div>
+                  <div className="t-micro" style={{ color: 'var(--text-muted)', marginTop: 'var(--sp-2)' }}>{label}</div>
                 </div>
               ))}
             </div>
 
             {/* ── Barres hebdomadaires ── */}
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '24px 28px', marginBottom: 24, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
-              <p style={{ ...SECTION_LABEL_GOLD, marginBottom: 20 }}>{WEEKS_SHOWN} dernières semaines</p>
+            <div className="card" style={{ padding: '24px 28px', marginBottom: 'var(--sp-6)' }}>
+              <p className="t-micro" style={{ color: 'var(--gold-dim)', marginBottom: 'var(--sp-5)' }}>{WEEKS_SHOWN} dernières semaines</p>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 120 }}>
                 {weekBuckets.map((b, i) => {
                   const h = Math.max((b.count / maxWeekCount) * 100, b.count > 0 ? 8 : 2)
@@ -171,8 +173,8 @@ export default async function ProgressionPage() {
 
             {/* ── Répartition par type ── */}
             {bioStats.length > 0 && (
-              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '24px 28px', marginBottom: 32, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
-                <p style={{ ...SECTION_LABEL_GOLD, marginBottom: 20 }}>Types biomécaniques travaillés</p>
+              <div className="card" style={{ padding: '24px 28px', marginBottom: 'var(--sp-7)' }}>
+                <p className="t-micro" style={{ color: 'var(--gold-dim)', marginBottom: 'var(--sp-5)' }}>Types biomécaniques travaillés</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {bioStats.map(([bioType, count]) => {
                     const pct = Math.round((count / maxBio) * 100)
@@ -180,11 +182,11 @@ export default async function ProgressionPage() {
                     return (
                       <div key={bioType}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                          <span style={{ fontSize: 14, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span className="t-body" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ opacity: 0.7 }}>{BIO_TYPE_ICONS[bioType]}</span>
                             {bioType}
                           </span>
-                          <span style={{ fontSize: 14, fontWeight: 700, color, letterSpacing: '0.02em' }}>{count}</span>
+                          <span className="t-body tnum" style={{ fontWeight: 700, color }}>{count}</span>
                         </div>
                         <div style={{ height: 2, background: 'var(--border-plus)' }}>
                           <div style={{ height: '100%', background: color, width: `${pct}%`, transition: 'width 0.6s ease' }} />
@@ -198,8 +200,10 @@ export default async function ProgressionPage() {
 
             {/* ── Historique ── */}
             <div>
-              <p style={{ ...SECTION_LABEL_GOLD, marginBottom: 16 }}>Historique</p>
-              <div style={{ border: '1px solid var(--border)', background: 'var(--bg-card)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
+              <p className="t-micro" style={{ color: 'var(--gold-dim)', marginBottom: 'var(--sp-4)' }}>Historique</p>
+              {/* .card pose un rayon que cette liste n'avait pas : sans overflow, le
+                  survol d'une ligne redessine des coins carres aux extremites. */}
+              <div className="card" style={{ overflow: 'hidden' }}>
                 {sessions.map((s, i) => {
                   const bioTypes = Array.from(new Set(s.workout.movements.map(m => m.movement.bioType))).slice(0, 3)
                   const doneStr = new Date(s.doneAt).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
@@ -215,10 +219,10 @@ export default async function ProgressionPage() {
                           <CheckCircle2 size={14} color="var(--gold)" />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div className="t-body" style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {s.workout.name}
                           </div>
-                          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                          <div className="t-sm" style={{ color: 'var(--text-muted)', marginTop: 2 }}>
                             {doneStr} à {timeStr}
                             {s.note && <span style={{ marginLeft: 8, color: 'var(--text-dim)' }}>· {s.note}</span>}
                           </div>

@@ -333,9 +333,20 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
    Un seul jeu de tailles pour titre de page / sous-titre, plutôt que des
    valeurs ad hoc (28 à 44px) réparties page par page. */
 .r-h1 {
-  font-size: 32px;
+  font-size: var(--fs-h1);
   font-weight: 800;
   letter-spacing: -0.02em;
+  margin: 0;
+}
+.r-h2 {
+  /* Le niveau manquant de l’echelle : --fs-h2 etait declaree sans aucun
+     consommateur, et .r-h2 n’existait qu’a l’interieur du @media — une regle
+     qui n’avait rien a ecraser. D’ou treize titres de section redessines a la
+     main entre 15 et 22px, avec des interlignes variant du simple au double. */
+  font-size: var(--fs-h2);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: var(--lh-tight);
   margin: 0;
 }
 .r-subtitle {
@@ -352,7 +363,10 @@ h1,
   font-family: var(--font-display), Georgia, serif;
   font-weight: 800;
   letter-spacing: -0.01em;
-  line-height: 0.98;
+  /* 0.98 collait les hampes aux jambages des que le titre passait sur deux
+     lignes — visible sur les noms de mouvement longs. 1.06 reste serre pour
+     un grand chiffre et devient lisible pour un titre qui se replie. */
+  line-height: 1.06;
 }
 
 /* ── Skeleton loading ───────────────────────────────────────────── */
@@ -413,11 +427,15 @@ h1,
 .btn-md { height: 40px; padding: 0 18px; font-size: 14px; }
 .btn-lg { height: 48px; padding: 0 24px; font-size: 15px; }
 
+/* Terracotta, et non or : la charte reserve l or a la marque et a la
+   progression, jamais a un bouton d action. La classe disait le contraire de
+   la regle, ce qui explique qu elle n ait jamais ete employee — et que l or ait
+   fini pose a la main sur quatre boutons des ecrans quotidiens. */
 .btn-primary {
-  background: var(--gold);
+  background: var(--accent);
   color: var(--on-accent);
 }
-.btn-primary:hover:not(:disabled) { background: var(--gold-bright); box-shadow: var(--elev-gold); }
+.btn-primary:hover:not(:disabled) { background: var(--crimson-bright); box-shadow: var(--elev-1); }
 
 .btn-secondary {
   background: var(--bg-elevated);

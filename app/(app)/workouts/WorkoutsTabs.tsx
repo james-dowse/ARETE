@@ -218,7 +218,7 @@ function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: string; on
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <CalendarPlus size={16} color="var(--gold)" />
-            <span style={{ fontWeight: 700, fontSize: 16 }}>Ajouter à ma semaine</span>
+            <span className="t-lg">Ajouter à ma semaine</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)' }}><X size={16} /></button>
         </div>
@@ -239,7 +239,8 @@ function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: string; on
         <button
           onClick={handleAdd}
           disabled={selected === null || saving}
-          style={{ width: '100%', padding: '11px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: selected === null || saving ? 'default' : 'pointer', opacity: selected === null ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+          className="btn btn-md"
+          style={{ width: '100%', background: 'var(--accent)', color: 'var(--on-accent)' }}
         >
           <CalendarPlus size={14} />
           {saving ? 'Ajout…' : selected !== null ? `Ajouter — ${DAYS_FR[selected]}` : 'Choisir un jour'}
@@ -364,7 +365,7 @@ function WorkoutCard({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div className="display" style={{ fontWeight: 700, fontSize: 17, lineHeight: 1.2, letterSpacing: '-0.005em' }}>{w.name}</div>
+                  <div className="display t-lg" style={{ lineHeight: 1.2, letterSpacing: '-0.005em' }}>{w.name}</div>
                   {isFavorite && <Star size={12} fill="var(--gold)" color="var(--gold)" style={{ flexShrink: 0 }} />}
                 </div>
                 {w.description && stripHtmlMultiline(w.description) && (
@@ -394,7 +395,7 @@ function WorkoutCard({
                   séance. Le nombre de mouvements n'était pas légendé et se
                   lisait comme un score. */}
               <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-                <div className="display" style={{ fontSize: 20, fontWeight: 700, color: 'var(--gold)', lineHeight: 1.1 }}>{fmtMin(estMin)}</div>
+                <div className="display tnum" style={{ fontSize: 20, fontWeight: 700, color: 'var(--gold)', lineHeight: 1.1 }}>{fmtMin(estMin)}</div>
                 <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-dim)', marginTop: 2, whiteSpace: 'nowrap' }}>
                   {w.movements.length} mouv.
                 </div>
@@ -406,7 +407,7 @@ function WorkoutCard({
         <div className="wod-preview-row" style={{ marginTop: 12, display: 'flex', gap: 1 }}>
           {previewColumns.map((col, ci) => (
             <div key={ci} className="wod-preview-col" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {col.label && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.3, color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{col.label}</div>}
+              {col.label && <div className="t-micro" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{col.label}</div>}
               {col.movements.map((m, mi) => (
                 <div key={mi} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                   <span style={{ width: 4, height: 4, borderRadius: '50%', background: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)', flexShrink: 0 }} />
@@ -451,13 +452,13 @@ function WorkoutCard({
               <button onClick={handleToggleFavorite} disabled={toggling}
                 title={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                 aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', color: isFavorite ? 'var(--gold)' : 'var(--text-muted)', cursor: toggling ? 'default' : 'pointer', transition: 'color var(--t-fast) var(--ease)' }}>
+                className="btn btn-sm btn-ghost" style={{ width: 32, padding: 0, color: isFavorite ? 'var(--gold)' : undefined }}>
                 <Star size={14} fill={isFavorite ? 'var(--gold)' : 'none'} />
               </button>
             )}
             {context === 'community' && (
               <button onClick={e => { e.preventDefault(); handleToggleSave() }} disabled={saving}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: `1px solid ${isSaved ? 'var(--gold-border)' : 'var(--border)'}`, borderRadius: 'var(--r-sm)', padding: '7px 12px', color: isSaved ? 'var(--gold)' : 'var(--text-muted)', fontSize: 12.5, fontWeight: 600, cursor: saving ? 'default' : 'pointer', transition: 'color var(--t-fast) var(--ease)' }}>
+                className="btn btn-sm btn-ghost" style={{ borderColor: isSaved ? 'var(--gold-border)' : undefined, color: isSaved ? 'var(--gold)' : undefined }}>
                 {isSaved ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
                 {isSaved ? 'Sauvegardé' : 'Sauvegarder'}
               </button>
@@ -469,13 +470,13 @@ function WorkoutCard({
                 palette. Elle était en or, la couleur réservée à la marque et à
                 la progression — et strictement identique au bouton Planning. */}
             <button onClick={e => { e.preventDefault(); router.push(`/workouts/${w.id}/active`) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)', border: '1px solid transparent', borderRadius: 'var(--r-sm)', padding: '7px 15px', color: 'var(--on-accent)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--elev-1)' }}>
+              className="btn btn-sm" style={{ background: 'var(--accent)', color: 'var(--on-accent)', boxShadow: 'var(--elev-1)' }}>
               <PlayCircle size={14} /> Démarrer
             </button>
             {(context === 'mine' || context === 'saved') && (
               <button onClick={e => { e.preventDefault(); setAddingToWeek(true) }}
                 title="Ajouter au planning"
-                style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '7px 12px', color: 'var(--text-muted)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+                className="btn btn-sm btn-ghost">
                 <CalendarPlus size={13} /> Planning
               </button>
             )}
@@ -509,7 +510,7 @@ function SectionLabel({ icon, label, count }: { icon: React.ReactNode; label: st
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, marginTop: 4 }}>
       <span style={{ color: 'var(--text-dim)', display: 'flex' }}>{icon}</span>
-      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.6, textTransform: 'uppercase' }}>{label}</span>
+      <span className="t-micro">{label}</span>
       <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{count}</span>
     </div>
   )
@@ -766,7 +767,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
           )}
         </div>
         {!loading && (
-          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+          <span className="t-body" style={{ color: 'var(--text-muted)' }}>
             {tab === 'mine' && `${myWorkoutsFiltered.length + savedWorkoutsFiltered.length} entraînement${myWorkoutsFiltered.length + savedWorkoutsFiltered.length !== 1 ? 's' : ''}`}
             {tab === 'community' && `${communityWorkoutsFiltered.length} entraînement${communityWorkoutsFiltered.length !== 1 ? 's' : ''} dans la communauté`}
             {tab === 'coach' && `${assignments.length} WOD assigné${assignments.length !== 1 ? 's' : ''}`}
@@ -960,7 +961,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
       {/* Skeleton */}
       {loading && (
         <div className="wod-list">
-          {[1, 2, 3].map(i => <div key={i} style={{ height: 140, background: 'var(--bg-card)', borderRadius: 12, animation: 'pulse 1.5s ease-in-out infinite' }} />)}
+          {[1, 2, 3].map(i => <div key={i} style={{ height: 140, background: 'var(--bg-card)', borderRadius: 'var(--r-md)', animation: 'pulse 1.5s ease-in-out infinite' }} />)}
         </div>
       )}
 
@@ -972,20 +973,22 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
               {/* Composé plutôt qu'un emoji posé au centre : c'est le tout
                   premier écran que voit un compte neuf. */}
               <img src="/logo.svg" alt="" width={56} height={56} style={{ opacity: 0.22, marginBottom: 18 }} />
-              <div className="display" style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Rien à l&apos;entraînement</div>
+              <div className="display r-h2" style={{ color: 'var(--text-primary)', marginBottom: 8 }}>Rien à l&apos;entraînement</div>
               <div style={{ fontSize: 'var(--fs-body)', marginBottom: 26, maxWidth: 380, marginLeft: 'auto', marginRight: 'auto' }}>
                 Le générateur compose une séance à partir de tes contraintes — durée, matériel, niveau.
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Link href="/generator">
-                  <button style={{ padding: '11px 26px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                  {/* .btn .btn-md pour la géométrie, fond terracotta conservé :
+                      .btn-primary est or, et la charte interdit l'or sur une action. */}
+                  <button className="btn btn-md" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
                     <Zap size={14} /> Générer
                   </button>
                 </Link>
                 <button
                   onClick={handleClaimWorkouts}
                   disabled={claiming}
-                  style={{ padding: '11px 20px', background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: claiming ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, opacity: claiming ? 0.6 : 1 }}
+                  className="btn btn-md btn-ghost"
                 >
                   {claiming ? '…' : '↩ Récupérer mes anciennes séances'}
                 </button>
@@ -995,8 +998,8 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
 
           {hasAnything && myWorkoutsFiltered.length === 0 && savedWorkoutsFiltered.length === 0 && (
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Aucun résultat</div>
-              <div style={{ fontSize: 13 }}>Aucune séance ne correspond à ta recherche ou à ce filtre</div>
+              <div className="display t-lg" style={{ color: 'var(--text-primary)', marginBottom: 4 }}>Aucun résultat</div>
+              <div className="t-body">Aucune séance ne correspond à ta recherche ou à ce filtre</div>
             </div>
           )}
 
@@ -1008,7 +1011,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                 style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: favoritesOpen ? 12 : 0, marginTop: 4, cursor: 'pointer', userSelect: 'none' }}
               >
                 <span style={{ color: 'var(--gold)', display: 'flex' }}><Star size={13} fill="var(--gold)" /></span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.6, textTransform: 'uppercase' }}>Favoris</span>
+                <span className="t-micro">Favoris</span>
                 <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{favorites.length}</span>
                 <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', display: 'flex' }}>{favoritesOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</span>
               </div>
@@ -1038,7 +1041,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                 style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: recentsOpen ? 12 : 0, marginTop: 4, cursor: 'pointer', userSelect: 'none' }}
               >
                 <span style={{ color: 'var(--text-dim)', display: 'flex' }}><Clock size={13} /></span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.6, textTransform: 'uppercase' }}>Récents</span>
+                <span className="t-micro">Récents</span>
                 <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{recents.length}</span>
                 <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', display: 'flex' }}>{recentsOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</span>
               </div>
@@ -1100,8 +1103,10 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
         <>
           {communityWorkoutsFiltered.length === 0 && (
             <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: 44, marginBottom: 14 }}>👥</div>
-              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucune séance</div>
+              {/* Composé plutôt qu'un emoji posé au centre, comme l'état vide
+                  d'accueil : un 👥 système ne suit ni la palette ni la police. */}
+              <img src="/logo.svg" alt="" width={48} height={48} style={{ opacity: 0.22, marginBottom: 14 }} />
+              <div className="display t-lg" style={{ color: 'var(--text-primary)', marginBottom: 6 }}>Aucune séance</div>
               <div style={{ fontSize: 13 }}>
                 {communityWorkouts.length === 0 ? 'Les séances de tes coéquipiers apparaîtront ici' : 'Aucun résultat pour ce filtre'}
               </div>
@@ -1130,9 +1135,11 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
         <>
           {assignments.length === 0 && (
             <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: 44, marginBottom: 14 }}>⭐</div>
-              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Aucun WOD assigné</div>
-              <div style={{ fontSize: 13 }}>Les séances que ton coach t&apos;assigne apparaîtront ici</div>
+              {/* Composé plutôt qu'un emoji posé au centre, comme l'état vide
+                  d'accueil : un ⭐ système ne suit ni la palette ni la police. */}
+              <img src="/logo.svg" alt="" width={48} height={48} style={{ opacity: 0.22, marginBottom: 14 }} />
+              <div className="display t-lg" style={{ color: 'var(--text-primary)', marginBottom: 6 }}>Aucun WOD assigné</div>
+              <div className="t-body">Les séances que ton coach t&apos;assigne apparaîtront ici</div>
             </div>
           )}
           {assignments.length > 0 && (

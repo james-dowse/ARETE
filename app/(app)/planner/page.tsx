@@ -89,8 +89,8 @@ function WorkoutPickerModal({ dayLabel, onPick, onClose }: {
       <div onClick={e => e.stopPropagation()} className="modal-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--gold-border)', borderRadius: 'var(--r-lg)', width: '100%', maxWidth: 420, maxHeight: '78vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: 'var(--elev-3)' }}>
         <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>Ajouter une séance</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{dayLabel}</div>
+            <div className="t-lg">Ajouter une séance</div>
+            <div className="t-sm" style={{ color: 'var(--text-muted)', marginTop: 1 }}>{dayLabel}</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={17} /></button>
         </div>
@@ -340,14 +340,19 @@ export default function PlannerPage() {
   return (
     <>
       <div className="page" onPointerMove={handlePointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
-          <div>
+        {/* En-tête de page — surtitre, titre, sous-titre : le même ouvrant que
+            les six autres écrans, pour qu'un changement d'onglet ne ressemble pas
+            à un changement d'application. Le sous-titre énonce un fait (le nombre
+            d'entraînements de la semaine), pas une promesse. La marge basse reste
+            sur la rangée flex, qui est la bande d'en-tête réelle. */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-6)', flexWrap: 'wrap', gap: 12 }}>
+          <header>
+            <div className="t-micro" style={{ marginBottom: 6 }}>ENTRAÎNEMENT</div>
             <h1 className="r-h1">Planning</h1>
             <p className="r-subtitle">
               {loading ? '…' : `${totalWorkouts} entraînement${totalWorkouts !== 1 ? 's' : ''} cette semaine`}
             </p>
-          </div>
+          </header>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button onClick={() => goWeek(-1)} style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
               <ChevronLeft size={16} />
@@ -360,7 +365,7 @@ export default function PlannerPage() {
               <ChevronRight size={16} />
             </button>
             {!isCurrentWeek && (
-              <button onClick={() => setWeekStart(getMonday(new Date()))} style={{ padding: '7px 14px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+              <button onClick={() => setWeekStart(getMonday(new Date()))} className="btn btn-sm btn-ghost">
                 Aujourd'hui
               </button>
             )}
@@ -383,8 +388,8 @@ export default function PlannerPage() {
               }}>
                 {/* Day header */}
                 <div style={{ textAlign: 'center', padding: '8px 4px', borderRadius: 8, background: isToday ? 'var(--gold-ghost)' : 'var(--bg-card)', border: `1px solid ${isToday ? 'var(--gold-border)' : 'var(--border)'}` }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: isToday ? 'var(--gold)' : 'var(--text-muted)', letterSpacing: 0.5 }}>{day}</div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: isToday ? 'var(--gold)' : 'var(--text-primary)', lineHeight: 1.3 }}>
+                  <div className="eyebrow" style={{ color: isToday ? 'var(--gold)' : 'var(--text-muted)' }}>{day}</div>
+                  <div className="t-lg tnum" style={{ color: isToday ? 'var(--gold)' : 'var(--text-primary)' }}>
                     {dayDate.getDate()}
                   </div>
                   {totalByDay[i] > 0 && (
@@ -401,7 +406,7 @@ export default function PlannerPage() {
                       const bioTypes = Array.from(new Set(entry.workout.movements.map(m => m.movement.bioType)))
                       const isBeingDragged = dragEntry?.id === entry.id
                       return (
-                        <div key={entry.id} data-planner-entry={entry.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 10px 9px 6px', position: 'relative', opacity: isBeingDragged ? 0.35 : 1, display: 'flex', gap: 4 }}>
+                        <div key={entry.id} data-planner-entry={entry.id} className="card" style={{ padding: '9px 10px 9px 6px', position: 'relative', opacity: isBeingDragged ? 0.35 : 1, display: 'flex', gap: 4 }}>
                           <div
                             onPointerDown={e => handlePointerDown(e, entry)}
                             style={{ touchAction: 'none', cursor: 'grab', display: 'flex', alignItems: 'center', color: 'var(--text-dim)', flexShrink: 0, padding: '2px 2px' }}
@@ -472,10 +477,12 @@ export default function PlannerPage() {
         {!loading && totalWorkouts === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
             <Calendar size={40} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-            <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Semaine vide</div>
-            <div style={{ fontSize: 13, marginBottom: 20 }}>Ouvre une séance et clique "Ajouter à ma semaine", ou utilise le "+" d'un jour</div>
+            <div className="t-lg" style={{ color: 'var(--text-primary)', marginBottom: 6 }}>Semaine vide</div>
+            <div className="t-body" style={{ marginBottom: 20 }}>Ouvre une séance et clique "Ajouter à ma semaine", ou utilise le "+" d'un jour</div>
             <Link href="/workouts">
-              <button style={{ padding: '10px 24px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              {/* Terracotta gardé en inline : .btn-primary est or, et la charte
+                  réserve l'or à la marque et à la progression, jamais à une action. */}
+              <button className="btn btn-md" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
                 <Zap size={13} /> Voir mes séances
               </button>
             </Link>

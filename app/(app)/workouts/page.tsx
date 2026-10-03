@@ -11,12 +11,15 @@ export default async function WorkoutsPage() {
   return (
     <>
       <div className="page">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
-          <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--sp-6)' }}>
+          <header>
+            <div className="t-micro" style={{ marginBottom: 6 }}>ENTRAÎNEMENT</div>
             <h1 className="r-h1">Mes séances</h1>
-          </div>
+                      </header>
           <Link href="/generator">
-            <button style={{ padding: '10px 18px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {/* .btn .btn-md pour la géométrie, fond terracotta conservé :
+                .btn-primary est or, et la charte interdit l'or sur une action. */}
+            <button className="btn btn-md" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
               <Zap size={14} /> Nouveau
             </button>
           </Link>

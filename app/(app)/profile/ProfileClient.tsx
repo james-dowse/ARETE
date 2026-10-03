@@ -76,13 +76,14 @@ export default function ProfileClient() {
       <>
         <div className="page-reading" style={{ textAlign: 'center', paddingTop: 64 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Connexion requise</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 15 }}>
+          <h2 className="r-h2" style={{ marginBottom: 8 }}>Connexion requise</h2>
+          <p className="r-subtitle" style={{ marginBottom: 24 }}>
             Tu dois être connecté pour accéder à ton profil.
           </p>
           <a
             href="/login?redirect=/profile"
-            style={{ display: 'inline-block', padding: '11px 28px', background: 'var(--accent)', color: 'var(--on-accent)', borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: 'none' }}
+            className="btn btn-md"
+            style={{ background: 'var(--accent)', color: 'var(--on-accent)', textDecoration: 'none' }}
           >
             Se connecter
           </a>
@@ -95,7 +96,7 @@ export default function ProfileClient() {
     return (
       <>
         <div className="page-reading" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {[1, 2].map(i => <div key={i} style={{ height: 140, background: 'var(--bg-card)', borderRadius: 14, opacity: 0.5 }} />)}
+          {[1, 2].map(i => <div key={i} className="card" style={{ height: 140, opacity: 0.5 }} />)}
         </div>
       </>
     )
@@ -111,13 +112,14 @@ export default function ProfileClient() {
   return (
     <>
       <div className="page-reading">
-        <div style={{ marginBottom: 32 }}>
+        <header style={{ marginBottom: 'var(--sp-6)' }}>
+          <div className="t-micro" style={{ marginBottom: 6 }}>COMPTE</div>
           <h1 className="r-h1">Mon profil</h1>
           <p className="r-subtitle">Informations personnelles</p>
-        </div>
+        </header>
 
         {/* ── Avatar ── */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 24 }}>
+        <div className="card" style={{ padding: 'var(--sp-6)', marginBottom: 'var(--sp-4)', display: 'flex', alignItems: 'center', gap: 'var(--sp-6)' }}>
           {/* Photo */}
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <div style={{
@@ -139,19 +141,20 @@ export default function ProfileClient() {
 
           {/* Actions */}
           <div>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{displayName}</div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>{profile.email}</div>
+            <div className="t-lg" style={{ marginBottom: 4 }}>{displayName}</div>
+            <div className="t-sm" style={{ color: 'var(--text-muted)', marginBottom: 12 }}>{profile.email}</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button
                 onClick={() => fileRef.current?.click()}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                className="btn btn-sm"
+                style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
               >
                 <Camera size={13} /> {avatarUrl ? 'Changer la photo' : 'Ajouter une photo'}
               </button>
               {avatarUrl && (
                 <button
                   onClick={handleRemoveAvatar}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}
+                  className="btn btn-sm btn-ghost"
                 >
                   <Trash2 size={12} /> Supprimer
                 </button>
@@ -162,50 +165,56 @@ export default function ProfileClient() {
         </div>
 
         {/* ── Champs ── */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+        <div className="card" style={{ padding: 'var(--sp-6)', marginBottom: 'var(--sp-5)' }}>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
             <div>
               <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>PRÉNOM</label>
               <input
-                value={firstName} onChange={e => setFirstName(e.target.value)}
+                className="input" value={firstName} onChange={e => setFirstName(e.target.value)}
                 placeholder="Jean"
-                style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
+                style={{ width: '100%' }}
               />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>NOM</label>
+              <label className="t-micro" style={{ display: 'block', marginBottom: 6 }}>NOM</label>
               <input
-                value={lastName} onChange={e => setLastName(e.target.value)}
+                className="input" value={lastName} onChange={e => setLastName(e.target.value)}
                 placeholder="Dupont"
-                style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
+                style={{ width: '100%' }}
               />
             </div>
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>EMAIL</label>
+            <label className="t-micro" style={{ display: 'block', marginBottom: 6 }}>EMAIL</label>
             <input
-              value={profile.email} disabled
-              style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text-dim)', fontSize: 14, outline: 'none', cursor: 'not-allowed' }}
+              className="input" value={profile.email} disabled
+              style={{ width: '100%', color: 'var(--text-dim)', cursor: 'not-allowed' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>DESCRIPTION</label>
+            <label className="t-micro" style={{ display: 'block', marginBottom: 6 }}>DESCRIPTION</label>
             <textarea
-              value={bio} onChange={e => setBio(e.target.value)}
+              className="input" value={bio} onChange={e => setBio(e.target.value)}
               placeholder="Quelques mots sur ta pratique, tes objectifs…"
               rows={4}
-              style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text-primary)', fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
+              style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
             />
           </div>
         </div>
 
         {/* ── Sauvegarder ── */}
+        {/* Les trois boutons d'action de cet ecran (se connecter, photo, enregistrer)
+            prennent de .btn la structure — hauteur, rayon, graisse, transitions — et
+            gardent leur fond en ligne : .btn-primary est or, et la charte reserve l'or
+            a la marque et a la progression, jamais a une action. Ici la couleur dit
+            aussi un etat : terracotta pour agir, mousse pour l'accompli. */}
         <button
           onClick={handleSave} disabled={saving}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 24px', background: saved ? 'var(--green)' : 'var(--accent)', color: saved ? '#fff' : 'var(--on-accent)', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: saving ? 'wait' : 'pointer', transition: 'background 0.2s' }}
+          className="btn btn-md"
+          style={{ background: saved ? 'var(--green)' : 'var(--accent)', color: saved ? '#fff' : 'var(--on-accent)', cursor: saving ? 'wait' : 'pointer' }}
         >
           {saved
             ? <><Check size={15} /> Enregistré</>

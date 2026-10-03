@@ -602,11 +602,12 @@ export default function GeneratorPage() {
   return (
     <>
       <div className="page">
-        <div style={{ marginBottom: 24 }}>
+        <header style={{ marginBottom: 'var(--sp-6)' }}>
+          <div className="t-micro" style={{ marginBottom: 6 }}>ENTRAÎNEMENT</div>
           <h1 className="r-h1">Générateur</h1>
           <p className="r-subtitle">Trois façons de composer ta séance.</p>
-          <div className="tick-rule" style={{ marginTop: 16 }} />
-        </div>
+          <div className="tick-rule" style={{ marginTop: 'var(--sp-4)' }} />
+        </header>
 
         <div className="r-gen-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 420px) 1fr', gap: 32 }}>
 
@@ -631,7 +632,7 @@ export default function GeneratorPage() {
                     transition: 'all 0.15s',
                   }}>
                     <div style={{ fontSize: 20, marginBottom: 6, filter: active ? 'none' : 'grayscale(0.6)' }}>{icon}</div>
-                    <div className="display" style={{ fontWeight: 700, fontSize: 14, color: active ? '#F8F4EC' : 'var(--text-primary)' }}>{title}</div>
+                    <div className="t-body" style={{ fontWeight: 700, color: active ? '#F8F4EC' : 'var(--text-primary)' }}>{title}</div>
                     <div style={{ fontSize: 10.5, color: active ? 'rgba(248,244,236,0.75)' : 'var(--text-dim)', marginTop: 3, lineHeight: 1.3 }}>{sub}</div>
                   </button>
                 )
@@ -655,7 +656,7 @@ export default function GeneratorPage() {
                       cursor: 'pointer', textAlign: 'center',
                       transition: 'border-color 0.12s, background 0.12s',
                     }}>
-                      <div className="display" style={{ fontWeight: 700, fontSize: 13, color: active ? 'var(--crimson-bright)' : 'var(--text-muted)' }}>{label}</div>
+                      <div className="t-sm" style={{ fontWeight: 700, color: active ? 'var(--crimson-bright)' : 'var(--text-muted)' }}>{label}</div>
                       <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{sub}</div>
                     </button>
                   )
@@ -709,7 +710,7 @@ export default function GeneratorPage() {
                       background: active ? 'var(--crimson-ghost)' : 'var(--bg-elevated)',
                       cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.12s, background 0.12s',
                     }}>
-                      <div className="display" style={{ fontWeight: 700, fontSize: 13, color: active ? 'var(--crimson-bright)' : 'var(--text-muted)' }}>{label}</div>
+                      <div className="t-sm" style={{ fontWeight: 700, color: active ? 'var(--crimson-bright)' : 'var(--text-muted)' }}>{label}</div>
                     </button>
                   )
                 })}
@@ -730,7 +731,7 @@ export default function GeneratorPage() {
             {/* ── 2. Section structurée ── */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, cursor: 'pointer', userSelect: 'none' }} onClick={() => setCollapsedStructure(v => !v)}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="t-lg" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   Structure personnalisée
                   <span style={{ color: 'var(--text-dim)', flexShrink: 0 }}>
                     {collapsedStructure ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
@@ -740,7 +741,7 @@ export default function GeneratorPage() {
                   {totalMovements} mvts · {fmtMin(totalEstMin)}
                 </div>
               </div>
-              <button onClick={e => { e.stopPropagation(); loadTemplates() }} disabled={loadingTemplates} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <button onClick={e => { e.stopPropagation(); loadTemplates() }} disabled={loadingTemplates} className="btn btn-sm btn-ghost">
                 <Save size={12} /> {loadingTemplates ? '…' : 'Mes templates'}
               </button>
             </div>
@@ -762,7 +763,7 @@ export default function GeneratorPage() {
 
             {showTemplates && templates.length > 0 && (
               <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 12, marginBottom: 14 }}>
-                <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-muted)', letterSpacing: 0.5, marginBottom: 8 }}>TEMPLATES SAUVEGARDÉS</div>
+                <div className="t-micro" style={{ color: 'var(--text-muted)', marginBottom: 8 }}>TEMPLATES SAUVEGARDÉS</div>
                 {templates.map(t => (
                   <div key={t.id} style={{ padding: '8px 10px', borderRadius: 7, fontSize: 13, marginBottom: 4, background: 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-elevated)')}
@@ -793,11 +794,11 @@ export default function GeneratorPage() {
               {blocks.map((block, idx) => {
                 const collapsed = !!collapsedBlocks[block.id]
                 return (
-                  <div key={block.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 12px rgba(0,0,0,0.4)' }}>
+                  <div key={block.id} className="card" style={{ overflow: 'hidden' }}>
                     {/* Block header row */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', cursor: 'pointer' }} onClick={() => toggleCollapse(block.id)}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 1 }}>BLOC {idx + 1}</span>
+                        <span className="t-micro" style={{ color: 'var(--text-muted)' }}>BLOC {idx + 1}</span>
                         {block.bioTypes.map(bt => (
                           <span key={bt} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${BIO_TYPE_COLORS[bt]}22`, color: BIO_TYPE_COLORS[bt], border: `1px solid ${BIO_TYPE_COLORS[bt]}44`, fontWeight: 600 }}>
                             {BIO_TYPE_ICONS[bt]} {bt}
@@ -830,7 +831,7 @@ export default function GeneratorPage() {
                     {!collapsed && (
                       <div style={{ padding: '0 16px 16px' }}>
                         <div style={{ marginBottom: 12 }}>
-                          <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>NOMBRE DE MOUVEMENTS</label>
+                          <label className="t-micro" style={{ color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>NOMBRE DE MOUVEMENTS</label>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                             {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
                               <button key={n} onClick={() => updateBlock(block.id, 'count', n)} style={{ width: 38, height: 38, borderRadius: 8, border: block.count === n ? '1px solid var(--accent)' : '1px solid var(--border)', background: block.count === n ? 'var(--accent-dim)' : 'var(--bg-elevated)', color: block.count === n ? 'var(--accent)' : 'var(--text-muted)', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>{n}</button>
@@ -901,7 +902,7 @@ export default function GeneratorPage() {
                         </div>
                         {/* Instructions */}
                         <div style={{ marginBottom: 12 }}>
-                          <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>INSTRUCTIONS (optionnel)</label>
+                          <label className="t-micro" style={{ color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>INSTRUCTIONS (optionnel)</label>
                           <RichEditor
                             value={block.instructions}
                             onChange={v => updateBlock(block.id, 'instructions', v)}
@@ -911,7 +912,7 @@ export default function GeneratorPage() {
                         </div>
                         {/* Per-block sets / reps ou durée / rest */}
                         <div style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, display: 'block', marginBottom: 10 }}>PARAMÈTRES</label>
+                          <label className="t-micro" style={{ color: 'var(--text-muted)', display: 'block', marginBottom: 10 }}>PARAMÈTRES</label>
                           {/* Mode toggle Reps ↔ Durée */}
                           <div style={{ display: 'flex', gap: 4, marginBottom: 10, justifyContent: 'center' }}>
                             {(['reps', 'durée'] as const).map(mode => {
@@ -968,9 +969,9 @@ export default function GeneratorPage() {
             </button>
 
             {/* Inter-block rest */}
-            <div style={{ marginTop: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
+            <div className="card" style={{ marginTop: 'var(--sp-5)', padding: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.4 }}>REPOS ENTRE BLOCS (sec)</label>
+                <label className="t-micro" style={{ color: 'var(--text-muted)' }}>REPOS ENTRE BLOCS (sec)</label>
                 <Stepper value={globalBlockRest} min={0} max={300} step={15} onChange={setGlobalBlockRest} />
               </div>
             </div>
@@ -997,7 +998,7 @@ export default function GeneratorPage() {
             </div>
 
             <div style={{ marginTop: 12 }}>
-              <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>DURÉE CIBLE (min)</label>
+              <label className="t-micro" style={{ color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>DURÉE CIBLE (min)</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: `1px solid ${targetMovements && !durationOk ? 'var(--orange)' : 'var(--border)'}`, borderRadius: 8, padding: '8px 12px', transition: 'border-color 0.2s' }}>
                 <Clock size={14} color={targetMovements && !durationOk ? 'var(--orange)' : 'var(--text-muted)'} />
                 <input type="number" value={duration} onChange={e => setDuration(e.target.value)} placeholder="30" min={1} max={180}
@@ -1034,7 +1035,7 @@ export default function GeneratorPage() {
             </button>
 
             <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-              <button onClick={() => setShowSaveTemplate(true)} style={{ flex: 1, padding: '8px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+              <button onClick={() => setShowSaveTemplate(true)} className="btn btn-sm btn-ghost" style={{ flex: 1 }}>
                 Sauvegarder la structure
               </button>
             </div>
@@ -1042,7 +1043,7 @@ export default function GeneratorPage() {
             {showSaveTemplate && (
               <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
                 <input value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Nom du template" style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }} />
-                <button onClick={saveTemplate} disabled={savingTemplate} style={{ padding: '8px 14px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 12, cursor: 'pointer' }}>
+                <button onClick={saveTemplate} disabled={savingTemplate} className="btn btn-sm btn-secondary">
                   {savingTemplate ? '...' : 'OK'}
                 </button>
               </div>
@@ -1056,7 +1057,7 @@ export default function GeneratorPage() {
             {!generated && (
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', gap: 12 }}>
                 <Zap size={48} strokeWidth={1} />
-                <div style={{ fontSize: 15, fontWeight: 600 }}>Configure et génère</div>
+                <div className="t-lg">Configure et génère</div>
                 <div style={{ fontSize: 13 }}>Ta séance apparaîtra ici</div>
               </div>
             )}
@@ -1067,7 +1068,7 @@ export default function GeneratorPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ fontWeight: 700, fontSize: 17 }}>{generated.length} mouvements · {fmtMin(totalEstMin)}</div>
+                      <div className="t-lg tnum">{generated.length} mouvements · {fmtMin(totalEstMin)}</div>
                       {resultDifficulty && (
                         <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${COMPLEXITY_COLORS[resultDifficulty]}18`, color: COMPLEXITY_COLORS[resultDifficulty], border: `1px solid ${COMPLEXITY_COLORS[resultDifficulty]}40` }}>
                           {resultDifficulty}
@@ -1076,7 +1077,7 @@ export default function GeneratorPage() {
                     </div>
                     {duration && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{duration} min défini</div>}
                   </div>
-                  <button onClick={generate} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button onClick={generate} className="btn btn-sm btn-ghost">
                     <RefreshCw size={12} /> Regénérer
                   </button>
                 </div>
@@ -1097,7 +1098,7 @@ export default function GeneratorPage() {
                             onClick={() => setCollapsedResultBlocks(prev => ({ ...prev, [block.id]: !prev[block.id] }))}
                             style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1, cursor: 'pointer', userSelect: 'none' }}
                           >
-                            <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1 }}>BLOC {bi + 1}</span>
+                            <span className="t-micro">BLOC {bi + 1}</span>
                             {block.bioTypes.map(bt => (
                               <span key={bt} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${BIO_TYPE_COLORS[bt]}22`, color: BIO_TYPE_COLORS[bt], border: `1px solid ${BIO_TYPE_COLORS[bt]}44`, fontWeight: 600 }}>
                                 {BIO_TYPE_ICONS[bt]} {bt}
@@ -1168,7 +1169,7 @@ export default function GeneratorPage() {
                           {movs.map((m, j) => {
                             const i = offset + j
                             return (
-                              <div key={`${m.id}-${i}`} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
+                              <div key={`${m.id}-${i}`} className="card" style={{ padding: '12px 14px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
                                   <div
                                     onClick={() => setSelectedMovementId(m.id)}
@@ -1318,11 +1319,11 @@ export default function GeneratorPage() {
                 </button>
 
                 {!savedId ? (
-                  <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 16 }}>
+                  <div className="card" style={{ padding: 'var(--sp-4)' }}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Sauvegarder cette séance</div>
                     <input value={workoutName} onChange={e => setWorkoutName(e.target.value)} placeholder="Nom de la séance" style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', marginBottom: 10 }} />
                     <div style={{ marginBottom: 10 }}>
-                      <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 5, fontWeight: 600, letterSpacing: 0.4 }}>DESCRIPTION (optionnel)</label>
+                      <label className="t-micro" style={{ color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>DESCRIPTION (optionnel)</label>
                       <RichEditor value={workoutDescription} onChange={setWorkoutDescription} placeholder="Décris cette séance…" minHeight={60} />
                     </div>
                     {saveError && (

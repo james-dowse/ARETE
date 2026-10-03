@@ -181,15 +181,19 @@ export default function LibraryPage() {
   return (
     <>
       <div className="page">
-        <div style={{ marginBottom: 28 }}>
+        {/* En-tête commun aux six écrans : surtitre, titre, puis un FAIT —
+            ici le nombre de mouvements réellement affichés, filtres compris,
+            et non une formule d'accroche. */}
+        <header style={{ marginBottom: 'var(--sp-6)' }}>
+          <div className="t-micro" style={{ marginBottom: 6 }}>RÉFÉRENTIEL</div>
           <h1 className="r-h1">Syllabus</h1>
           <p className="r-subtitle">
             {loading ? '...' : `${displayed.length} mouvement${displayed.length !== 1 ? 's' : ''}`}
           </p>
-        </div>
+        </header>
 
         {/* Tab bar */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, width: 'fit-content', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="card" style={{ display: 'flex', gap: 4, marginBottom: 20, padding: 4, width: 'fit-content' }}>
           <button style={tabBtn('all')} onClick={() => setTab('all')}><BookOpen size={13} /> Tous</button>
           <button style={tabBtn('favorites')} onClick={() => setTab('favorites')}>
             <Star size={13} fill={tab === 'favorites' ? 'var(--on-accent)' : 'none'} /> Favoris {favIds.size > 0 && <span style={{ fontSize: 11, opacity: 0.75 }}>({favIds.size})</span>}
@@ -200,7 +204,7 @@ export default function LibraryPage() {
         {tab === 'all' && (
           <div style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', flex: 1, minWidth: 220 }}>
+              <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', flex: 1, minWidth: 220 }}>
                 <Search size={16} color="var(--text-muted)" />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un mouvement..." style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 14, flex: 1 }} />
                 {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={14} color="var(--text-muted)" /></button>}
@@ -208,7 +212,8 @@ export default function LibraryPage() {
 
               <div
                 title={search ? 'Recherche active : tri par pertinence' : undefined}
-                style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', opacity: search ? 0.5 : 1 }}
+                className="card"
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 14px', opacity: search ? 0.5 : 1 }}
               >
                 <ArrowUpDown size={14} color="var(--text-muted)" />
                 <select
@@ -270,7 +275,7 @@ export default function LibraryPage() {
 
         {/* Search bar in favorites tab */}
         {tab === 'favorites' && (
-          <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px' }}>
+          <div className="card" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
             <Search size={16} color="var(--text-muted)" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filtrer les favoris..." style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 14, flex: 1 }} />
             {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={14} color="var(--text-muted)" /></button>}
@@ -288,12 +293,12 @@ export default function LibraryPage() {
         {!loading && groupByBio && groupNames.length > 0 && (
           <div style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
             <button
+              className="btn btn-sm btn-ghost"
               onClick={() => setCollapsedGroups(new Set(groupNames))}
-              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--text-muted)' }}
             >Tout replier</button>
             <button
+              className="btn btn-sm btn-ghost"
               onClick={() => setCollapsedGroups(new Set())}
-              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--text-muted)' }}
             >Tout déplier</button>
           </div>
         )}
@@ -309,8 +314,8 @@ export default function LibraryPage() {
                   style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: collapsed ? 0 : 12, cursor: 'pointer', userSelect: 'none' }}
                 >
                   <span style={{ fontSize: 18 }}>{BIO_TYPE_ICONS[bt]}</span>
-                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: BIO_TYPE_COLORS[bt] || 'var(--text-primary)' }}>{bt}</h2>
-                  <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{mvts.length}</span>
+                  <h2 className="t-lg" style={{ margin: 0, color: BIO_TYPE_COLORS[bt] || 'var(--text-primary)' }}>{bt}</h2>
+                  <span className="t-sm tnum" style={{ color: 'var(--text-dim)' }}>{mvts.length}</span>
                   <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', display: 'flex' }}>
                     {collapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
                   </span>
@@ -336,10 +341,10 @@ export default function LibraryPage() {
             {tab === 'favorites'
               ? <Star size={34} style={{ opacity: 0.3, marginBottom: 14 }} />
               : <Search size={34} style={{ opacity: 0.3, marginBottom: 14 }} />}
-            <div className="display" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+            <div className="display r-h2" style={{ color: 'var(--text-primary)', marginBottom: 6 }}>
               {tab === 'favorites' ? 'Aucun favori' : 'Aucun mouvement'}
             </div>
-            <div style={{ fontSize: 'var(--fs-body)' }}>
+            <div className="t-body">
               {tab === 'favorites' ? 'L’étoile sur une fiche de mouvement l’ajoute ici.' : 'Aucun résultat pour cette recherche ou ces filtres.'}
             </div>
           </div>
@@ -355,11 +360,13 @@ export default function LibraryPage() {
 
 function MovementCard({ movement: m, isFav, onFav, onClick }: { movement: Movement; isFav: boolean; onFav: (id: string) => void; onClick: () => void }) {
   const thumb = youtubeThumbnail(m.videoUrl)
+  // Surface du système : .card porte fond, bordure, rayon et ombre, et
+  // .card-interactive reprend le survol qui était recalculé ici à la main
+  // — un liseré maison par écran ne fait pas une interface.
   return (
     <div
-      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', transition: 'border-color 0.15s', position: 'relative' }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--text-dim)')}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+      className="card card-interactive"
+      style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', position: 'relative' }}
     >
       <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
         {/* Vignette de la démonstration quand elle existe : la bibliothèque est
@@ -388,7 +395,7 @@ function MovementCard({ movement: m, isFav, onFav, onClick }: { movement: Moveme
           )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
+          <div className="t-body" style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
           <div style={{ display: 'flex', gap: 6, marginTop: 3, flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: 12, color: BIO_TYPE_COLORS[m.bioType] || 'var(--text-muted)' }}>{m.bioType}</span>
             <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>·</span>
