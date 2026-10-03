@@ -73,8 +73,14 @@
 
   /* ── Texte ───────────────────────────────────────────────────── */
   --text-primary: #F0EBE1;   /* parchemin clair */
-  --text-muted:   rgba(240,235,225,0.55);
-  --text-dim:     rgba(240,235,225,0.40);
+  /* 0,55 et 0,40 donnaient 5,26:1 et 3,40:1 sur une carte — la seconde sous le
+     seuil AA, et c’est le niveau des etiquettes en capitales de .t-micro et
+     .eyebrow, a 11px, le libelle le plus repete de l’interface. 0,68 et 0,51
+     remontent a 7,37:1 et 4,71:1 au pire des trois fonds, et ecartent les deux
+     niveaux de 2,66 points au lieu de 1,86 : la hierarchie se lit mieux qu’avant,
+     pas moins bien. */
+  --text-muted:   rgba(240,235,225,0.68);
+  --text-dim:     rgba(240,235,225,0.51);
 
   /* ── Dirty / warning ─────────────────────────────────────────── */
   --dirty:        rgba(201,165,53,0.10);
