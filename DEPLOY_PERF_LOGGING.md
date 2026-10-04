@@ -1,3 +1,23 @@
+> # ⛔ CE RUNBOOK EST PÉRIMÉ — NE LE SUIS PAS
+>
+> Il a été exécuté, la branche `perf-logging` n’existe plus, et la table
+> `SessionSet` est en production depuis le 26/08/2026. Conservé comme trace,
+> pas comme procédure.
+>
+> **Le suivre aujourd’hui casserait une base neuve.** `SessionSet` est
+> désormais créée par la migration
+> `prisma/migrations/20260826161646_add_content_notifications_assignments/`,
+> dont le `CREATE TABLE` n’a PAS de `IF NOT EXISTS`. Créer la table avant,
+> par l’étape 1 ou par le plan B, fait échouer la migration ensuite.
+>
+> `scripts/migrate-session-set.mjs`, que l’étape 1 appelle, a été supprimé
+> pour cette raison. Son DDL écrit à la main avait d’ailleurs déjà dérivé de
+> celui de la migration (`completed INTEGER` contre `BOOLEAN`).
+>
+> Pour appliquer une migration aujourd’hui : `node scripts/apply-migration.mjs
+> <nom_du_dossier>`, voir AGENTS.md.
+
+---
 # 🚀 Déploiement — Logging de performance (branche `perf-logging`)
 
 > **Pour toi, modèle Claude (y compris Haiku).** Suis ce runbook dans l'ordre, sans
