@@ -144,7 +144,9 @@ export default async function DashboardPage() {
     WeekPlanResult, number, SiteContentRow[], ResourceRow[],
   ]
 
-  const textContents = siteContents.filter(c => c.key !== 'resources')
+  // Le corps vide est exclu : l'admin peut laisser un contenu actif en ayant
+  // effacé son texte, et le panneau se rendait alors vide, titre compris.
+  const textContents = siteContents.filter(c => c.key !== 'resources' && c.body.trim())
   const resourcesEnabled = siteContents.some(c => c.key === 'resources')
 
   // Depuis quand, et non combien de jours d’affilee : un compteur de serie
