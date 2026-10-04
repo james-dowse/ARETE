@@ -12,6 +12,7 @@
 //   TURSO_DATABASE_URL / TURSO_AUTH_TOKEN                 <- source, existante
 //   TARGET_TURSO_DATABASE_URL / TARGET_TURSO_AUTH_TOKEN   <- cible, nouvelle
 
+import '../lib/system-ca.mjs'
 import dotenv from 'dotenv'
 import { createClient } from '@libsql/client'
 

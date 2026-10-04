@@ -12,6 +12,7 @@
 // Chaque instruction doit être idempotente (`IF NOT EXISTS`) : le script peut
 // être rejoué sans risque.
 
+import './lib/system-ca.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'

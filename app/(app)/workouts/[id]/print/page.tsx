@@ -95,15 +95,16 @@ export default function PrintPage() {
       {hasBlocks ? (
         workout.blocks.map((block, bi) => {
           const bMovs = workout.movements.filter(m => m.blockId === block.id)
+          // Les consignes sont du HTML (RichEditor) : sur la feuille imprimée
+          // on en imprime le texte, hors de l’en-tête en capitales.
+          const consignes = block.instructions ? stripHtmlMultiline(block.instructions) : ''
           return (
             <div key={block.id} className="block">
               <div className="block-header">
-                <span>
-                  Bloc {bi + 1}{block.bioType ? ` · ${block.bioType}` : ''}
-                  {block.instructions ? ` · ${block.instructions}` : ''}
-                </span>
+                <span>Bloc {bi + 1}{block.bioType ? ` · ${block.bioType}` : ''}</span>
                 {block.superset && <span className="superset-chip">⚡ Superset</span>}
               </div>
+              {consignes && <div className="block-instructions">{consignes}</div>}
               {bMovs.map((wm, i) => <MovRow key={wm.id} wm={wm} i={i} />)}
               {block.restAfter && bi < workout.blocks.length - 1 && (
                 <div className="block-rest">⏸ {block.restAfter}s de repos avant le bloc suivant</div>

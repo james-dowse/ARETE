@@ -4,6 +4,7 @@
 // - Ne touche à AUCUNE autre table, ne supprime rien, n'écrit aucune donnée.
 //
 // Usage : node scripts/migrate-session-set.mjs
+import './lib/system-ca.mjs'
 import { createClient } from '@libsql/client'
 import 'dotenv/config'
 

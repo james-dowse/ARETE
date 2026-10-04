@@ -39,6 +39,7 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
           .section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: #888; margin-bottom: 10px; margin-top: 20px; }
           .block { border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 12px; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
           .block-header { background: #f9fafb; padding: 8px 14px; font-size: 11px; font-weight: 700; color: #555; letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+          .block-instructions { padding: 7px 14px; font-size: 11.5px; line-height: 1.55; color: #555; white-space: pre-line; }
           .superset-chip { font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; color: #a07800; background: #fdf3d0; border: 1px solid #e8c84a; border-radius: 20px; padding: 1px 8px; text-transform: none; white-space: nowrap; }
           .movement-row { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-top: 1px solid #f3f4f6; break-inside: avoid; page-break-inside: avoid; }
           .movement-row:first-child { border-top: none; }

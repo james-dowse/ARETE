@@ -6,6 +6,7 @@
 //
 // Ne modifie rien : lectures seules.
 
+import '../lib/system-ca.mjs'
 import dotenv from 'dotenv'
 import { createClient } from '@libsql/client'
 
@@ -43,14 +44,45 @@ async function dbLatency(url, token) {
   return median(times)
 }
 
+// Un refus de certificat se présente ici comme un « fetch failed » sans détail,
+// que l'affichage traduisait en « injoignable » — soit une panne de réseau, ce
+// qui envoie chercher au mauvais endroit. On garde donc l'erreur pour pouvoir
+// nommer la vraie cause.
+let derniereErreurHttp = null
+
 async function httpLatency(url) {
   const times = []
   for (let i = 0; i < 5; i++) {
     const t = Date.now()
-    try { await fetch(url, { cache: 'no-store' }) } catch { return null }
+    try {
+      await fetch(url, { cache: 'no-store' })
+    } catch (e) {
+      derniereErreurHttp = e
+      return null
+    }
     times.push(Date.now() - t)
   }
   return median(times)
+}
+
+// « fetch failed » seul ne prouve rien : un hôte inatteignable le dit aussi
+// (cause UND_ERR_CONNECT_TIMEOUT). Seules les causes qui parlent de certificat
+// permettent d'affirmer que le réseau n'est pas en cause ; pour les autres, on
+// affiche la cause brute plutôt que d'inventer un diagnostic.
+function pourquoiInjoignable(e) {
+  const cause = [e?.cause?.code, e?.cause?.message, e?.message].filter(Boolean).join(' ')
+  // Seules ces causes-là disent « je ne connais pas l'autorité qui a signé »,
+  // c'est-à-dire le magasin de racines — le cas que system-ca.mjs traite. Un
+  // certificat expiré ou un nom d'hôte qui ne correspond pas sont aussi des
+  // erreurs de certificat, mais y renvoyer enverrait chercher la panne au
+  // mauvais endroit : on affiche alors la cause brute.
+  if (/UNABLE_TO_VERIFY_LEAF_SIGNATURE|SELF_SIGNED_CERT|UNABLE_TO_GET_ISSUER/i.test(cause)) {
+    return 'injoignable — autorité du certificat inconnue de Node (voir scripts/lib/system-ca.mjs)'
+  }
+  if (/CERT_|certificate/i.test(cause)) {
+    return `injoignable — certificat refusé${e?.cause?.code ? ` (${e.cause.code})` : ''}, pas le réseau`
+  }
+  return e?.cause?.code ? `injoignable — ${e.cause.code}` : 'injoignable'
 }
 
 say(`${C.b}▶ Latence base de données${C.x}`)
@@ -74,7 +106,7 @@ if (dst) {
 say(`\n${C.b}▶ Production${C.x}`)
 const prodMs = await httpLatency(PROD_URL)
 say(prodMs === null
-  ? `  ${C.y}injoignable${C.x}`
+  ? `  ${C.y}${pourquoiInjoignable(derniereErreurHttp)}${C.x}`
   : `  ${PROD_URL.replace('https://', '')}  ${prodMs} ms`)
 
 say(`\n${C.d}Repère : une page tape la base plusieurs fois de suite ; chaque${C.x}`)

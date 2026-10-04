@@ -20,26 +20,13 @@
 // On lit .env et .env.local à la main plutôt que par dotenv : le paquet n'est
 // pas une dépendance déclarée du projet, il ne se résout qu'en transitif.
 
+// Magasin de certificats de Windows : voir scripts/lib/system-ca.mjs.
+import './lib/system-ca.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
-import { spawnSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
 import { createClient } from '@libsql/client'
 
 const C = { g: '\x1b[32m', r: '\x1b[31m', j: '\x1b[33m', d: '\x1b[2m', b: '\x1b[1m', x: '\x1b[0m' }
-
-// Sur ce poste, Node n'utilise pas le magasin de certificats de Windows : toute
-// requête vers Turso échoue sur un « fetch failed » laconique, qui ressemble à
-// une panne réseau alors que c'est un refus TLS. Les configurations de lancement
-// du poste posent toutes NODE_OPTIONS=--use-system-ca pour cette raison. Plutôt
-// que d'exiger qu'on s'en souvienne, on se relance une fois avec le drapeau.
-if (!(process.env.NODE_OPTIONS || '').includes('--use-system-ca')) {
-  const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...process.argv.slice(2)], {
-    stdio: 'inherit',
-    env: { ...process.env, NODE_OPTIONS: `${process.env.NODE_OPTIONS || ''} --use-system-ca`.trim() },
-  })
-  process.exit(r.status ?? 1)
-}
 
 function lireEnv() {
   const env = {}

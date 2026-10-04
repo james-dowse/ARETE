@@ -17,6 +17,7 @@
 // dans une base de test posée en clair sur un poste de travail. Ils ne servent
 // pas non plus en local, où la session se pose directement par cookie.
 
+import './lib/system-ca.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import dotenv from 'dotenv'
