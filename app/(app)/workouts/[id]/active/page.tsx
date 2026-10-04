@@ -863,14 +863,21 @@ export default function ActivePage() {
   const curTarget = currentWm ? (currentWm.sets ?? 3) : 0
   const curDone = currentWm ? (done[currentWm.id] ?? 0) : 0
   const curIndex = currentWm ? flatMovs.findIndex(m => m.id === currentWm.id) : -1
-  const curBlock = currentWm?.blockId ? (workout.blocks.find(b => b.id === currentWm.blockId) ?? null) : null
+  // Pendant l'ecran de correction, le curseur a deja quitte le circuit — c'est
+  // meme a ca qu'on detecte sa fin. Sans ce repli, l'en-tete annonçait
+  // « Hors bloc » au-dessus d'un ecran qui ne parle que du bloc qu'on vient de
+  // terminer.
+  const curBlock = circuitReview
+    ? (workout.blocks.find(b => b.id === circuitReview) ?? null)
+    : currentWm?.blockId ? (workout.blocks.find(b => b.id === currentWm.blockId) ?? null) : null
   const curBlockLabel = curBlock
     ? `Bloc ${workout.blocks.indexOf(curBlock) + 1}${curBlock.bioType ? ` · ${curBlock.bioType}` : ''}`
-    // « Hors bloc » n’a de sens que si d’AUTRES mouvements, eux, sont ranges
-    // dans un bloc. Quand aucun ne l’est — c’est le cas de toutes les seances
-    // de la base — le libelle serait affiche sur les 27 mouvements et ne
-    // dirait rien : on montre alors le nom de la seance.
-    : (hasBlocks && workout.movements.some(m => m.blockId)) ? 'Hors bloc' : workout.name
+    // « Hors bloc » n’a de sens qu’au-dessus d’un mouvement qui, lui, n’est
+    // range nulle part, alors que d’AUTRES le sont. Sans mouvement courant —
+    // seance terminee — il n’y a rien a situer, et quand aucun mouvement n’a de
+    // bloc le libelle s’afficherait sur les 27 sans rien dire. Dans ces deux
+    // cas on montre le nom de la seance.
+    : (currentWm && hasBlocks && workout.movements.some(m => m.blockId)) ? 'Hors bloc' : workout.name
   const nextWm = curIndex >= 0 ? (flatMovs[curIndex + 1] ?? null) : null
   const isTimed = currentWm?.duration != null
   const isCircuit = !!(curBlock && supersetBlocs.has(curBlock.id))
