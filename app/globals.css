@@ -812,7 +812,7 @@ h1,
    parcours : froid tant que rien n’est engage, forge pendant qu’on cree et
    qu’on fait, or une fois que c’est accompli.
 
-   TROIS REGLES, apprises a nos depens :
+   QUATRE REGLES, apprises a nos depens :
 
    1. LE FROID EST L’APPARENCE ACTUELLE, a l’identique. Il ne redefinit rien.
       Un axe qui change deja tout au premier cran n’est pas une gradation,
@@ -824,8 +824,23 @@ h1,
 
    3. MEME CLARTE, TEINTE TOURNEE. Seules la teinte et la saturation bougent,
       jamais la luminosite : c’est un voile pose sur la matiere, pas une
-      repeinture. Ecart percu de 5 a 10 sur les cartes — au-dessus du seuil
-      de 2,3 ou l’oeil separe deux couleurs, loin en dessous du choc.
+      repeinture. La teinte part du brun neutre du classique (78°) et tourne
+      vers 32° pour la braise, 95° pour le metal a temperature. La carte garde
+      exactement son rapport de clarte avec le sol (1,10 — 1,11) aux trois
+      crans : ce qui porte la lecture ne bouge pas.
+
+   4. LE SOL NE CHAUFFE PAS. SEULES LES CARTOUCHES CHAUFFENT. --bg-canvas et
+      --bg-primary sont identiques aux trois crans : ce sont les deux plus
+      grandes surfaces de l’application, et ce sont elles qui faisaient
+      basculer un ecran entier dans le rouge. La couleur vit desormais dans
+      les plaques et les creux — petits, cernes de gris, et c’est la qu’est
+      le contenu qu’on regarde. C’est aussi l’image juste : la piece chaude
+      sur une enclume qui reste froide.
+
+      Dosage : ecart percu de 3,3 a 5,5 sur les cartouches. Une version plus
+      franche (jusqu’a 9,6, et le sol teinte avec) a ete jugee trop marquee.
+      Le repere utile : la gradation doit se voir quand on compare deux
+      ecrans, jamais sauter aux yeux sur un seul.
 
    Et aucune couleur de premier plan ne bouge : terracotta, or, mousse et les
    trois niveaux de texte gardent leur valeur exacte aux trois crans. C’est ce
@@ -833,26 +848,25 @@ h1,
    axe ne tiedit que la surface sous eux.
    ═════════════════════════════════════════════════════════════════════ */
 
-/* Le froid ne redefinit rien : il EST l’apparence actuelle. */
+/* La braise. Le froid, lui, n’a pas de bloc : il EST l’apparence actuelle. */
 html[data-temp="forge"] {
-  --bg-canvas:     #130D0B;
-  --bg-primary:    #1E100B;
-  --bg-card:       #271510;
-  --bg-card-solid: #271510;
-  --bg-elevated:   #301A15;
+  --bg-card:       #231715;
+  --bg-card-solid: #231715;
+  --bg-elevated:   #2A1C1A;
 }
 
+/* Le métal à température : teinte 95°. */
 html[data-temp="or"] {
-  --bg-canvas:     #100E08;
-  --bg-primary:    #181304;
-  --bg-card:       #1F1906;
-  --bg-card-solid: #1F1906;
-  --bg-elevated:   #251F0B;
+  --bg-card:       #1C1A10;
+  --bg-card-solid: #1C1A10;
+  --bg-elevated:   #232015;
 }
 
 /* Le passage se fait entre deux ecrans, jamais sous les yeux : une teinte qui
-   derive pendant qu’on regarde se lit comme un defaut d’affichage. */
+   derive pendant qu’on regarde se lit comme un defaut d’affichage. Depuis que
+   le sol ne chauffe plus, c’est la carte qu’il faut adoucir, pas le fond. */
 @media (prefers-reduced-motion: no-preference) {
-  html[data-temp] body,
-  html[data-temp] .main-grid { transition: background-color 380ms cubic-bezier(0.4, 0, 0.2, 1); }
+  html[data-temp] .card,
+  html[data-temp] .card-hero,
+  html[data-temp] .panel { transition: background-color 380ms cubic-bezier(0.4, 0, 0.2, 1); }
 }
