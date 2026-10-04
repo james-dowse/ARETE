@@ -13,7 +13,7 @@ function Bar({ w, h = 14, r = 6 }: { w: string | number; h?: number; r?: number 
 
 export function SkeletonCard({ lines = 3 }: { lines?: number }) {
   return (
-    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md, 12px)', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 'var(--r-md, 12px)', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
         <Bar w={130} h={86} r={10} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 9 }}>

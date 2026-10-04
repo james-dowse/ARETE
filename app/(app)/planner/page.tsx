@@ -95,7 +95,7 @@ function WorkoutPickerModal({ dayLabel, onPick, onClose }: {
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={17} /></button>
         </div>
         <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 11px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '6px 11px' }}>
             <Search size={13} color="var(--text-muted)" />
             <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher une séance…"
               style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }} />
@@ -144,7 +144,7 @@ function WorkoutPickerModal({ dayLabel, onPick, onClose }: {
                 style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', marginBottom: 2, textAlign: 'left', transition: 'background 0.1s' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
-                <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border-cartouche)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {w.imageUrl
                     ? <img src={sizedImage(w.imageUrl, { width: 40, height: 40 }) ?? undefined} srcSet={sizedImageSrcSet(w.imageUrl, { width: 40, height: 40 })} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%' }} />
                     : <img src="/logo.svg" alt="" loading="lazy" decoding="async" style={{ width: '45%', height: '45%', objectFit: 'contain', opacity: 0.18 }} />}
@@ -354,14 +354,14 @@ export default function PlannerPage() {
             </p>
           </header>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={() => goWeek(-1)} style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+            <button onClick={() => goWeek(-1)} style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
               <ChevronLeft size={16} />
             </button>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', minWidth: 180, textAlign: 'center' }}>
               {fmtWeekLabel(weekStart)}
               {isCurrentWeek && <span style={{ marginLeft: 8, fontSize: 11, padding: '2px 7px', borderRadius: 10, background: 'var(--gold-ghost)', color: 'var(--gold)', fontWeight: 700, border: '1px solid var(--gold-border)' }}>Cette semaine</span>}
             </div>
-            <button onClick={() => goWeek(1)} style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+            <button onClick={() => goWeek(1)} style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
               <ChevronRight size={16} />
             </button>
             {!isCurrentWeek && (
@@ -441,21 +441,21 @@ export default function PlannerPage() {
                                 onClick={() => moveWithinDay(entry.id, -1)}
                                 disabled={entryIdx === 0}
                                 title="Monter"
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 5, color: entryIdx === 0 ? 'var(--text-dim)' : 'var(--text-muted)', cursor: entryIdx === 0 ? 'default' : 'pointer', opacity: entryIdx === 0 ? 0.4 : 1 }}>
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 5, color: entryIdx === 0 ? 'var(--text-dim)' : 'var(--text-muted)', cursor: entryIdx === 0 ? 'default' : 'pointer', opacity: entryIdx === 0 ? 0.4 : 1 }}>
                                 <ChevronUp size={11} />
                               </button>
                               <button
                                 onClick={() => moveWithinDay(entry.id, 1)}
                                 disabled={entryIdx === dayEntries.length - 1}
                                 title="Descendre"
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 5, color: entryIdx === dayEntries.length - 1 ? 'var(--text-dim)' : 'var(--text-muted)', cursor: entryIdx === dayEntries.length - 1 ? 'default' : 'pointer', opacity: entryIdx === dayEntries.length - 1 ? 0.4 : 1 }}>
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 5, color: entryIdx === dayEntries.length - 1 ? 'var(--text-dim)' : 'var(--text-muted)', cursor: entryIdx === dayEntries.length - 1 ? 'default' : 'pointer', opacity: entryIdx === dayEntries.length - 1 ? 0.4 : 1 }}>
                                 <ChevronDown size={11} />
                               </button>
                               <select
                                 value={entry.dayOfWeek}
                                 onChange={e => moveEntry(entry.id, Number(e.target.value))}
                                 title="Changer de jour"
-                                style={{ flex: 1, minWidth: 0, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--text-muted)', fontSize: 10, padding: '2px 4px', height: 20, cursor: 'pointer' }}>
+                                style={{ flex: 1, minWidth: 0, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 5, color: 'var(--text-muted)', fontSize: 10, padding: '2px 4px', height: 20, cursor: 'pointer' }}>
                                 {DAYS.map((d, di) => <option key={di} value={di}>{d}</option>)}
                               </select>
                             </div>

@@ -1,7 +1,7 @@
 'use client'
 import MovementModal from '@/components/MovementModal'
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, EQUIPMENT_ICONS } from '@/lib/types'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Search, X, Star, BookOpen, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react'
 import FilterPanel, { FilterGroup, type ActiveFilter } from '@/components/FilterPanel'
 import { readableAccent } from '@/lib/color'
@@ -29,6 +29,7 @@ interface Movement {
 export default function LibraryPage() {
   const [movements, setMovements] = useState<Movement[]>([])
   const [loading, setLoading] = useState(true)
+  const [echec, setEchec] = useState(false)
   const [search, setSearch] = useState('')
   // Multi-sélection : un ensemble vide = pas de restriction sur ce critère
   const [bioFilters, setBioFilters] = useState<Set<string>>(new Set())
@@ -58,20 +59,51 @@ export default function LibraryPage() {
 
   // bioType/complexity/equipment sont désormais filtrés côté client (multi-sélection) :
   // seule la recherche texte reste envoyée au serveur.
+  // La marque du terme chargé vit ici, au-dessus de fetchMovements, parce que
+  // c’est lui qui doit pouvoir la relâcher en cas d’échec.
+  const termeCharge = useRef<string | null>(null)
+
   const fetchMovements = useCallback(async () => {
     setLoading(true)
     const params = new URLSearchParams()
     if (search) params.set('search', search)
-    const res = await fetch(`/api/movements?${params}`)
-    const data = await res.json()
-    setMovements(data)
-    setLoading(false)
+    try {
+      const res = await fetch(`/api/movements?${params}`)
+      if (!res.ok) throw new Error(String(res.status))
+      setMovements(await res.json())
+      setEchec(false)
+    } catch {
+      // Sans ce relâchement, la garde de l’effet ci-dessous interdirait de
+      // redemander ce terme tant que le composant reste monté : un creux de
+      // réseau gelait la recherche sur ce mot jusqu’au rechargement complet.
+      // L’application est une PWA avec une page hors ligne : une requête qui
+      // tombe est un cas de marche normale, pas un imprévu.
+      termeCharge.current = null
+      setEchec(true)
+    } finally {
+      setLoading(false)
+    }
   }, [search])
 
+  // Le terme déjà chargé ne se redemande pas. Ce garde couvre deux cas d'un
+  // coup : le premier passage, où il n'y a rien à débouncer — la page demande
+  // ses données tout de suite — et le double montage de StrictMode en dev, qui
+  // rejoue l'effet sur la même ref et reprogrammerait sinon un fetch inutile
+  // 300 ms plus tard. La ref est déclarée plus haut, avec fetchMovements.
   useEffect(() => {
-    const t = setTimeout(fetchMovements, 300)
+    if (termeCharge.current === search) return
+    if (termeCharge.current === null) {
+      termeCharge.current = search
+      fetchMovements()
+      return
+    }
+    // Frappe de l'utilisateur : là, l'anti-rebond a un sens.
+    const t = setTimeout(() => {
+      termeCharge.current = search
+      fetchMovements()
+    }, 300)
     return () => clearTimeout(t)
-  }, [fetchMovements])
+  }, [fetchMovements, search])
 
   const toggleFav = async (id: string) => {
     const res = await fetch('/api/favorites', {
@@ -336,7 +368,19 @@ export default function LibraryPage() {
           </div>
         )}
 
-        {!loading && displayed.length === 0 && (
+        {!loading && echec && (
+          <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--text-muted)' }}>
+            <div className="display r-h2" style={{ color: 'var(--text-primary)', marginBottom: 6 }}>
+              Liste indisponible
+            </div>
+            <div className="t-body" style={{ marginBottom: 16 }}>
+              Les mouvements n’ont pas pu être chargés. Vérifie ta connexion.
+            </div>
+            <button className="btn btn-md btn-primary" onClick={() => fetchMovements()}>Réessayer</button>
+          </div>
+        )}
+
+        {!loading && !echec && displayed.length === 0 && (
           <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--text-muted)' }}>
             {tab === 'favorites'
               ? <Star size={34} style={{ opacity: 0.3, marginBottom: 14 }} />

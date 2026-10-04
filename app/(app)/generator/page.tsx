@@ -749,7 +749,7 @@ export default function GeneratorPage() {
             {!collapsedStructure && (<>
 
             {showTemplates && templates.length === 0 && (
-              <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Aucun template trouvé pour ce compte.</span>
                 <button
                   onClick={claimTemplates}
@@ -762,7 +762,7 @@ export default function GeneratorPage() {
             )}
 
             {showTemplates && templates.length > 0 && (
-              <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 12, marginBottom: 14 }}>
+              <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 10, padding: 12, marginBottom: 14 }}>
                 <div className="t-micro" style={{ color: 'var(--text-muted)', marginBottom: 8 }}>TEMPLATES SAUVEGARDÉS</div>
                 {templates.map(t => (
                   <div key={t.id} style={{ padding: '8px 10px', borderRadius: 7, fontSize: 13, marginBottom: 4, background: 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
@@ -808,7 +808,7 @@ export default function GeneratorPage() {
                           <span key={c} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${COMPLEXITY_COLORS[c]}22`, color: COMPLEXITY_COLORS[c], border: `1px solid ${COMPLEXITY_COLORS[c]}44`, fontWeight: 600 }}>{c}</span>
                         ))}
                         {block.equipments.map(eq => (
-                          <span key={eq} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontWeight: 600 }}>{EQUIPMENT_ICONS[eq]} {eq}</span>
+                          <span key={eq} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-cartouche)', fontWeight: 600 }}>{EQUIPMENT_ICONS[eq]} {eq}</span>
                         ))}
                         <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{block.count} mvt{block.count > 1 ? 's' : ''} · {fmtMin(blockEstMin(block.count, block.sets, block.rest, block.duration))}</span>
                         {block.instructions && (
@@ -1042,7 +1042,7 @@ export default function GeneratorPage() {
 
             {showSaveTemplate && (
               <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-                <input value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Nom du template" style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }} />
+                <input value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Nom du template" style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }} />
                 <button onClick={saveTemplate} disabled={savingTemplate} className="btn btn-sm btn-secondary">
                   {savingTemplate ? '...' : 'OK'}
                 </button>
@@ -1108,7 +1108,7 @@ export default function GeneratorPage() {
                               <span key={c} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${COMPLEXITY_COLORS[c]}22`, color: COMPLEXITY_COLORS[c], border: `1px solid ${COMPLEXITY_COLORS[c]}44`, fontWeight: 600 }}>{c}</span>
                             ))}
                             {block.equipments.map(eq => (
-                              <span key={eq} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontWeight: 600 }}>{EQUIPMENT_ICONS[eq]} {eq}</span>
+                              <span key={eq} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-cartouche)', fontWeight: 600 }}>{EQUIPMENT_ICONS[eq]} {eq}</span>
                             ))}
                             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
                               {fmtMin(estimateWorkoutMinutes(
@@ -1160,7 +1160,7 @@ export default function GeneratorPage() {
                         {!resultCollapsed && block.instructions && (
                           <div
                             className="rich-content"
-                            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 12px', marginBottom: 8, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}
+                            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '7px 12px', marginBottom: 8, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}
                             dangerouslySetInnerHTML={{ __html: block.instructions }}
                           />
                         )}
@@ -1191,7 +1191,7 @@ export default function GeneratorPage() {
                                     <button
                                       onClick={() => setSubstitutingIndex(i)}
                                       title="Remplacer ce mouvement (choisir ou tirer au hasard, avec filtres)"
-                                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}
+                                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}
                                     >
                                       <Search size={11} /> Remplacer
                                     </button>
@@ -1245,7 +1245,7 @@ export default function GeneratorPage() {
                                               value={![15,20,30,45,60,90,120].includes(params[i]?.duration ?? 0) ? (params[i]?.duration ?? '') : ''}
                                               placeholder="libre"
                                               onChange={e => { const v = Number(e.target.value); if (v >= 5) setParam(i, 'duration', v) }}
-                                              style={{ width: 54, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 6px', color: 'var(--blue)', fontSize: 11, fontWeight: 700, outline: 'none', textAlign: 'center' }}
+                                              style={{ width: 54, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 6, padding: '3px 6px', color: 'var(--blue)', fontSize: 11, fontWeight: 700, outline: 'none', textAlign: 'center' }}
                                             />
                                             <span style={{ fontSize: 10, color: 'var(--blue)' }}>s</span>
                                           </div>
@@ -1272,14 +1272,14 @@ export default function GeneratorPage() {
                           <button
                             onClick={() => addRandomToResultBlock(bi)}
                             disabled={addingRandomToBlock === bi}
-                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 10px', background: 'var(--bg-elevated)', border: '1px dashed var(--border)', borderRadius: 8, color: 'var(--text-dim)', fontSize: 12, cursor: addingRandomToBlock === bi ? 'wait' : 'pointer', opacity: addingRandomToBlock === bi ? 0.6 : 1 }}
+                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 10px', background: 'var(--bg-elevated)', border: '1px dashed var(--border-cartouche)', borderRadius: 8, color: 'var(--text-dim)', fontSize: 12, cursor: addingRandomToBlock === bi ? 'wait' : 'pointer', opacity: addingRandomToBlock === bi ? 0.6 : 1 }}
                           >
                             <RefreshCw size={11} style={addingRandomToBlock === bi ? { animation: 'spin 1s linear infinite' } : {}} />
                             Mouvement aléatoire
                           </button>
                           <button
                             onClick={() => setAddingToBlockIndex(bi)}
-                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 10px', background: 'var(--bg-elevated)', border: '1px dashed var(--border)', borderRadius: 8, color: 'var(--text-dim)', fontSize: 12, cursor: 'pointer' }}
+                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 10px', background: 'var(--bg-elevated)', border: '1px dashed var(--border-cartouche)', borderRadius: 8, color: 'var(--text-dim)', fontSize: 12, cursor: 'pointer' }}
                           >
                             <Search size={11} /> Depuis le syllabus
                           </button>
@@ -1289,7 +1289,7 @@ export default function GeneratorPage() {
                         {bi < resultBlocks.length - 1 && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
                             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '5px 10px' }}>
                               <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>⏸</span>
                               <Stepper
                                 value={blockRests[bi] ?? globalBlockRest}
@@ -1321,7 +1321,7 @@ export default function GeneratorPage() {
                 {!savedId ? (
                   <div className="card" style={{ padding: 'var(--sp-4)' }}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Sauvegarder cette séance</div>
-                    <input value={workoutName} onChange={e => setWorkoutName(e.target.value)} placeholder="Nom de la séance" style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', marginBottom: 10 }} />
+                    <input value={workoutName} onChange={e => setWorkoutName(e.target.value)} placeholder="Nom de la séance" style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', marginBottom: 10 }} />
                     <div style={{ marginBottom: 10 }}>
                       <label className="t-micro" style={{ color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>DESCRIPTION (optionnel)</label>
                       <RichEditor value={workoutDescription} onChange={setWorkoutDescription} placeholder="Décris cette séance…" minHeight={60} />
@@ -1375,7 +1375,7 @@ export default function GeneratorPage() {
 // ─── Stepper component ────────────────────────────────────────────────────────
 function Stepper({ value, min, max, step = 1, onChange }: { value: number; min: number; max: number; step?: number; onChange: (v: number) => void }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 0, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, overflow: 'hidden' }}>
       <button onClick={() => onChange(Math.max(min, value - step))} disabled={value <= min}
         style={{ width: 30, height: 30, background: 'none', border: 'none', cursor: value > min ? 'pointer' : 'default', color: value > min ? 'var(--text-primary)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <Minus size={12} />
@@ -1395,7 +1395,7 @@ function RepsInput({ value, onChange }: { value: string; onChange: (v: string) =
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <input value={value} onChange={e => onChange(e.target.value)} placeholder="10"
-        style={{ width: 80, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, outline: 'none', textAlign: 'center' }} />
+        style={{ width: 80, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, outline: 'none', textAlign: 'center' }} />
       <button type="button" onClick={() => onChange(isFailure ? DEFAULT_REPS : FAILURE_REPS)}
         title="Séries jusqu'à l'échec"
         style={{ fontSize: 10, padding: '5px 8px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, border: `1px solid ${isFailure ? 'var(--red)' : 'var(--border)'}`, background: isFailure ? 'rgba(239,68,68,0.12)' : 'var(--bg-elevated)', color: isFailure ? 'var(--red)' : 'var(--text-dim)' }}>

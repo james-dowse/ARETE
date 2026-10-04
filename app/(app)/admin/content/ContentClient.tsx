@@ -41,7 +41,7 @@ function ContentForm({ content, onSaved }: { content: SiteContent; onSaved: (c: 
   }
 
   return (
-    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 'var(--r-md)', padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{meta.label}</h3>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -63,7 +63,7 @@ function ContentForm({ content, onSaved }: { content: SiteContent; onSaved: (c: 
               value={title}
               maxLength={60}
               onChange={e => setTitle(e.target.value)}
-              style={{ width: '100%', marginTop: 6, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13.5 }}
+              style={{ width: '100%', marginTop: 6, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13.5 }}
             />
             <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 4, textAlign: 'right' }}>{title.length}/60</div>
           </div>
@@ -75,7 +75,7 @@ function ContentForm({ content, onSaved }: { content: SiteContent; onSaved: (c: 
               maxLength={meta.bodyMax}
               onChange={e => setBody(e.target.value)}
               rows={5}
-              style={{ width: '100%', marginTop: 6, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13.5, fontFamily: 'inherit', resize: 'vertical' }}
+              style={{ width: '100%', marginTop: 6, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13.5, fontFamily: 'inherit', resize: 'vertical' }}
             />
             <div style={{ fontSize: 10.5, color: body.length > meta.bodyMax * 0.9 ? 'var(--gold)' : 'var(--text-dim)', marginTop: 4, textAlign: 'right' }}>{body.length}/{meta.bodyMax}</div>
           </div>

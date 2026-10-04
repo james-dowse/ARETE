@@ -22,7 +22,22 @@ node scripts/deploy.mjs --check-only
 
 1. **Contexte** — bon dépôt, branche `main`.
 2. **Écart avec la production** — liste ce qui n'est pas encore en ligne ; sort immédiatement si tout y est déjà.
-3. **Barrière qualité** — `tsc --noEmit`, `vitest run`, `npm run build`. Un échec arrête tout **avant** le moindre push.
+3. **Barrière qualité** — `prisma generate`, `tsc --noEmit` (pile agrandie,
+   voir plus bas), `vitest run`,
+   `npm run build`. `prisma generate` passe en premier parce que `/node_modules`
+   est ignoré par git et que `@prisma/client` 7.x n'a plus de `postinstall` :
+   sur un clone neuf, le client n'existe pas encore et `tsc` échouerait sur les
+   types importés depuis `@prisma/client` pour une raison d'outillage et non de
+   code. Il garantit aussi que le typage est validé contre le schéma courant et
+   non contre le client laissé par le déploiement précédent. Un échec arrête tout
+   **avant** le moindre push.
+
+   Le typage est appelé en direct — `node --stack-size=8000
+   node_modules/typescript/lib/tsc.js --noEmit` — et non `npx tsc --noEmit` :
+   sur ce schéma Prisma, la pile V8 par défaut déborde (« Maximum call stack
+   size exceeded ») et `npx` ne transmet pas le drapeau au processus node.
+   C'est la même limite qui a fait désactiver le typecheck de `next build`
+   (`next.config.ts`), à ceci près qu'ici elle se contourne.
 4. **Commit** — uniquement les fichiers du projet.
 5. **Push sur `main`** — ce qui déclenche le déploiement Vercel.
 6. **Attente du build** — affiche l'avancement ; en cas d'échec, imprime les logs Vercel.

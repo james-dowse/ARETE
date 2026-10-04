@@ -49,7 +49,7 @@ export default function OverflowMenu({ items, label = 'Plus d’actions' }: { it
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           width: 32, height: 32, borderRadius: 'var(--r-sm)',
           background: open ? 'var(--bg-elevated)' : 'none',
-          border: '1px solid var(--border)',
+          border: '1px solid var(--border-cartouche)',
           color: 'var(--text-muted)', cursor: 'pointer',
           transition: 'background var(--t-fast) var(--ease)',
         }}

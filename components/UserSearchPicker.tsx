@@ -36,7 +36,7 @@ export default function UserSearchPicker({ onSelect, placeholder, autoFocus }: {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 12px' }}>
         <Search size={14} color="var(--text-muted)" />
         <input
           autoFocus={autoFocus}
@@ -56,7 +56,7 @@ export default function UserSearchPicker({ onSelect, placeholder, autoFocus }: {
             <button
               key={u.id}
               onClick={() => onSelect(u)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}
             >
               <CreatorBadge user={u} size={26} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>

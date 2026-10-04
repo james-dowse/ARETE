@@ -58,20 +58,20 @@ function ResourceModal({ resource, onClose, onSaved }: { resource: Resource | nu
 
         <div>
           <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Titre</label>
-          <input value={title} onChange={e => setTitle(e.target.value)} style={{ width: '100%', marginTop: 6, padding: '9px 11px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 13.5 }} />
+          <input value={title} onChange={e => setTitle(e.target.value)} style={{ width: '100%', marginTop: 6, padding: '9px 11px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 13.5 }} />
         </div>
         <div>
           <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Lien (URL)</label>
-          <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" style={{ width: '100%', marginTop: 6, padding: '9px 11px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 13.5 }} />
+          <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" style={{ width: '100%', marginTop: 6, padding: '9px 11px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 13.5 }} />
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Source</label>
-            <input value={source} onChange={e => setSource(e.target.value)} placeholder="Nom du site" style={{ width: '100%', marginTop: 6, padding: '9px 11px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 13.5 }} />
+            <input value={source} onChange={e => setSource(e.target.value)} placeholder="Nom du site" style={{ width: '100%', marginTop: 6, padding: '9px 11px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 13.5 }} />
           </div>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Catégorie</label>
-            <select value={category} onChange={e => setCategory(e.target.value)} style={{ width: '100%', marginTop: 6, padding: '9px 11px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 13.5 }}>
+            <select value={category} onChange={e => setCategory(e.target.value)} style={{ width: '100%', marginTop: 6, padding: '9px 11px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 13.5 }}>
               {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
           </div>

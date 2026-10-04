@@ -131,12 +131,12 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
         </div>
 
         {/* Invite form */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, marginBottom: 28, boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 14, padding: 24, marginBottom: 28, boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, color: 'var(--text-muted)', marginBottom: 14 }}>
             INVITER UN UTILISATEUR
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px' }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 10, padding: '10px 14px' }}>
               <Mail size={15} color="var(--text-muted)" />
               <input
                 type="email"
@@ -181,7 +181,7 @@ export default function UsersClient({ adminEmail }: { adminEmail: string }) {
         </div>
 
         {/* Note config email si pas de clé */}
-        <div style={{ marginBottom: 24, padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ marginBottom: 24, padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 10, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link2 size={13} style={{ flexShrink: 0 }} />
           Pour activer l'envoi d'emails, renseigne <code style={{ color: 'var(--text-primary)', background: 'var(--bg-elevated)', padding: '1px 5px', borderRadius: 4 }}>RESEND_API_KEY</code> dans le fichier <code style={{ color: 'var(--text-primary)', background: 'var(--bg-elevated)', padding: '1px 5px', borderRadius: 4 }}>.env</code>.
           En attendant, copie le lien manuellement après chaque invitation.
@@ -271,7 +271,7 @@ function InviteLinkBox({ url }: { url: string }) {
     setTimeout(() => setCopied(false), 2500)
   }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 12px' }}>
       <span style={{ flex: 1, fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{url}</span>
       <button
         onClick={copy}
@@ -360,7 +360,7 @@ function AdminProfileModal({ profile, onClose, onSaved }: { profile: UserProfile
         {/* Avatar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
           <div style={{ position: 'relative', flexShrink: 0 }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-elevated)', border: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: 'var(--accent)' }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-elevated)', border: '2px solid var(--border-cartouche)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: 'var(--accent)' }}>
               {avatarUrl
                 ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : initials}
@@ -400,7 +400,7 @@ function AdminProfileModal({ profile, onClose, onSaved }: { profile: UserProfile
             <input
               value={firstName} onChange={e => setFirstName(e.target.value)}
               placeholder="Jean"
-              style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 11px', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 11px', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
           <div>
@@ -408,7 +408,7 @@ function AdminProfileModal({ profile, onClose, onSaved }: { profile: UserProfile
             <input
               value={lastName} onChange={e => setLastName(e.target.value)}
               placeholder="Dupont"
-              style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 11px', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 11px', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
         </div>
@@ -419,7 +419,7 @@ function AdminProfileModal({ profile, onClose, onSaved }: { profile: UserProfile
             value={bio} onChange={e => setBio(e.target.value)}
             placeholder="Quelques mots sur la pratique, les objectifs…"
             rows={3}
-            style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 11px', color: 'var(--text-primary)', fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6, boxSizing: 'border-box' }}
+            style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 11px', color: 'var(--text-primary)', fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6, boxSizing: 'border-box' }}
           />
         </div>
 
@@ -446,7 +446,7 @@ function UserRow({ user, onRevoke, isProtected, onEditProfile, onAssignWod }: { 
     .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 
   return (
-    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', boxShadow: 'var(--shadow-sm)' }}>
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 10, padding: '12px 16px', boxShadow: 'var(--shadow-sm)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         {/* Avatar */}
         <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: accepted ? 'rgba(187,176,147,0.1)' : 'rgba(245,158,11,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: accepted ? 'var(--green)' : 'var(--orange)' }}>
@@ -568,7 +568,7 @@ function AssignWodModal({ user, onClose }: { user: { id: string; email: string }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, width: 440, maxWidth: '100%', boxShadow: 'var(--shadow-lg, 0 12px 40px rgba(0,0,0,0.4))' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 14, padding: 24, width: 440, maxWidth: '100%', boxShadow: 'var(--shadow-lg, 0 12px 40px rgba(0,0,0,0.4))' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Assigner un WOD à {user.email}</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}><X size={16} /></button>
@@ -582,7 +582,7 @@ function AssignWodModal({ user, onClose }: { user: { id: string; email: string }
           <>
             {!selected ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
                   <Search size={14} color="var(--text-muted)" />
                   <input
                     autoFocus
@@ -601,7 +601,7 @@ function AssignWodModal({ user, onClose }: { user: { id: string; email: string }
                     <button
                       key={w.id}
                       onClick={() => setSelected(w)}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', textAlign: 'left', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: 13 }}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', textAlign: 'left', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: 13 }}
                     >
                       <span>{w.name}</span>
                       {w.duration && <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{w.duration} min</span>}
@@ -621,14 +621,14 @@ function AssignWodModal({ user, onClose }: { user: { id: string; email: string }
                   onChange={e => setNote(e.target.value)}
                   rows={2}
                   maxLength={280}
-                  style={{ width: '100%', marginTop: 6, marginBottom: 12, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13, fontFamily: 'inherit', resize: 'vertical' }}
+                  style={{ width: '100%', marginTop: 6, marginBottom: 12, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13, fontFamily: 'inherit', resize: 'vertical' }}
                 />
                 <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Date prévue (optionnel)</label>
                 <input
                   type="date"
                   value={scheduledFor}
                   onChange={e => setScheduledFor(e.target.value)}
-                  style={{ width: '100%', marginTop: 6, marginBottom: 16, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13 }}
+                  style={{ width: '100%', marginTop: 6, marginBottom: 16, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13 }}
                 />
                 <button
                   onClick={handleAssign}

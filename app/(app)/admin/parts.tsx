@@ -99,7 +99,7 @@ export function NewMovementModal({
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div onClick={onClose} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.5)' }} />
-      <form onSubmit={handleSubmit} className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 500, maxWidth: 'calc(100vw - 32px)', padding: '24px', boxShadow: 'var(--elev-3)' }}>
+      <form onSubmit={handleSubmit} className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 'var(--r-lg)', width: 500, maxWidth: 'calc(100vw - 32px)', padding: '24px', boxShadow: 'var(--elev-3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Nouveau mouvement</h2>
           <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
@@ -221,7 +221,7 @@ export function ImportResultModal({
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div onClick={onClose} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.5)' }} />
-      <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 760, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', boxShadow: 'var(--elev-3)' }}>
+      <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 'var(--r-lg)', width: 760, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', boxShadow: 'var(--elev-3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px 16px' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Résultat de l&apos;import</h2>
@@ -301,7 +301,7 @@ export function DeleteConfirm({ movement, onConfirm, onCancel }: { movement: Mov
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div onClick={onCancel} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.45)' }} />
-      <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 380, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
+      <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 380, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
         <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
         <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Supprimer ce mouvement ?</div>
         <div style={{ fontSize: 14, color: 'var(--accent)', marginBottom: 4 }}>{movement.name}</div>
@@ -402,12 +402,12 @@ function AttributeSection({
 
   const inp = (v: string, onChange: (x: string) => void, placeholder: string, width?: number) => (
     <input value={v} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-      style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', color: 'var(--text-primary)', fontSize: 12, outline: 'none', width: width ?? 'auto', minWidth: 0 }} />
+      style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 6, padding: '5px 8px', color: 'var(--text-primary)', fontSize: 12, outline: 'none', width: width ?? 'auto', minWidth: 0 }} />
   )
 
   return (
-    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-cartouche)', background: 'var(--bg-elevated)' }}>
         <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.07em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{title}</span>
         <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-dim)' }}>{items.length}</span>
       </div>
@@ -437,7 +437,7 @@ function AttributeSection({
                 {hasTempo && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 3 }} title="Secondes par répétition, pour estimer la durée d'une série au nombre de reps">
                     <input type="number" step="0.1" min="0" value={editBuf.tempo} onChange={e => setEditBuf(b => ({ ...b, tempo: e.target.value }))} placeholder="3"
-                      style={{ width: 44, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 6px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
+                      style={{ width: 44, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 6, padding: '5px 6px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
                     <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>s/rep</span>
                   </div>
                 )}
@@ -446,7 +446,7 @@ function AttributeSection({
                   <Check size={12} />
                 </button>
                 <button onClick={cancelEdit} title="Annuler"
-                  style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <X size={12} />
                 </button>
               </>
@@ -472,11 +472,11 @@ function AttributeSection({
                 </div>
                 <div className="attr-row-actions" style={{ display: 'flex', gap: 4, opacity: 0 }}>
                   <button onClick={() => startEdit(opt)} title="Modifier"
-                    style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Pencil size={11} />
                   </button>
                   <button onClick={() => handleDelete(opt.id)} title="Supprimer"
-                    style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Trash2 size={11} />
                   </button>
                 </div>
@@ -501,7 +501,7 @@ function AttributeSection({
         {hasTempo && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <input type="number" step="0.1" min="0" value={addForm.tempo} onChange={e => setAddForm(f => ({ ...f, tempo: e.target.value }))} placeholder="3"
-              style={{ width: 44, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 6px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
+              style={{ width: 44, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 6, padding: '5px 6px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
             <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>s/rep</span>
           </div>
         )}
@@ -649,7 +649,7 @@ export function DifficultyTiersSection({ complexities }: { complexities: Attribu
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <button onClick={addTier}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-muted)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border-cartouche)', background: 'var(--bg-elevated)', color: 'var(--text-muted)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             <Plus size={13} /> Échelon
           </button>
           <button onClick={save} disabled={!dirty || saving}
@@ -668,14 +668,14 @@ export function DifficultyTiersSection({ complexities }: { complexities: Attribu
                 <input
                   value={t.label}
                   onChange={e => patch(i, 'label', e.target.value)}
-                  style={{ flex: 1, minWidth: 180, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px 12px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, outline: 'none' }}
+                  style={{ flex: 1, minWidth: 180, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 'var(--r-sm)', padding: '8px 12px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, outline: 'none' }}
                 />
                 <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                   Séries
                   <input
                     type="number" min={1} max={10} value={t.sets}
                     onChange={e => patch(i, 'sets', Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
-                    style={{ width: 58, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px 6px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, textAlign: 'center', outline: 'none' }}
+                    style={{ width: 58, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 'var(--r-sm)', padding: '8px 6px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, textAlign: 'center', outline: 'none' }}
                   />
                 </label>
                 <button onClick={() => removeTier(i)} title="Supprimer cet échelon"
@@ -881,7 +881,7 @@ export function WorkoutsAdminTab() {
             {loading ? '…' : `${filtered.length} / ${workouts.length} séances`} — tous utilisateurs confondus.
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, padding: '7px 12px', width: 280, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 9, padding: '7px 12px', width: 280, flexShrink: 0 }}>
           <Search size={14} color="var(--text-muted)" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Nom ou utilisateur…"
             style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, flex: 1 }} />
@@ -907,10 +907,10 @@ export function WorkoutsAdminTab() {
       )}
 
       {!loading && !fetchError && filtered.length > 0 && (
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 12, overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+              <tr style={{ borderBottom: '1px solid var(--border-cartouche)', background: 'var(--bg-elevated)' }}>
                 <th style={{ padding: '9px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: 'var(--text-muted)' }}>NOM</th>
                 <th style={{ padding: '9px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: 'var(--text-muted)' }}>AUTEUR</th>
                 <th style={{ padding: '9px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: 'var(--text-muted)' }}>DATE</th>
@@ -957,7 +957,7 @@ export function WorkoutsAdminTab() {
                       <button
                         onClick={() => setDeletingId(w.id)}
                         title="Supprimer cette séance"
-                        style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }}
+                        style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }}
                         className="admin-wod-del"
                       >
                         <Trash2 size={12} />
@@ -978,7 +978,7 @@ export function WorkoutsAdminTab() {
       {deletingWorkout && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div onClick={() => setDeletingId(null)} className="overlay-in" style={{ position: 'absolute', inset: 0, background: 'rgba(8,6,2,0.45)' }} />
-          <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 400, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
+          <div className="modal-in" style={{ position: 'relative', zIndex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 'var(--r-lg)', padding: '24px 28px', width: 400, maxWidth: 'calc(100vw - 32px)', boxShadow: 'var(--elev-3)', textAlign: 'center' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Supprimer cette séance ?</div>
             <div style={{ fontSize: 14, color: 'var(--accent)', marginBottom: 4, fontWeight: 600 }}>{deletingWorkout.name}</div>
@@ -1055,7 +1055,7 @@ export function StatsTab() {
           { label: 'Sauvegardés', value: totals.saved },
           { label: 'Favoris', value: totals.favorites },
         ].map(({ label, value }) => (
-          <div key={label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+          <div key={label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 12, padding: '16px 18px' }}>
             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--gold)' }}>{value}</div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginTop: 4, letterSpacing: 0.5, textTransform: 'uppercase' }}>{label}</div>
           </div>
@@ -1064,8 +1064,8 @@ export function StatsTab() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         {/* Top mouvements */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-cartouche)', background: 'var(--bg-elevated)' }}>
             <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.07em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Top 10 mouvements</span>
           </div>
           <div>
@@ -1086,8 +1086,8 @@ export function StatsTab() {
         </div>
 
         {/* Workouts par user */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-cartouche)', background: 'var(--bg-elevated)' }}>
             <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.07em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Séances par utilisateur</span>
           </div>
           <div>

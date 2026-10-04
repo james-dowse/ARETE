@@ -915,7 +915,7 @@ export default function ActivePage() {
     <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
       {/* ══ ZONE A — REPERAGE ═══════════════════════════════════════════════ */}
-      <div style={{ flexShrink: 0, background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ flexShrink: 0, background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-cartouche)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', padding: '6px var(--sp-3)' }}>
           {/* Deux sorties, deux formes. Un libelle ecrit pour celle qui
               enregistre, une croix pour celle qui annule : deux chevrons
@@ -1239,7 +1239,7 @@ export default function ActivePage() {
           Hauteur et composition fixes : une ligne d'information, puis trois
           controles. Le lateral qui s'eclipse pendant le repos est le bouton
           qu'on cherche au moment ou l'on en a le plus besoin. */}
-      <div style={{ flexShrink: 0, background: 'var(--bg-elevated)', borderTop: '1px solid var(--border)', padding: 'var(--sp-2) var(--sp-3) calc(var(--sp-3) + env(safe-area-inset-bottom))' }}>
+      <div style={{ flexShrink: 0, background: 'var(--bg-elevated)', borderTop: '1px solid var(--border-cartouche)', padding: 'var(--sp-2) var(--sp-3) calc(var(--sp-3) + env(safe-area-inset-bottom))' }}>
         <div style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-dim)', marginBottom: 'var(--sp-2)', paddingLeft: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', height: 15, lineHeight: '15px' }}>
           {infoLine}
         </div>

@@ -105,7 +105,7 @@ export default function FilterPanel({
       {open && (
         <div style={{
           marginTop: 12, padding: 14,
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)',
           borderRadius: 'var(--r-md)',
           display: 'flex', flexDirection: 'column', gap: 14,
           // Sur un petit écran, le panneau déplié reste borné et défile

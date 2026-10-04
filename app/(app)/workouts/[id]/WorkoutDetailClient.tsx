@@ -22,9 +22,10 @@ import {
   Workout, WorkoutMovement, WorkoutBlock, Movement, EditState, LastPerf,
   WorkoutImage, ImageEditZone, MovementRowView, MovementRowEdit,
   BlockHeaderView, BlockHeaderEdit, BlockRestAfterEdit, EditBar, AddToWeekModal, Stat,
-  ShareModal, AssignFromWorkoutModal,
+  AssignFromWorkoutModal,
   toEditState, toDurationMovement, stripHtml, fmtMin, fmtSec,
 } from './parts'
+import { ShareModal } from '@/components/ShareModal'
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin, passages = 0, dernierPassage = null }: { workout: Workout; backTo?: string; isAdmin?: boolean; passages?: number; dernierPassage?: string | null }) {
@@ -661,7 +662,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
         <div className="r-detail-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, marginBottom: 18 }}>
           <Stat value={initial.movements.length} label="Mouvements" color="var(--accent)" />
           <Stat value={bioTypes.length} label="Types" color="var(--blue)" />
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--orange)' }}>{fmtMin(estimatedMin)}</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
               {initial.duration ? `${initial.duration}min prévu` : 'Estimé'}
@@ -737,7 +738,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
           </div>
         ) : (
           initial.description && stripHtml(initial.description) && (
-            <div style={{ marginBottom: 22, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px' }}>
+            <div style={{ marginBottom: 22, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 12, padding: '14px 16px' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, marginBottom: 8 }}>DESCRIPTION</div>
               <div
                 className="rich-content"
@@ -777,12 +778,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                   }
                 }}
                 placeholder="Ajouter un tag…"
-                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', flex: 1 }}
+                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', flex: 1 }}
               />
               <button
                 onClick={() => { const t = tagInput.trim(); if (t && !editTags.includes(t)) { setEditTags(prev => [...prev, t]); setTagInput('') } }}
                 disabled={!tagInput.trim()}
-                style={{ padding: '6px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}
+                style={{ padding: '6px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}
               >
                 + Ajouter
               </button>
@@ -1032,7 +1033,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
         </div>
 
         {initial.notes && (
-          <div style={{ marginTop: 22, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px' }}>
+          <div style={{ marginTop: 22, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 12, padding: '14px 16px' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, marginBottom: 6 }}>NOTES</div>
             <div style={{ fontSize: 14, lineHeight: 1.6 }}>{initial.notes}</div>
           </div>
@@ -1042,7 +1043,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
       {editMode && isDirty && <EditBar count={pendingCount} onSave={handleSave} onCancel={handleCancelAll} saving={saving} />}
 
       {editMode && !isDirty && (
-        <div style={{ position: 'fixed', bottom: 'calc(28px + var(--mobile-tabbar-h, 0px))', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, animation: 'slideUp 0.25s ease' }}>
+        <div style={{ position: 'fixed', bottom: 'calc(28px + var(--mobile-tabbar-h, 0px))', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 14, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, animation: 'slideUp 0.25s ease' }}>
           <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Aucune modification</span>
           <button onClick={() => setEditMode(false)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             <X size={13} /> Quitter l'édition
@@ -1096,7 +1097,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
             </span>
           </div>
           {sessionsOpen && (
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 10, overflow: 'hidden' }}>
               {sessions.map((s, i) => (
                 <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
                   <CheckCircle2 size={13} color="var(--green)" />

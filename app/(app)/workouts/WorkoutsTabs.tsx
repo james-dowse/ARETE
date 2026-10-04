@@ -15,7 +15,7 @@ import OverflowMenu from '@/components/OverflowMenu'
 import { useConfirm } from '@/components/ConfirmDialog'
 import { useToast } from '@/components/Toast'
 import { Zap, Users, User, Share2, X, CheckCircle2, Bookmark, BookmarkCheck, Layers, Star, Clock, ChevronDown, ChevronUp, CalendarPlus, Copy, Pencil, Trash2, PlayCircle, Search, ArrowUpDown } from 'lucide-react'
-import { ShareModal } from './[id]/parts'
+import { ShareModal } from '@/components/ShareModal'
 
 // `hasAvatar` et non l'image : les listes ne transportent plus le data URI
 // base64 du créateur (il était dupliqué par cartouche) — voir lib/avatar.ts.
@@ -332,7 +332,7 @@ function WorkoutCard({
           <div className="wod-card-cover" style={{
             position: 'relative', borderRadius: 'var(--r-sm)', overflow: 'hidden', flexShrink: 0,
             alignSelf: 'flex-start',
-            border: '1px solid var(--border)',
+            border: '1px solid var(--border-cartouche)',
             background: difficulty
               ? `linear-gradient(145deg, ${COMPLEXITY_COLORS[difficulty]}26 0%, var(--bg-elevated) 70%)`
               : 'var(--bg-elevated)',
@@ -752,7 +752,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
       {/* Tabs + compteur dynamique. `flexWrap` : sur 375 px le compteur passait
           hors écran, tronqué au milieu d'un mot. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, rowGap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
-        <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: 4, boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 'var(--r-sm)', padding: 4, boxShadow: 'var(--shadow-sm)' }}>
           <button style={tabStyle('mine')} onClick={() => setTab('mine')}><User size={14} /> Mes séances</button>
           <button style={tabStyle('community')} onClick={() => setTab('community')}><Users size={14} /> Communauté</button>
           {assignments.length > 0 && (
@@ -778,7 +778,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
       {/* Recherche texte + tri (masqués sur l'onglet coach : liste dédiée, pas de filtres) */}
       {tab !== 'coach' && <>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px', maxWidth: 340, flex: 1, minWidth: 200 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 9, padding: '8px 12px', maxWidth: 340, flex: 1, minWidth: 200 }}>
           <Search size={14} color="var(--text-muted)" />
           <input
             value={searchQuery}
@@ -793,7 +793,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 9, padding: '8px 12px' }}>
           <ArrowUpDown size={13} color="var(--text-muted)" />
           <select
             value={sortBy}
@@ -901,7 +901,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
             <select
               value={durationCustomMode}
               onChange={e => setDurationCustomMode(e.target.value as 'between' | 'lte' | 'gte')}
-              style={{ fontSize: 12, padding: '4px 6px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+              style={{ fontSize: 12, padding: '4px 6px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', color: 'var(--text-muted)' }}
             >
               <option value="between">Entre</option>
               <option value="lte">≤</option>
@@ -912,7 +912,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                 type="number" min={0} placeholder="min"
                 value={durationCustomMin}
                 onChange={e => setDurationCustomMin(e.target.value)}
-                style={{ width: 56, fontSize: 12, padding: '4px 8px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                style={{ width: 56, fontSize: 12, padding: '4px 8px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', color: 'var(--text-primary)' }}
               />
             )}
             {durationCustomMode === 'between' && <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>—</span>}
@@ -921,7 +921,7 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                 type="number" min={0} placeholder="max"
                 value={durationCustomMax}
                 onChange={e => setDurationCustomMax(e.target.value)}
-                style={{ width: 56, fontSize: 12, padding: '4px 8px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                style={{ width: 56, fontSize: 12, padding: '4px 8px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', color: 'var(--text-primary)' }}
               />
             )}
             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>min</span>

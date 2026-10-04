@@ -123,8 +123,20 @@ if (dirty.length > 0 && !message && !checkOnly) {
 }
 
 // ── 2. Barrière qualité ──────────────────────────────────────────────────────
-step('Barrière qualité (types, tests, build)')
-run('npx tsc --noEmit', 'Types')
+step('Barrière qualité (client Prisma, types, tests, build)')
+// Le gate de typage est le seul filet : next.config.ts désactive le typecheck de
+// `next build`. Il doit donc valider le code contre un client Prisma à jour, et
+// non contre celui laissé par le déploiement précédent — les points d'entrée de
+// @prisma/client ne réexportent que .prisma/client, que /node_modules soit
+// ignoré par git suffit à le rendre absent d'un clone neuf.
+run('npx prisma generate', 'Client Prisma')
+// Appel direct du compilateur, et non `npx tsc` : sur ce schéma Prisma le
+// typage déborde la pile V8 par défaut ("Maximum call stack size exceeded"),
+// et le lanceur npx ne transmet pas --stack-size au processus node. C'est la
+// même limite qui a fait désactiver le typecheck de `next build`
+// (next.config.ts) ; ici on peut l'agrandir, donc on l'agrandit plutôt que de
+// renoncer au seul gate de typage du projet.
+run('node --stack-size=8000 node_modules/typescript/lib/tsc.js --noEmit', 'Types')
 run('npx vitest run', 'Tests')
 run('npm run build', 'Build')
 

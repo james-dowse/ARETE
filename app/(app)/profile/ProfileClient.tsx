@@ -124,7 +124,7 @@ export default function ProfileClient() {
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <div style={{
               width: 84, height: 84, borderRadius: '50%', overflow: 'hidden',
-              background: 'var(--bg-elevated)', border: '2px solid var(--border)',
+              background: 'var(--bg-elevated)', border: '2px solid var(--border-cartouche)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 30, fontWeight: 700, color: 'var(--accent)',
             }}>

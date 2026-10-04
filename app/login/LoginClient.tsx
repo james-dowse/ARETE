@@ -91,7 +91,7 @@ export default function LoginClient() {
         </div>
 
         {step === 'email' ? (
-          <form onSubmit={requestCode} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: 28, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <form onSubmit={requestCode} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', padding: 28, display: 'flex', flexDirection: 'column', gap: 16 }}>
             {linkError && !error && (
               <div style={errorBox}>⏱ Ce lien de connexion est invalide ou expiré. Demande un nouveau code.</div>
             )}
@@ -112,7 +112,7 @@ export default function LoginClient() {
             </button>
           </form>
         ) : (
-          <form onSubmit={submitCode} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: 28, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <form onSubmit={submitCode} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', padding: 28, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, textAlign: 'center' }}>
               {relayed
                 ? <>Le code a été envoyé à l&apos;administrateur, qui va te le transmettre.</>

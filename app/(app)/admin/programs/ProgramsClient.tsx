@@ -90,7 +90,7 @@ export default function ProgramsClient() {
           {groups.map(({ user, items }) => {
             const pending = items.filter(a => !a.done).length
             return (
-              <div key={user.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+              <div key={user.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ width: 28, height: 28, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--gold)' }}>
                     {avatarSrc(user) ? <img src={avatarSrc(user)!} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : displayName(user)[0].toUpperCase()}
@@ -204,7 +204,7 @@ function NewAssignmentModal({ onClose, onAssigned }: { onClose: () => void; onAs
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, width: 460, maxWidth: '100%' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 14, padding: 24, width: 460, maxWidth: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Assigner un WOD</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}><X size={16} /></button>
@@ -213,14 +213,14 @@ function NewAssignmentModal({ onClose, onAssigned }: { onClose: () => void; onAs
         <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Utilisateur</label>
         {!selectedUser ? (
           <div style={{ marginTop: 6, marginBottom: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 12px' }}>
               <Search size={13} color="var(--text-muted)" />
               <input value={userQuery} onChange={e => setUserQuery(e.target.value)} placeholder="Nom ou email…" style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 13, color: 'var(--text-primary)' }} />
             </div>
             {userResults.length > 0 && (
               <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 140, overflowY: 'auto' }}>
                 {userResults.map(u => (
-                  <button key={u.id} onClick={() => setSelectedUser(u)} style={{ textAlign: 'left', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', fontSize: 12.5, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  <button key={u.id} onClick={() => setSelectedUser(u)} style={{ textAlign: 'left', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 6, padding: '6px 10px', fontSize: 12.5, color: 'var(--text-primary)', cursor: 'pointer' }}>
                     {displayName(u)} {u.email && <span style={{ color: 'var(--text-dim)' }}>· {u.email}</span>}
                   </button>
                 ))}
@@ -237,14 +237,14 @@ function NewAssignmentModal({ onClose, onAssigned }: { onClose: () => void; onAs
         <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Séance</label>
         {!selectedWod ? (
           <div style={{ marginTop: 6, marginBottom: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 12px' }}>
               <Search size={13} color="var(--text-muted)" />
               <input value={wodQuery} onChange={e => setWodQuery(e.target.value)} placeholder="Rechercher une séance…" style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 13, color: 'var(--text-primary)' }} />
             </div>
             {wodResults.length > 0 && (
               <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 140, overflowY: 'auto' }}>
                 {wodResults.map(w => (
-                  <button key={w.id} onClick={() => setSelectedWod(w)} style={{ display: 'flex', justifyContent: 'space-between', textAlign: 'left', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', fontSize: 12.5, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  <button key={w.id} onClick={() => setSelectedWod(w)} style={{ display: 'flex', justifyContent: 'space-between', textAlign: 'left', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 6, padding: '6px 10px', fontSize: 12.5, color: 'var(--text-primary)', cursor: 'pointer' }}>
                     <span>{w.name}</span>
                     {w.duration && <span style={{ color: 'var(--text-dim)' }}>{w.duration} min</span>}
                   </button>
@@ -260,10 +260,10 @@ function NewAssignmentModal({ onClose, onAssigned }: { onClose: () => void; onAs
         )}
 
         <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Note (optionnel)</label>
-        <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} maxLength={280} style={{ width: '100%', marginTop: 6, marginBottom: 12, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13, fontFamily: 'inherit', resize: 'vertical' }} />
+        <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} maxLength={280} style={{ width: '100%', marginTop: 6, marginBottom: 12, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13, fontFamily: 'inherit', resize: 'vertical' }} />
 
         <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Date prévue (optionnel)</label>
-        <input type="date" value={scheduledFor} onChange={e => setScheduledFor(e.target.value)} style={{ width: '100%', marginTop: 6, marginBottom: 16, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13 }} />
+        <input type="date" value={scheduledFor} onChange={e => setScheduledFor(e.target.value)} style={{ width: '100%', marginTop: 6, marginBottom: 16, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13 }} />
 
         {error && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 10 }}>{error}</div>}
 

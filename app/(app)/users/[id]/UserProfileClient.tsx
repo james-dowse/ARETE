@@ -75,7 +75,7 @@ export default function UserProfileClient({ userId }: { userId: string }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {following && (
               <button onClick={handleToggleNotify} title={notify ? 'Désactiver les notifications' : 'Activer les notifications'}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, color: notify ? 'var(--gold)' : 'var(--text-muted)', cursor: 'pointer' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 9, color: notify ? 'var(--gold)' : 'var(--text-muted)', cursor: 'pointer' }}>
                 {notify ? <Bell size={14} /> : <BellOff size={14} />}
               </button>
             )}
@@ -100,7 +100,7 @@ export default function UserProfileClient({ userId }: { userId: string }) {
             return (
               <Link key={w.id} href={`/workouts/${w.id}`} className="card card-interactive"
                 style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 'var(--r-md)', textDecoration: 'none' }}>
-                <div style={{ width: 60, height: 60, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 60, height: 60, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border-cartouche)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {w.imageUrl ? (
                     <img src={sizedImage(w.imageUrl, { width: 60, height: 60 }) ?? undefined} srcSet={sizedImageSrcSet(w.imageUrl, { width: 60, height: 60 })} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: w.imagePosition || '50% 50%', display: 'block' }} />
                   ) : (

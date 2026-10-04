@@ -31,9 +31,9 @@ async function defaultTiers(): Promise<TierDTO[]> {
   ]
 }
 
-async function ensureSeeded() {
-  const count = await prisma.difficultyTier.count()
-  if (count > 0) return
+// N'est déclenchée que lorsqu'une lecture révèle une table vide — pas avant
+// chaque lecture comme avant, où un count() tournait pour rien à chaque appel.
+async function seedDefauts() {
   const tiers = await defaultTiers()
   for (const t of tiers) {
     await prisma.difficultyTier.upsert({
@@ -54,9 +54,16 @@ function parse(row: { key: string; label: string; complexities: string; sets: nu
 }
 
 export async function GET() {
-  try { await ensureSeeded() } catch { /* non bloquant : on renvoie ce qui existe déjà */ }
+  let rows = await prisma.difficultyTier.findMany({ orderBy: [{ position: 'asc' }, { key: 'asc' }] })
 
-  const rows = await prisma.difficultyTier.findMany({ orderBy: [{ position: 'asc' }, { key: 'asc' }] })
+  // Base neuve : on sème puis on relit, une seule fois dans la vie de la base.
+  if (rows.length === 0) {
+    try {
+      await seedDefauts()
+      rows = await prisma.difficultyTier.findMany({ orderBy: [{ position: 'asc' }, { key: 'asc' }] })
+    } catch { /* non bloquant : on renvoie ce qui existe déjà */ }
+  }
+
   return NextResponse.json({ tiers: rows.map(parse) })
 }
 

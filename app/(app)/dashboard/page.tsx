@@ -354,7 +354,7 @@ export default async function DashboardPage() {
         {textContents.length > 0 && (
           <div className="r-grid-2" style={{ display: 'grid', gridTemplateColumns: textContents.length === 1 ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 32 }}>
             {textContents.map(c => (
-              <div key={c.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '20px 24px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
+              <div key={c.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', padding: '20px 24px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
                 {c.title && <p style={{ ...SECTION_LABEL_GOLD, marginBottom: 10 }}>{c.title}</p>}
                 <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-muted)', margin: 0, whiteSpace: 'pre-wrap' }}>{c.body}</p>
               </div>
@@ -364,7 +364,7 @@ export default async function DashboardPage() {
 
         {/* ── Ressources utiles (widget, indépendant du toggle des contenus texte) ── */}
         {resourcesEnabled && resources.length > 0 && (
-          <div style={{ marginBottom: 32, background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
+          <div style={{ marginBottom: 32, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px 20px' }}>
               <p style={{ ...SECTION_LABEL_GOLD, margin: 0 }}>Ressources utiles</p>
               <Link href="/resources" style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>Tout voir →</Link>
@@ -386,7 +386,7 @@ export default async function DashboardPage() {
         {upcomingEntries.length > 0 && (
           <div style={{ marginBottom: 32 }}>
             <p style={SECTION_LABEL_GOLD}>Prochaines séances</p>
-            <div style={{ display: 'flex', flexDirection: 'column', marginTop: 12, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', marginTop: 12, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)' }}>
               {upcomingEntries.map((entry, i) => (
                 <Link key={entry.id} href={`/workouts/${entry.workout.id}`} style={{ textDecoration: 'none' }}>
                   <div className="workout-row" style={{
@@ -450,7 +450,7 @@ export default async function DashboardPage() {
             </div>
 
             {recentSessions.length > 0 ? (
-              <div style={{ border: '1px solid var(--border)', background: 'var(--bg-card)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
+              <div style={{ border: '1px solid var(--border-cartouche)', background: 'var(--bg-card)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
                 {recentSessions.map((s, i) => {
                   const bioTypes = Array.from(new Set(s.workout.movements.map(m => m.movement.bioType)))
                   const dominant = bioTypes[0]
@@ -482,7 +482,7 @@ export default async function DashboardPage() {
                 })}
               </div>
             ) : (
-              <div style={{ padding: '32px 20px', textAlign: 'center', border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+              <div style={{ padding: '32px 20px', textAlign: 'center', border: '1px solid var(--border-cartouche)', background: 'var(--bg-card)' }}>
                 <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Aucune séance accomplie pour l&apos;instant</span>
               </div>
             )}
@@ -506,7 +506,7 @@ export default async function DashboardPage() {
           {/* Répartition de la bibliothèque de mouvements */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <p style={SECTION_LABEL_GOLD}>Mouvements par type</p>
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '24px 28px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', padding: '24px 28px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 16px rgba(0,0,0,0.5)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {bioStats.sort((a, b) => b._count - a._count).map(stat => {
                   const pct = Math.round((stat._count / maxBio) * 100)

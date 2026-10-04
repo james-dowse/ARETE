@@ -161,7 +161,7 @@ export default function LibraryPicker({ currentName, currentId, onPick, onClose 
         {/* Filters */}
         <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 7 }}>
           <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 11px', flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '6px 11px', flex: 1 }}>
               <Search size={13} color="var(--text-muted)" />
               <input
                 ref={inputRef}
@@ -222,19 +222,19 @@ export default function LibraryPicker({ currentName, currentId, onPick, onClose 
             </button>
           )}
           {showCustomForm && (
-            <div style={{ padding: 12, marginTop: 4, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ padding: 12, marginTop: 4, background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <input
                 autoFocus
                 value={customName}
                 onChange={e => setCustomName(e.target.value)}
                 placeholder="Nom du mouvement"
-                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 7, padding: '8px 10px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 7, padding: '8px 10px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
               />
               <input
                 value={customVideo}
                 onChange={e => setCustomVideo(e.target.value)}
                 placeholder="Lien vidéo (optionnel)"
-                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 7, padding: '8px 10px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 7, padding: '8px 10px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
               />
               {customError && <div style={{ fontSize: 12, color: 'var(--red)' }}>{customError}</div>}
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>

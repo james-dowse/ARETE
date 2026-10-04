@@ -88,7 +88,7 @@ export default function MovementModal({ movementId, onClose }: Props) {
                   {movement.complexity}
                 </span>
                 {movement.equipment && (
-                  <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontWeight: 600 }}>
+                  <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 20, background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-cartouche)', fontWeight: 600 }}>
                     {EQUIPMENT_ICONS[movement.equipment] || '🔧'} {movement.equipment}
                   </span>
                 )}
@@ -184,7 +184,7 @@ export default function MovementModal({ movementId, onClose }: Props) {
                   href={movement.videoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 10, textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}
                 >
                   <Play size={14} fill="currentColor" />
                   Voir la vidéo

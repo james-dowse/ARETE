@@ -42,7 +42,7 @@ export default function CreatorBadge({ user, size = 28 }: { user: CreatorUser | 
       title={name || undefined}
       style={{
         width: size, height: size, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-        background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+        background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >
