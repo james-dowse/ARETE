@@ -48,6 +48,12 @@ export default function YouTubeLoopEmbed({ videoId, style }: { videoId: string; 
   // `videoId` : permet de détecter un changement de mouvement sans dépendre
   // de l'ordre effet/re-render.
   const loadedIdRef = useRef<string | null>(null)
+  // `new YT.Player()` rend aussitot un objet, mais ses methodes n’existent
+  // qu’une fois le lecteur PRET. Changer de mouvement avant ce moment appelait
+  // `loadVideoById` sur un objet qui ne l’avait pas encore : exception non
+  // rattrapee, et tout le rendu React de l’ecran de seance tombait avec elle.
+  const pretRef = useRef(false)
+  const enAttenteRef = useRef<string | null>(null)
 
   // Un seul player créé au montage, jamais détruit/recréé lors d'un simple
   // changement de mouvement (`loadVideoById` à la place) : détruire l'iframe
@@ -69,6 +75,14 @@ export default function YouTubeLoopEmbed({ videoId, style }: { videoId: string; 
           origin: typeof window !== 'undefined' ? window.location.origin : undefined,
         },
         events: {
+          onReady: () => {
+            pretRef.current = true
+            const attendue = enAttenteRef.current
+            enAttenteRef.current = null
+            if (attendue && attendue !== loadedIdRef.current) {
+              try { playerRef.current?.loadVideoById(attendue); loadedIdRef.current = attendue } catch {}
+            }
+          },
           onStateChange: (e: { data: number; target: YTPlayer }) => {
             if (window.YT && e.data === window.YT.PlayerState.ENDED) {
               e.target.seekTo(0, true)
@@ -81,6 +95,8 @@ export default function YouTubeLoopEmbed({ videoId, style }: { videoId: string; 
     })
     return () => {
       cancelled = true
+      pretRef.current = false
+      enAttenteRef.current = null
       playerRef.current?.destroy?.()
       playerRef.current = null
       loadedIdRef.current = null
@@ -89,9 +105,18 @@ export default function YouTubeLoopEmbed({ videoId, style }: { videoId: string; 
   }, [containerId])
 
   useEffect(() => {
-    if (playerRef.current && loadedIdRef.current !== videoId) {
+    if (loadedIdRef.current === videoId) return
+    if (!pretRef.current || typeof playerRef.current?.loadVideoById !== 'function') {
+      enAttenteRef.current = videoId
+      return
+    }
+    try {
       playerRef.current.loadVideoById(videoId)
       loadedIdRef.current = videoId
+    } catch {
+      // Une demonstration qui refuse de se charger ne doit jamais emporter
+      // l’ecran de seance avec elle.
+      enAttenteRef.current = videoId
     }
   }, [videoId])
 

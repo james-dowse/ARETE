@@ -2,21 +2,42 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { BIO_TYPE_COLORS } from '@/lib/types'
-import { ProgressRing } from '@/components/ui'
+import { Modal, ProgressRing } from '@/components/ui'
 import { useToast } from '@/components/Toast'
-import { getEmbedInfo, extractEmbedVideoId } from '@/lib/video'
+import { getEmbedInfo, extractEmbedVideoId, youtubeThumbnail } from '@/lib/video'
+// La vignette commande l'affichage de la demonstration : voir la zone B.
+import { useConfirm } from '@/components/ConfirmDialog'
 import YouTubeLoopEmbed from '@/components/YouTubeLoopEmbed'
 // La file d'attente locale vit dans ResumeSessionBanner : c'est lui qui la rejoue
 // et qui l'affiche, et il est monté sur le tableau de bord comme sur la page de
 // détail — là où l'on retombe juste après avoir terminé une séance.
 import { enqueuePendingSession, dequeuePendingSession } from '@/components/ResumeSessionBanner'
 
-interface Movement { id: string; name: string; bioType: string; videoUrl?: string | null }
+// `equipment` est deja renvoye par GET /api/workouts/[id] (include movement:
+// true) ; il n'etait simplement pas declare ici. « Poids corps » vaut pour 137
+// des 377 mouvements du referentiel et decide si un champ de charge a un sens.
+interface Movement { id: string; name: string; bioType: string; videoUrl?: string | null; equipment?: string | null }
 interface WM { id: string; order: number; sets?: number | null; reps?: string | null; rest?: number | null; duration?: number | null; blockId?: string | null; movement: Movement }
 interface Block { id: string; order: number; bioType?: string | null; instructions?: string | null; superset?: boolean }
 interface Workout { id: string; name: string; duration?: number | null; movements: WM[]; blocks: Block[] }
 
 const REST_OPTIONS = [30, 60, 90, 120]
+
+// Mise en place : le temps de se mettre en position avant que le chrono
+// d'exercice parte. 0 = aucune — on ne fait pas attendre celui qui est deja
+// sous la barre.
+const SETUP_OPTIONS = [0, 3, 5, 10]
+
+// Demander la charge d'une traction est une question sans reponse : le champ
+// est omis pour ces mouvements, et « + charge » reste a un appui pour le gilet.
+const isBodyweight = (eq?: string | null) => (eq ?? '').trim().toLowerCase() === 'poids corps'
+
+// Nom de la source, pour les plateformes qui n'exposent aucune vignette
+// (Instagram, TikTok) : on annonce ou l'on envoie plutot que d'ouvrir un cadre
+// 16/9 noir a la place d'une demonstration qui n'arrivera jamais.
+const SOURCE_LABELS: Record<string, string> = {
+  youtube: 'YouTube', instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook', video: 'vidéo',
+}
 const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
 // Delai d'expiration pour les appels reseau de cet ecran. `AbortSignal.timeout`
@@ -85,7 +106,12 @@ export default function ActivePage() {
   const [draft, setDraft] = useState<{ name: string | null; doneSets: number } | null>(null)
 
   const [done, setDone] = useState<Record<string, number>>({})
-  const [rest, setRest] = useState<{ sec: number; total: number; wmId: string } | null>(null)
+  // `endsAt` est la verite, `sec` n'est plus qu'un affichage. Les deux minuteurs
+  // enchainaient des setTimeout de 1 s : la chaine s'arrete quand l'ecran se
+  // verrouille, et le repos reprenait la ou il s'etait fige — alors que le
+  // chronometre de seance, ancre sur Date.now(), repartait juste. Trois
+  // compteurs, trois temps differents, et le son toujours en retard.
+  const [rest, setRest] = useState<{ sec: number; total: number; wmId: string; endsAt: number } | null>(null)
   const [defaultRest, setDefaultRest] = useState(60)
   const [elapsed, setElapsed] = useState(0)
   const [started, setStarted] = useState(false)
@@ -94,7 +120,27 @@ export default function ActivePage() {
   const [note, setNote] = useState('')
   const [showFinish, setShowFinish] = useState(false)
   const [supersetBlocs, setSupersetBlocs] = useState<Set<string>>(new Set())
-  const [exerciseTimer, setExerciseTimer] = useState<{ wmId: string; sec: number; total: number } | null>(null)
+  const [exerciseTimer, setExerciseTimer] = useState<{ wmId: string; sec: number; total: number; endsAt: number } | null>(null)
+  // Mise en place : decompte en gros chiffres avant le chrono d'exercice. Meme
+  // ancrage horloge, meme raison.
+  const [setup, setSetup] = useState<{ wmId: string; sec: number; total: number; endsAt: number } | null>(null)
+  const [setupSeconds, setSetupSeconds] = useState(5)
+  // Seconde deja sonnee. Un seul compteur suffit : mise en place, effort et
+  // repos ne tournent jamais ensemble. Sans cette memoire, l'intervalle qui
+  // rafraichit l'affichage plus vite qu'une seconde ferait tiquer plusieurs
+  // fois la meme seconde.
+  const tickedSecRef = useRef(-1)
+  // Curseur pose a la main (rail, Precedent, Suivant). Null = on suit la
+  // deduction « premiere serie non faite ». Un curseur explicite est
+  // indispensable parce que « Suivant » doit pouvoir sauter un mouvement SANS
+  // le declarer fait — ce qu'aucune derivation sur `done` ne sait exprimer.
+  const [cursorWmId, setCursorWmId] = useState<string | null>(null)
+  // Circuit : les charges se reglent avant le depart, et se corrigent apres. Un
+  // bloc dont la preparation est acquittee ne la redemande plus.
+  const [circuitPrepDone, setCircuitPrepDone] = useState<Set<string>>(new Set())
+  const [circuitReview, setCircuitReview] = useState<string | null>(null)
+  const [showSettings, setShowSettings] = useState(false)
+  const confirm = useConfirm()
   // Log de performance : une entrée par SÉRIE (clé = wmId, index = n° de série − 1).
   // Un seul couple par mouvement recopié n fois à l'enregistrement écrivait une
   // charge fausse dès qu'on montait entre deux séries, et cette donnée inventée
@@ -175,6 +221,34 @@ export default function ActivePage() {
       beep(0, 880); beep(0.3, 1175)
     } catch {}
   }
+
+  // ── Les trois signaux ──────────────────────────────────────────────────
+  // Trois, pas davantage : au-dela on ne les distingue plus a l'oreille, et
+  // c'est tout l'interet — ne pas avoir a regarder l'ecran. Le tic sec des
+  // trois dernieres secondes, la note montante au depart de l'effort, et les
+  // deux notes de fin (notifyTimerEnd, deja la). Meme AudioContext : en creer
+  // un par signal sature le quota d'iOS au bout de quelques series.
+  const blip = (freq: number, dur: number, gain: number, from?: number) => {
+    const ctx = audioCtxRef.current
+    if (!ctx || ctx.state !== 'running') return
+    try {
+      const o = ctx.createOscillator()
+      const g = ctx.createGain()
+      o.connect(g); g.connect(ctx.destination)
+      const t = ctx.currentTime
+      if (from != null) { o.frequency.setValueAtTime(from, t); o.frequency.linearRampToValueAtTime(freq, t + dur) }
+      else o.frequency.value = freq
+      g.gain.setValueAtTime(0.001, t)
+      g.gain.exponentialRampToValueAtTime(gain, t + 0.015)
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur)
+      o.start(t); o.stop(t + dur + 0.02)
+    } catch {}
+  }
+  // Court et haut : le tic se place dans le silence sans couvrir la musique.
+  const tick = () => blip(1650, 0.055, 0.16)
+  // Un glissando montant ne se confond pas avec les deux notes piquees de la
+  // fin : « ca part » et « c'est fini » doivent s'entendre sans reflechir.
+  const riseNote = () => blip(990, 0.26, 0.22, 330)
 
   // ── Wake lock : garder l'écran allumé pendant la séance ──
   useEffect(() => {
@@ -353,12 +427,60 @@ export default function ActivePage() {
     return () => clearInterval(t)
   }, [started])
 
+  // ── Lancements : un seul endroit pose les echeances ────────────────────
+  // Chaque minuteur recoit `endsAt` ET `sec`. Les poser a la main sur chaque
+  // site d'appel est precisement ce qui laissait quatre `setRest` divergents.
+  const startRest = (wmId: string, sec: number) => {
+    tickedSecRef.current = -1
+    setRest({ wmId, sec, total: sec, endsAt: Date.now() + sec * 1000 })
+  }
+  const startExercise = (wmId: string, sec: number) => {
+    tickedSecRef.current = -1
+    riseNote()
+    setExerciseTimer({ wmId, sec, total: sec, endsAt: Date.now() + sec * 1000 })
+  }
+  // Mise en place d'abord, chrono ensuite. Reglable, 0 = aucune.
+  const startWithSetup = (wmId: string, sec: number) => {
+    if (setupSeconds <= 0) { startExercise(wmId, sec); return }
+    tickedSecRef.current = -1
+    setSetup({ wmId, sec: setupSeconds, total: setupSeconds, endsAt: Date.now() + setupSeconds * 1000 })
+  }
+
+  // Decompte de mise en place. Un tic a CHAQUE seconde, et non seulement sur
+  // les trois dernieres : la mise en place est courte, et le tic est le seul
+  // signal disponible quand on a la tete sous la barre.
+  useEffect(() => {
+    if (!setup) return
+    if (setup.sec <= 0) {
+      const wm = workout?.movements.find(m => m.id === setup.wmId)
+      setSetup(null)
+      if (wm?.duration != null) startExercise(wm.id, wm.duration)
+      return
+    }
+    if (tickedSecRef.current !== setup.sec) { tickedSecRef.current = setup.sec; tick() }
+    const t = setInterval(() => {
+      const left = Math.max(0, Math.ceil((setup.endsAt - Date.now()) / 1000))
+      setSetup(s => (s && s.sec !== left ? { ...s, sec: left } : s))
+    }, 200)
+    return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setup])
+
   // rest countdown
   useEffect(() => {
     if (!rest) return
     if (rest.sec <= 0) { setRest(null); notifyTimerEnd(); return }
-    const t = setTimeout(() => setRest(r => r ? { ...r, sec: r.sec - 1 } : null), 1000)
-    return () => clearTimeout(t)
+    // Un tic par seconde sur les trois dernieres. `tickedSecRef` evite de
+    // sonner deux fois la meme seconde, l'intervalle tournant a 200 ms pour
+    // que l'affichage ne saute pas une seconde entiere au reveil de l'ecran.
+    if (rest.sec <= 3 && tickedSecRef.current !== rest.sec) { tickedSecRef.current = rest.sec; tick() }
+    // Relu depuis l'echeance et non decremente : c'est ce qui fait survivre le
+    // repos a la mise en veille de l'ecran.
+    const t = setInterval(() => {
+      const left = Math.max(0, Math.ceil((rest.endsAt - Date.now()) / 1000))
+      setRest(r => (r && r.sec !== left ? { ...r, sec: left } : r))
+    }, 200)
+    return () => clearInterval(t)
   }, [rest])
 
   // exercise countdown (timed movements)
@@ -385,17 +507,25 @@ export default function ActivePage() {
           return d >= newRound || d >= (m.sets ?? 3)
         })
         const allComplete = blocMovs.every(m => (updatedDone[m.id] ?? 0) >= (m.sets ?? 3))
-        if (roundDone && !allComplete) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+        if (roundDone && !allComplete) startRest(wm.id, restDur)
         else setRest(null)
       } else {
         setDone(d => ({ ...d, [wm.id]: next }))
-        if (next < target) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+        if (next < target) startRest(wm.id, restDur)
         else setRest(null)
       }
       return
     }
-    const t = setTimeout(() => setExerciseTimer(e => e ? { ...e, sec: e.sec - 1 } : null), 1000)
-    return () => clearTimeout(t)
+    // Tic sec sur les trois dernieres secondes, comme pour le repos : on doit
+    // savoir que l'effort se termine sans quitter la barre des yeux.
+    if (exerciseTimer.sec <= 3 && tickedSecRef.current !== exerciseTimer.sec) { tickedSecRef.current = exerciseTimer.sec; tick() }
+    // Echeance en horloge reelle (meme motif que le repos) : un chrono qui gele
+    // pendant un verrouillage d'ecran sonne la fin bien apres l'effort.
+    const t = setInterval(() => {
+      const left = Math.max(0, Math.ceil((exerciseTimer.endsAt - Date.now()) / 1000))
+      setExerciseTimer(e => (e && e.sec !== left ? { ...e, sec: left } : e))
+    }, 200)
+    return () => clearInterval(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exerciseTimer])
 
@@ -425,7 +555,9 @@ export default function ActivePage() {
     : []
 
   // Current movement = next to do, superset-aware (picks active movement in current round)
-  const currentWm = (() => {
+  // Mouvement deduit : la premiere serie non faite, en respectant les rounds de
+  // circuit. C'est la regle par defaut, pas la seule.
+  const derivedWm = (() => {
     if (!workout) return null
     for (const block of displayBlocks) {
       const movs = block ? workout.movements.filter(wm => wm.blockId === block.id) : (hasBlocks ? orphanMovements : workout.movements)
@@ -439,14 +571,19 @@ export default function ActivePage() {
     }
     return null
   })()
+  // Un curseur pose a la main l'emporte sur la deduction : c'est la seule facon
+  // d'exprimer « saute ce mouvement » sans le declarer fait.
+  const cursorWm = cursorWmId ? (workout?.movements.find(m => m.id === cursorWmId) ?? null) : null
+  const currentWm = cursorWm ?? derivedWm
   const rawEmbed = currentWm?.movement.videoUrl ? getEmbedInfo(currentWm.movement.videoUrl) : null
   // Instagram ne supporte pas l'autoplay en iframe — pas de panneau vidéo dans ce cas
   const currentEmbed = rawEmbed && rawEmbed.type !== 'instagram' ? rawEmbed : null
 
-  // Mouvements suivants (hors mouvement actif), dans l'ordre de la séance —
-  // bande "À suivre" sous la scène vidéo.
-  const upNext = workout
-    ? workout.movements.filter(wm => wm.id !== currentWm?.id && (done[wm.id] ?? 0) < (wm.sets ?? 3)).slice(0, 5)
+  // Ordre de la seance a plat : blocs dans l'ordre, puis les orphelins. C'est
+  // exactement l'ordre du rail, donc celui que l'utilisateur voit — et donc
+  // celui dans lequel « Precedent » et « Suivant » doivent se deplacer.
+  const flatMovs: WM[] = workout
+    ? displayBlocks.flatMap(b => (b ? workout.movements.filter(wm => wm.blockId === b.id) : (hasBlocks ? orphanMovements : workout.movements)))
     : []
 
   const handleSet = (wm: WM) => {
@@ -456,7 +593,7 @@ export default function ActivePage() {
       const target = wm.sets ?? 3
       const current = done[wm.id] ?? 0
       if (current >= target) return
-      setExerciseTimer({ wmId: wm.id, sec: wm.duration, total: wm.duration })
+      startWithSetup(wm.id, wm.duration)
       return
     }
     if (!started) setStarted(true)
@@ -482,13 +619,13 @@ export default function ActivePage() {
       // Toute série déclarée réinitialise le repos : repos frais si le round est bouclé
       // (et pas fini), sinon on coupe le repos en cours (on est reparti au travail).
       const allComplete = blocMovs.every(m => (updatedDone[m.id] ?? 0) >= (m.sets ?? 3))
-      if (roundDone && !allComplete) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+      if (roundDone && !allComplete) startRest(wm.id, restDur)
       else setRest(null)
     } else {
       const next = current + 1
       setDone(d => ({ ...d, [wm.id]: next }))
       // Repos frais si séries restantes, sinon coupé (mouvement terminé)
-      if (next < target) setRest({ sec: restDur, total: restDur, wmId: wm.id })
+      if (next < target) startRest(wm.id, restDur)
       else setRest(null)
     }
   }
@@ -499,6 +636,67 @@ export default function ActivePage() {
     setDone(d => ({ ...d, [wm.id]: current - 1 }))
     setRest(null)
   }
+
+  // ── Deplacement du curseur ─────────────────────────────────────────────
+  // « Suivant » saute ce qui est en cours : repos, mise en place, effort, puis
+  // le mouvement. Un seul bouton pour quatre refus, parce qu'en salle on ne
+  // cherche pas lequel des quatre on veut annuler — on veut avancer.
+  const goNext = () => {
+    ensureAudio()
+    if (setup) { setSetup(null); return }
+    if (exerciseTimer) { setExerciseTimer(e => (e ? { ...e, sec: 0, endsAt: Date.now() } : null)); return }
+    if (rest) { setRest(null); return }
+    const i = flatMovs.findIndex(m => m.id === currentWm?.id)
+    const next = i >= 0 ? flatMovs[i + 1] : flatMovs[0]
+    if (next) setCursorWmId(next.id)
+  }
+
+  // « Precedent » recule sans confirmation et remet a zero le mouvement quitte :
+  // revenir en arriere pour refaire est le seul motif de reculer, et laisser ses
+  // series cochees obligerait a decocher n fois avant de pouvoir reprendre.
+  const goPrev = () => {
+    ensureAudio()
+    setSetup(null); setExerciseTimer(null); setRest(null)
+    const i = flatMovs.findIndex(m => m.id === currentWm?.id)
+    const prev = i > 0 ? flatMovs[i - 1] : null
+    if (!prev) return
+    if (currentWm) setDone(d => ({ ...d, [currentWm.id]: 0 }))
+    setCursorWmId(prev.id)
+  }
+
+  // En circuit, la charge est posee a la preparation et ne se retape pas entre
+  // deux stations : on la reporte sur le tour suivant au moment de valider.
+  // L'ecran de fin de circuit sert a corriger — on ajoute un disque au deuxieme
+  // tour et le circuit n'a aucun moment pour l'entendre.
+  const validate = (wm: WM) => {
+    const inCircuit = !!(wm.blockId && supersetBlocs.has(wm.blockId))
+    const i = done[wm.id] ?? 0
+    if (inCircuit && i > 0 && !perfLog[wm.id]?.[i]?.weight) copyPrevSet(wm.id, i)
+    handleSet(wm)
+  }
+
+  // Le curseur se relache des que le mouvement qu'il designe est termine, sinon
+  // « Valider la serie » resterait pose sur un mouvement complet.
+  useEffect(() => {
+    if (!cursorWmId || !workout) return
+    const wm = workout.movements.find(m => m.id === cursorWmId)
+    if (!wm || (done[wm.id] ?? 0) >= (wm.sets ?? 3)) setCursorWmId(null)
+  }, [cursorWmId, done, workout])
+
+  // Fin de circuit : on le detecte en QUITTANT le bloc, pas en y etant — une
+  // fois le circuit complet, la deduction a deja porte le curseur ailleurs.
+  const lastCircuitRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!workout) return
+    const b = currentWm?.blockId ?? null
+    const prev = lastCircuitRef.current
+    if (prev && prev !== b) {
+      const movs = workout.movements.filter(m => m.blockId === prev)
+      lastCircuitRef.current = null
+      if (movs.length > 0 && movs.every(m => (done[m.id] ?? 0) >= (m.sets ?? 3))) setCircuitReview(prev)
+    }
+    if (b && supersetBlocs.has(b)) lastCircuitRef.current = b
+  }, [currentWm?.blockId, done, supersetBlocs, workout])
 
   const handleFinish = async () => {
     setFinishing(true)
@@ -616,566 +814,532 @@ export default function ActivePage() {
     )
   }
 
+  // ── Derivations des trois zones ──────────────────────────────────────────
+  // Calculees avant le rendu : la zone D ne doit jamais changer de composition,
+  // donc chacun de ses trois controles doit pouvoir se decider d'un coup d'oeil
+  // sur ces valeurs plutot qu'au fil d'une imbrication de conditions JSX.
+  const curTarget = currentWm ? (currentWm.sets ?? 3) : 0
+  const curDone = currentWm ? (done[currentWm.id] ?? 0) : 0
+  const curIndex = currentWm ? flatMovs.findIndex(m => m.id === currentWm.id) : -1
+  const curBlock = currentWm?.blockId ? (workout.blocks.find(b => b.id === currentWm.blockId) ?? null) : null
+  const curBlockLabel = curBlock
+    ? `Bloc ${workout.blocks.indexOf(curBlock) + 1}${curBlock.bioType ? ` · ${curBlock.bioType}` : ''}`
+    // « Hors bloc » n’a de sens que si d’AUTRES mouvements, eux, sont ranges
+    // dans un bloc. Quand aucun ne l’est — c’est le cas de toutes les seances
+    // de la base — le libelle serait affiche sur les 27 mouvements et ne
+    // dirait rien : on montre alors le nom de la seance.
+    : (hasBlocks && workout.movements.some(m => m.blockId)) ? 'Hors bloc' : workout.name
+  const nextWm = curIndex >= 0 ? (flatMovs[curIndex + 1] ?? null) : null
+  const isTimed = currentWm?.duration != null
+  const isCircuit = !!(curBlock && supersetBlocs.has(curBlock.id))
+  const circuitMovs = curBlock ? workout.movements.filter(m => m.blockId === curBlock.id) : []
+  // Ecran de preparation : tant qu'aucune station n'a ete validee et que
+  // l'utilisateur n'a pas dit « c'est bon ». Pure derivation, pas un etat —
+  // un etat se desynchronise du `done` qu'il est justement cense observer.
+  const showPrep = isCircuit && !circuitPrepDone.has(curBlock!.id) && circuitMovs.every(m => (done[m.id] ?? 0) === 0)
+  const reviewMovs = circuitReview ? workout.movements.filter(m => m.blockId === circuitReview) : []
+
+  // La vignette commande la bande video. Un mouvement sur cinq du referentiel
+  // pointe vers Instagram ou TikTok, qui n'exposent aucune vignette : un cadre
+  // 16/9 noir y tenait la place d'une demonstration qui n'arrivait jamais.
+  const curThumb = youtubeThumbnail(currentWm?.movement.videoUrl)
+  const canEmbed = !!curThumb || rawEmbed?.type === 'video'
+  const curSource = rawEmbed ? (SOURCE_LABELS[rawEmbed.type] ?? 'vidéo') : null
+
+  // Libelle et geste du bouton principal. Un seul endroit les decide, sinon la
+  // zone D finit par porter deux boutons differents selon l'etat — exactement
+  // ce que « ne change JAMAIS de composition » interdit.
+  const main: { label: string; sub: string | null; fill: number; onPress: () => void; tone: 'accent' | 'green' } =
+    allDone && !rest && !setup && !exerciseTimer
+      ? { label: 'Terminer la séance', sub: null, fill: 0, onPress: () => setShowFinish(true), tone: 'green' }
+      : setup
+        ? { label: 'Valider maintenant', sub: 'Mise en place', fill: setup.sec / Math.max(setup.total, 1), onPress: () => { setSetup(null); if (currentWm?.duration != null) startExercise(currentWm.id, currentWm.duration) }, tone: 'accent' }
+        : exerciseTimer
+          ? { label: 'Valider maintenant', sub: `${exerciseTimer.sec} s`, fill: exerciseTimer.sec / Math.max(exerciseTimer.total, 1), onPress: () => setExerciseTimer(e => (e ? { ...e, sec: 0, endsAt: Date.now() } : null)), tone: 'accent' }
+          : rest
+            ? { label: `Reprendre · ${rest.sec} s`, sub: null, fill: rest.sec / Math.max(rest.total, 1), onPress: () => { ensureAudio(); setRest(null) }, tone: 'accent' }
+            : showPrep
+              ? { label: 'Commencer le circuit', sub: null, fill: 0, onPress: () => { ensureAudio(); if (!started) setStarted(true); setCircuitPrepDone(prev => new Set([...prev, curBlock!.id])) }, tone: 'accent' }
+              : circuitReview
+                ? { label: 'Circuit terminé', sub: null, fill: 0, onPress: () => setCircuitReview(null), tone: 'green' }
+                : currentWm && isTimed
+                  ? { label: `Démarrer · ${currentWm.duration} s`, sub: null, fill: 0, onPress: () => validate(currentWm), tone: 'accent' }
+                  : currentWm
+                    ? { label: `Valider la série ${Math.min(curDone + 1, curTarget)} / ${curTarget}`, sub: null, fill: 0, onPress: () => validate(currentWm), tone: 'accent' }
+                    : { label: 'Terminer la séance', sub: null, fill: 0, onPress: () => setShowFinish(true), tone: 'green' }
+
+  // Ligne d'information de la zone D : une seule ligne, toujours presente, pour
+  // que la hauteur de la zone ne bouge pas d'un etat a l'autre.
+  const infoLine = rest
+    ? `Repos · puis ${(workout.movements.find(m => m.id === rest.wmId)?.movement.name) ?? '—'}`
+    : setup
+      ? 'Mise en place · tiens la position'
+      : nextWm
+        ? `À suivre · ${nextWm.movement.name}`
+        : 'Dernier mouvement de la séance'
+
+  // Sortie en annulant : la confirmation enumere ce qui disparait. « Tu vas
+  // perdre ta progression » ne dit pas combien, et personne n'annule une
+  // seance sans savoir ce qu'il y laisse.
+  const quitWithoutSaving = async () => {
+    const ok = await confirm(
+      `${doneSets} série${doneSets > 1 ? 's' : ''} cochée${doneSets > 1 ? 's' : ''}, ${fmt(elapsed)} de chronomètre et les charges saisies seront effacées. Rien ne sera enregistré.`,
+      { title: 'Abandonner la séance ?', danger: true, confirmLabel: 'Abandonner', cancelLabel: 'Continuer' },
+    )
+    if (!ok) return
+    try { localStorage.removeItem(storageKey) } catch {}
+    router.push(`/workouts/${id}`)
+  }
+
+  // Style commun des deux controles lateraux. 56 px de large, verbe ecrit sous
+  // le signe, presents dans TOUS les etats : un bouton qui disparait pendant le
+  // repos est un bouton qu'on cherche au moment ou l'on en a le plus besoin.
+  const sideBtn: React.CSSProperties = {
+    width: 56, minHeight: 56, flexShrink: 0, display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center', gap: 1,
+    borderRadius: 'var(--r-sm)', background: 'var(--bg-card)',
+    border: '1px solid var(--border-plus)', color: 'var(--text-muted)',
+    fontSize: 'var(--fs-micro)', fontWeight: 700, cursor: 'pointer', padding: 0,
+  }
+  const fieldStyle: React.CSSProperties = {
+    textAlign: 'center', borderRadius: 'var(--r-sm)', padding: '11px 6px', minHeight: 44,
+    fontSize: 'var(--fs-body)', fontWeight: 700, outline: 'none',
+    background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-plus)',
+    color: 'var(--text-primary)',
+  }
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+    // Coque : la page ne defile pas. Deux zones fixes encadrent la seule qui
+    // defile, pour que « Valider la serie » soit toujours au meme endroit sous
+    // le pouce — le chercher au scroll etait le geste le plus couteux de l'ecran.
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── Header + bouton d'action collants ── : sur un superset à rallonge, la
-          vidéo défile hors écran et cocher l'exercice en cours devient une
-          chasse au scroll. Ce bandeau reste visible en permanence et déclenche
-          exactement la même action que la ligne du mouvement actif — plus
-          besoin de chercher, on tape le gros bouton dès qu'on est prêt. */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button onClick={() => router.push(`/workouts/${id}`)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 0, display: 'flex', lineHeight: 1 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      {/* ══ ZONE A — REPERAGE ═══════════════════════════════════════════════ */}
+      <div style={{ flexShrink: 0, background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', padding: '6px var(--sp-3)' }}>
+          {/* Deux sorties, deux formes. Un libelle ecrit pour celle qui
+              enregistre, une croix pour celle qui annule : deux chevrons
+              jumeaux auraient fait jouer la seance a la roulette. */}
+          <button onClick={() => setShowFinish(true)}
+            style={{ minHeight: 44, padding: '0 var(--sp-3)', borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px solid var(--border-plus)', color: 'var(--text-muted)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+            Sortir
           </button>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workout.name}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 1 }}>
-              {workout.movements.length} mouvement{workout.movements.length > 1 ? 's' : ''} · {doneSets}/{totalSets()} séries
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {curBlockLabel}
+            </div>
+            <div className="tnum" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+              {curIndex >= 0
+                ? `Mouvement ${curIndex + 1} / ${flatMovs.length} · série ${Math.min(curDone + 1, curTarget)} / ${curTarget}`
+                : `${flatMovs.length} mouvement${flatMovs.length > 1 ? 's' : ''} · terminé`}
             </div>
           </div>
-          {/* Cadran du chrono — aplat or massif, texte encre */}
-          <div className="tnum display" style={{
-            fontSize: 22, fontWeight: 700, flexShrink: 0, lineHeight: 1,
-            padding: '9px 16px', borderRadius: 'var(--r-sm)',
-            background: started ? 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)' : 'var(--bg-elevated)',
-            color: started ? 'var(--ink)' : 'var(--text-dim)',
-            boxShadow: started ? 'var(--elev-gold)' : 'none',
-            transition: 'background 0.3s, color 0.3s',
-          }}>
-            {fmt(elapsed)}
-          </div>
-        </div>
-
-        {/* ── Progress bar ── */}
-        <div style={{ height: 3, background: 'rgba(255,255,255,0.06)' }}>
-          <div style={{ height: '100%', background: allDone ? 'var(--green)' : 'var(--gold)', width: `${pct}%`, transition: 'width 0.4s ease' }} />
-        </div>
-
-        {/* ── Bouton d'action toujours visible : coche le mouvement actif ── */}
-        {currentWm && (
-          <button
-            onClick={() => handleSet(currentWm)}
-            disabled={exerciseTimer?.wmId === currentWm.id}
+          {/* Or : la progression et la marque. Jamais un bouton d'action — le
+              cadran ouvre les reglages, qui ne sont pas une action de seance. */}
+          <button className="tnum display" onClick={() => setShowSettings(true)}
+            aria-label="Chronomètre — ouvrir les réglages de séance"
             style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px',
-              background: 'var(--accent)', border: 'none', borderBottom: '1px solid var(--border)',
-              cursor: exerciseTimer?.wmId === currentWm.id ? 'default' : 'pointer',
-              opacity: exerciseTimer?.wmId === currentWm.id ? 0.6 : 1, textAlign: 'left',
+              fontSize: 'var(--fs-lg)', fontWeight: 700, flexShrink: 0, lineHeight: 1, cursor: 'pointer',
+              minHeight: 44, display: 'flex', alignItems: 'center', padding: '0 var(--sp-3)',
+              borderRadius: 'var(--r-sm)', border: 'none',
+              background: started ? 'linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%)' : 'var(--bg-card)',
+              color: started ? 'var(--ink)' : 'var(--text-dim)',
+              boxShadow: started ? 'var(--elev-gold)' : 'none',
             }}>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F8F4EC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(248,244,236,0.75)' }}>
-                {currentWm.duration != null ? 'Lancer' : 'Série suivante'} · {(done[currentWm.id] ?? 0) + 1}/{currentWm.sets ?? 3}
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#F8F4EC', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {currentWm.movement.name}
-              </div>
-            </div>
+            {fmt(elapsed)}
           </button>
-        )}
-      </div>
-
-      {/* ── Scène : vidéo pleine largeur + HUD superposé (mouvement actif) ── */}
-      {currentWm && (() => {
-        const target = currentWm.sets ?? 3
-        const setsNow = done[currentWm.id] ?? 0
-        const ringProgress = target > 0 ? setsNow / target : 0
-        const circumference = 2 * Math.PI * 64
-        return (
-          <div style={{ maxWidth: 980, margin: '0 auto', width: '100%', padding: '16px 16px 0' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-
-              {/* Cadre vidéo (ou placeholder si pas de vidéo) */}
-              {/* Format suivant l'écran plutôt qu'un 16/10 fixe : les démos
-                  d'exercice sont très souvent tournées en vertical, et un embed
-                  YouTube ne peut pas être recadré en `cover` — une vidéo
-                  verticale se retrouvait avec d'énormes bandes noires
-                  latérales sur téléphone. Le 4/5 mobile les réduit nettement
-                  tout en gardant le 16/10 éditorial sur grand écran. */}
-              <div className="wod-video-stage" style={{ position: 'relative', flex: '1 1 480px', minWidth: 280, borderRadius: 18, overflow: 'hidden', background: 'radial-gradient(ellipse at 38% 30%, #3a3428 0%, #221f1a 45%, #0e0d0a 100%)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                {currentEmbed ? (
-                  currentEmbed.type === 'video' ? (
-                    <video key={currentEmbed.url} src={currentEmbed.url} autoPlay muted loop playsInline controls
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : currentEmbed.type === 'youtube' && extractEmbedVideoId(currentEmbed.url) ? (
-                    <YouTubeLoopEmbed videoId={extractEmbedVideoId(currentEmbed.url)!} />
-                  ) : (
-                    <iframe key={currentEmbed.url} src={currentEmbed.url}
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                  )
-                ) : (
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 74, height: 74, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)"><path d="M8 5v14l11-7z" /></svg>
-                    </div>
-                  </div>
-                )}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 32%, transparent 70%, rgba(0,0,0,0.25) 100%)', pointerEvents: 'none' }} />
-                {currentEmbed && (
-                  <div style={{ position: 'absolute', top: 14, left: 14, display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 20, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--crimson-bright)' }} />
-                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#F0EBE1' }}>DÉMONSTRATION</span>
-                  </div>
-                )}
-                <div style={{ position: 'absolute', left: 18, bottom: 16, right: 18 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--crimson-bright)', textTransform: 'uppercase', marginBottom: 3 }}>Mouvement actif</div>
-                  <div className="display" style={{ fontSize: 24, fontWeight: 700, color: '#F8F4EC', lineHeight: 1.15 }}>{currentWm.movement.name}</div>
-                </div>
-              </div>
-
-              {/* HUD superposé : anneau de séries + repos */}
-              <div style={{ flex: '0 1 240px', minWidth: 220, borderRadius: 18, background: 'rgba(23,19,15,0.55)', backdropFilter: 'blur(14px)', border: '1px solid rgba(255,255,255,0.10)', padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-                <div style={{ position: 'relative', width: 130, height: 130 }}>
-                  <svg width="130" height="130" viewBox="0 0 130 130">
-                    <circle cx="65" cy="65" r="64" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="7" />
-                    <circle cx="65" cy="65" r="64" fill="none" stroke="url(#activeRingGrad)" strokeWidth="7" strokeLinecap="round"
-                      strokeDasharray={circumference} strokeDashoffset={circumference * (1 - ringProgress)}
-                      transform="rotate(-90 65 65)" style={{ transition: 'stroke-dashoffset 0.3s ease' }} />
-                    <defs>
-                      <linearGradient id="activeRingGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="var(--gold-bright)" />
-                        <stop offset="100%" stopColor="var(--crimson-bright)" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <span className="display" style={{ fontSize: 30, fontWeight: 800, color: '#F8F4EC' }}>{setsNow}/{target}</span>
-                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>séries</span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
-                  {Array.from({ length: target }).map((_, i) => (
-                    <span key={i} className="tnum" style={{
-                      width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800,
-                      background: i < setsNow ? 'linear-gradient(160deg, var(--gold-bright), var(--gold))' : 'rgba(255,255,255,0.06)',
-                      color: i < setsNow ? '#17130F' : 'rgba(255,255,255,0.35)',
-                      border: i < setsNow ? 'none' : '1px solid rgba(255,255,255,0.12)',
-                    }}>{i + 1}</span>
-                  ))}
-                </div>
-                {rest?.wmId === currentWm.id && (
-                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.10)' }}>
-                    <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
-                      <svg width="36" height="36" viewBox="0 0 36 36">
-                        <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3.5" />
-                        <circle cx="18" cy="18" r="15" fill="none" stroke="var(--crimson-bright)" strokeWidth="3.5" strokeLinecap="round"
-                          strokeDasharray={2 * Math.PI * 15} strokeDashoffset={2 * Math.PI * 15 * (1 - rest.sec / rest.total)} transform="rotate(-90 18 18)" />
-                      </svg>
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#F0EBE1' }}>{rest.sec}</div>
-                    </div>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: '#F0EBE1' }}>Repos en cours</div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* À suivre */}
-            {upNext.length > 0 && (
-              <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 8 }}>À suivre</div>
-                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-                  {upNext.map((wm, i) => (
-                    <div key={wm.id} style={{
-                      flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 13px', borderRadius: 11,
-                      background: i === 0 ? 'rgba(201,165,53,0.12)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${i === 0 ? 'rgba(201,165,53,0.35)' : 'rgba(255,255,255,0.08)'}`,
-                    }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: BIO_TYPE_COLORS[wm.movement.bioType] || '#888', flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: i === 0 ? 700 : 600, color: i === 0 ? '#F8F4EC' : 'rgba(255,255,255,0.55)', whiteSpace: 'nowrap' }}>{wm.movement.name}</div>
-                        <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)' }}>{wm.movement.bioType} · {wm.sets ?? 3} séries</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )
-      })()}
-
-      {/* ── Default rest selector ── */}
-      <div style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Repos par défaut</span>
-        <div style={{ display: 'flex', gap: 4, marginLeft: 4 }}>
-          {REST_OPTIONS.map(s => (
-            <button key={s} onClick={() => setDefaultRest(s)}
-              style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${defaultRest === s ? 'var(--crimson)' : 'rgba(255,255,255,0.1)'}`, background: defaultRest === s ? 'var(--crimson-ghost)' : 'transparent', color: defaultRest === s ? 'var(--crimson-bright)' : 'rgba(255,255,255,0.4)', transition: 'all 0.15s' }}>
-              {s}s
-            </button>
-          ))}
+          <button onClick={quitWithoutSaving} aria-label="Abandonner la séance sans enregistrer"
+            style={{ width: 44, minHeight: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
-      </div>
 
-      {/* ── Movements ── */}
-      <div style={{ flex: 1, padding: '16px 16px 160px', maxWidth: 680, margin: '0 auto', width: '100%' }}>
-        {displayBlocks.map((block, bi) => {
-          const movs = block ? workout.movements.filter(wm => wm.blockId === block.id) : (hasBlocks ? orphanMovements : workout.movements)
-          const isSuperset = !!(block?.id && supersetBlocs.has(block.id))
-          const completedRounds = isSuperset ? Math.min(...movs.map(m => done[m.id] ?? 0)) : 0
-          const maxRounds = isSuperset ? Math.max(...movs.map(m => m.sets ?? 3)) : 0
-          const blocAllDone = isSuperset && movs.every(m => (done[m.id] ?? 0) >= (m.sets ?? 3))
-          // Active movement in current superset round = first incomplete that hasn't done this round yet
-          const incompleteMovs = isSuperset ? movs.filter(m => (done[m.id] ?? 0) < (m.sets ?? 3)) : []
-          const activeMovId = isSuperset ? incompleteMovs.find(m => (done[m.id] ?? 0) === completedRounds)?.id : undefined
-          return (
-            <div key={block?.id ?? 'solo'} style={{ marginBottom: hasBlocks ? 20 : 0 }}>
-              {hasBlocks && (
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10, paddingLeft: 4, gap: 8 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', flex: 1 }}>
-                    {block ? `Bloc ${bi + 1}` : 'Hors bloc'}{block?.bioType ? ` · ${block.bioType}` : ''}{block?.instructions ? ` · ${block.instructions}` : ''}
-                    {isSuperset && !blocAllDone && <span style={{ color: 'var(--gold)', marginLeft: 6 }}>· Round {completedRounds + 1}/{maxRounds}</span>}
-                    {isSuperset && blocAllDone && <span style={{ color: 'var(--green)', marginLeft: 6 }}>· Terminé</span>}
-                  </div>
-                  {movs.length > 1 && block?.id && (
-                    <button onClick={() => toggleSuperset(block.id)}
-                      style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: `1px solid ${isSuperset ? 'var(--crimson)' : 'rgba(255,255,255,0.15)'}`, background: isSuperset ? 'var(--crimson-ghost)' : 'transparent', color: isSuperset ? 'var(--crimson-bright)' : 'rgba(255,255,255,0.3)', transition: 'all 0.15s', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                      ⚡ Superset
-                    </button>
-                  )}
-                </div>
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* ── Le rail ──────────────────────────────────────────────────────
+            Un cran par mouvement, groupes par bloc. Vert mousse = fait,
+            terracotta epais = ici, neutre = a venir. Les crans sont sous
+            44 px : c'est assume. Douze mouvements a 44 px ne tiennent pas
+            sur 375 px, et le rail est un reperage d'abord, un raccourci
+            ensuite — les trois controles de la zone D, eux, font 56 px. */}
+        <div style={{ display: 'flex', gap: 'var(--sp-3)', alignItems: 'center', padding: '0 var(--sp-3) 6px', overflowX: 'auto' }}>
+          {displayBlocks.map((b, bi) => {
+            const movs = b ? workout.movements.filter(wm => wm.blockId === b.id) : (hasBlocks ? orphanMovements : workout.movements)
+            if (movs.length === 0) return null
+            return (
+              <div key={b?.id ?? 'solo'} style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
                 {movs.map(wm => {
-                  const target = wm.sets ?? 3
-                  const setsNow = done[wm.id] ?? 0
-                  const isComplete = setsNow >= target
-                  const isCurrent = !isSuperset && currentWm?.id === wm.id
-                  const isDoneInRound = isSuperset && !isComplete && setsNow > completedRounds
-                  const isActiveInRound = isSuperset && !isComplete && wm.id === activeMovId
-                  const isResting = rest?.wmId === wm.id
-                  const color = BIO_TYPE_COLORS[wm.movement.bioType] || '#888'
-
-                  // Trois registres : sombre = contexte · terracotta = maintenant · mousse = fait.
-                  //
-                  // Le mouvement actif était rendu sur une plaque ivoire (#F5F1E8)
-                  // bordée d'or. Sur un écran de séance en plein écran quasi noir,
-                  // cela donnait un rectangle blanc éblouissant — pénible le soir —
-                  // et en contradiction avec le reste de la charte, où « le
-                  // maintenant » est le terracotta : le bouton d'action collant en
-                  // haut de page et l'anneau de repos l'emploient déjà. Le contraste
-                  // qui rendait la carte repérable est conservé, mais par la bordure
-                  // et le halo plutôt qu'en inversant la luminosité.
-                  const isNow = (isCurrent || isActiveInRound) && !isComplete
-                  const cardBg = isComplete ? 'var(--cypress-ghost)' : isDoneInRound ? 'rgba(58,94,72,0.15)' : isNow ? 'var(--crimson-ghost)' : 'var(--bg-card)'
-                  const cardBorder = isComplete ? 'rgba(127,184,148,0.30)' : isDoneInRound ? 'rgba(127,184,148,0.18)' : isNow ? 'var(--crimson)' : isResting ? 'var(--crimson-border)' : 'var(--border)'
-                  const nameColor = isComplete || isDoneInRound ? 'var(--green)' : isNow ? 'var(--text-primary)' : 'var(--text-muted)'
-                  const subColor = isNow ? 'rgba(240,235,225,0.72)' : 'rgba(255,255,255,0.45)'
-                  const dimColor = isNow ? 'rgba(240,235,225,0.45)' : 'rgba(255,255,255,0.25)'
-                  const timedColor = 'var(--blue)'
-
+                  const d = done[wm.id] ?? 0
+                  const t = wm.sets ?? 3
+                  const isHere = currentWm?.id === wm.id
+                  const isDone = d >= t
                   return (
-                    <div key={wm.id} style={{
-                      background: cardBg,
-                      border: `1px solid ${cardBorder}`,
-                      borderRadius: 'var(--r-md)', padding: '14px 16px',
-                      boxShadow: isNow ? '0 0 0 1px var(--crimson-border), 0 6px 24px rgba(180,85,45,0.20)' : 'none',
-                      transition: 'border-color 0.2s, background 0.2s, box-shadow 0.2s',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                        <span style={{ flex: 1, fontSize: 15, fontWeight: isNow ? 700 : 600, color: nameColor }}>
-                          {wm.movement.name}
-                        </span>
-                        {(isComplete || isDoneInRound) && (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        )}
-                      </div>
-
-                      {/* Set circles + label */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                        <div style={{ display: 'flex', gap: 5 }}>
-                          {Array.from({ length: target }).map((_, i) => (
-                            <span key={i} className="tnum" style={{
-                              width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700,
-                              // Une série faite est une série faite : mousse dans tous les cas.
-                              // Elle était or pour un mouvement en répétitions et bleu pour un
-                              // mouvement chronométré — deux couleurs pour un même état.
-                              background: i < setsNow ? 'var(--green)' : (isNow ? 'rgba(240,235,225,0.08)' : 'rgba(255,255,255,0.07)'),
-                              color: i < setsNow ? 'var(--ink)' : (isNow ? 'rgba(240,235,225,0.55)' : 'rgba(255,255,255,0.3)'),
-                              border: `1px solid ${i < setsNow ? 'transparent' : (isNow ? 'rgba(240,235,225,0.22)' : 'rgba(255,255,255,0.1)')}`,
-                              transition: 'all 0.2s',
-                            }}>
-                              {i + 1}
-                            </span>
-                          ))}
-                        </div>
-                        {wm.duration != null ? (
-                          <span style={{ fontSize: 13, color: timedColor, marginLeft: 4, fontWeight: 600 }}>{wm.duration}s</span>
-                        ) : wm.reps ? (
-                          <span style={{ fontSize: 13, color: subColor, marginLeft: 4 }}>{wm.reps}</span>
-                        ) : null}
-                        {wm.rest && wm.rest >= 10 && wm.rest !== defaultRest && (
-                          <span style={{ fontSize: 11, color: dimColor, marginLeft: 'auto' }}>repos {wm.rest}s</span>
-                        )}
-                      </div>
-
-                      {/* ── Saisie, une ligne par série ──────────────────────────
-                          Un couple unique par mouvement enregistrait la même charge
-                          pour toutes les séries : monter de 40 à 50 kg entre la 1re
-                          et la 3e écrivait trois fois la même valeur fausse.
-                          Les lignes s'ouvrent au fur et à mesure (séries faites, plus
-                          la suivante sur le mouvement en cours) : afficher d'emblée
-                          toutes les séries de tous les mouvements ferait un mur de
-                          champs sur un écran de téléphone. */}
-                      {(() => {
-                        const lp = lastPerf[wm.movement.id]
-                        const rows = perfLog[wm.id] ?? []
-                        const hasHint = !!(lp?.last && (lp.last.weight != null || lp.last.reps != null))
-                        // Séries faites + la suivante quand c'est le mouvement actif :
-                        // on remplit après avoir soulevé, pas avant la séance.
-                        const visibleRows = Math.min(target, isNow ? setsNow + 1 : setsNow)
-                        if (visibleRows === 0 && !hasHint) return null
-                        // Le PR se juge sur la série la plus lourde SAISIE : c'est
-                        // très souvent la dernière qui bat le record, pas la première.
-                        const topTyped = rows.reduce((max, r) => {
-                          const v = num(r?.weight)
-                          return v != null && v > max ? v : max
-                        }, 0)
-                        const isPR = lp?.bestWeight != null && topTyped > 0 && topTyped > lp.bestWeight
-                        const fieldStyle: React.CSSProperties = {
-                          textAlign: 'center', borderRadius: 'var(--r-sm)', padding: '11px 6px', minHeight: 44,
-                          fontSize: 'var(--fs-body)', fontWeight: 700, outline: 'none',
-                          background: isNow ? 'rgba(240,235,225,0.08)' : 'rgba(255,255,255,0.06)',
-                          border: `1px solid ${isNow ? 'rgba(240,235,225,0.22)' : 'rgba(255,255,255,0.12)'}`,
-                          color: 'var(--text-primary)',
-                        }
-                        const borderDim = isNow ? 'rgba(240,235,225,0.22)' : 'rgba(255,255,255,0.12)'
-                        return (
-                          <div style={{ marginBottom: 'var(--sp-3)' }}>
-                            {/* La dernière charge connue est un indice — placeholder grisé
-                                et rappel « Dernière : … » — jamais une valeur posée dans
-                                le champ. Le record ne se
-                                pose plus a cote sous forme de trophée : c’est la charge saisie
-                                elle-même qui passe en or. La marque est frappée dans la piece. */}
-                            {hasHint && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-2)' }}>
-                                {hasHint && (
-                                  <span style={{ fontSize: 'var(--fs-micro)', color: dimColor, whiteSpace: 'nowrap' }}>
-                                    Dernière&nbsp;: {lp!.last!.weight != null ? `${lp!.last!.weight}kg` : ''}{lp!.last!.weight != null && lp!.last!.reps != null ? ' × ' : ''}{lp!.last!.reps != null ? lp!.last!.reps : ''}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {Array.from({ length: visibleRows }).map((_, i) => {
-                              const row = rows[i]
-                              const isPending = i >= setsNow
-                              // Proposé seulement quand il y a de quoi reprendre et que la
-                              // ligne est encore vide : un bouton inerte ou destructeur
-                              // n'a rien à faire sous le pouce en pleine série.
-                              const canCopy = i > 0 && num(rows[i - 1]?.weight) != null && !row?.weight
-                              return (
-                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginTop: i === 0 ? 0 : 'var(--sp-2)' }}>
-                                  {/* Mousse = l'accompli ; la série à venir reste neutre. Le
-                                      terracotta est déjà pris par « Série suivante » juste
-                                      en dessous — deux actions terracotta sur la même carte
-                                      se disputeraient le regard. */}
-                                  <span className="tnum" style={{
-                                    width: 20, flexShrink: 0, textAlign: 'center',
-                                    fontSize: 'var(--fs-micro)', fontWeight: 800,
-                                    color: isPending ? dimColor : 'var(--green)',
-                                  }}>{i + 1}</span>
-                                  {/* type="text" + inputMode plutôt que type="number" : ce
-                                      dernier refuse la virgule du pavé numérique iOS, change
-                                      de valeur à la molette et affiche des flèches minuscules
-                                      — intenable à une main entre deux séries. */}
-                                  <input type="text" inputMode="decimal" enterKeyHint="next"
-                                    aria-label={`Charge série ${i + 1} — ${wm.movement.name}`}
-                                    placeholder={lp?.last?.weight != null ? String(lp.last.weight) : 'kg'}
-                                    value={row?.weight ?? ''}
-                                    onChange={e => setLog(wm.id, i, 'weight', e.target.value)}
-                                    style={{ ...fieldStyle, width: 74,
-                                      // L’or sur la seule serie qui bat le record, pas sur
-                                      // toutes : c’est un fait precis, pas une decoration.
-                                      ...(isPR && num(row?.weight) != null && num(row?.weight) === topTyped
-                                        ? { color: 'var(--gold)', borderColor: 'var(--gold-border)' }
-                                        : null) }} />
-                                  {wm.duration != null ? (
-                                    // Mouvement chronométré : la durée est la consigne, mais la
-                                    // charge n'avait aucun champ — une planche lestée était
-                                    // tout simplement impossible à enregistrer.
-                                    <span style={{ color: dimColor, fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap' }}>kg&nbsp;·&nbsp;{wm.duration}s</span>
-                                  ) : (
-                                    <>
-                                      <span style={{ color: dimColor, fontSize: 'var(--fs-sm)', fontWeight: 700 }}>kg&nbsp;×</span>
-                                      <input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done"
-                                        aria-label={`Répétitions série ${i + 1} — ${wm.movement.name}`}
-                                        placeholder={lp?.last?.reps != null ? String(lp.last.reps) : 'reps'}
-                                        value={row?.reps ?? ''}
-                                        onChange={e => setLog(wm.id, i, 'reps', e.target.value)}
-                                        style={{ ...fieldStyle, width: 66 }} />
-                                    </>
-                                  )}
-                                  {canCopy && (
-                                    <button type="button" onClick={() => copyPrevSet(wm.id, i)}
-                                      title="Reprendre la saisie de la série précédente"
-                                      aria-label={`Reprendre la saisie de la série ${i}`}
-                                      style={{ marginLeft: 'auto', minWidth: 44, minHeight: 44, borderRadius: 'var(--r-sm)', background: 'transparent', border: `1px solid ${borderDim}`, color: isNow ? 'rgba(240,235,225,0.6)' : 'rgba(255,255,255,0.35)', fontSize: 'var(--fs-body)', cursor: 'pointer' }}>
-                                      ↑
-                                    </button>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )
-                      })()}
-
-                      {/* Exercise timer in-card (timed mode, currently running) */}
-                      {wm.duration != null && exerciseTimer?.wmId === wm.id && (
-                        <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
-                          <ProgressRing progress={exerciseTimer.sec / exerciseTimer.total} size={96} stroke={5} color="var(--crimson-bright)" track={'rgba(240,235,225,0.12)'}>
-                            <span className="tnum display" style={{ fontSize: 27, fontWeight: 700, color: 'var(--text-primary)' }}>{exerciseTimer.sec}</span>
-                          </ProgressRing>
-                        </div>
-                      )}
-
-                      {/* Action button */}
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        {wm.duration != null ? (
-                          <>
-                            <button
-                              onClick={() => handleSet(wm)}
-                              disabled={isComplete || (isSuperset && wm.id !== activeMovId) || exerciseTimer?.wmId === wm.id}
-                              style={{
-                                flex: 1, padding: '13px', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: isNow ? 800 : 700,
-                                cursor: isComplete || exerciseTimer?.wmId === wm.id ? 'default' : 'pointer',
-                                // Terracotta comme le bouton de série : c'est le même geste,
-                                // « fais cet exercice maintenant ». Le caractère chronométré
-                                // est déjà porté par le libellé (« ▶ Démarrer · 60s ») — il
-                                // n'a pas besoin d'un bleu acier qui n'a aucun rôle dans la
-                                // charte et qui formait un pavé délavé sur la carte active.
-                                background: isComplete ? 'var(--cypress-ghost)' : exerciseTimer?.wmId === wm.id ? 'transparent' : isNow ? 'var(--accent)' : 'var(--crimson-ghost)',
-                                border: `1px solid ${isComplete ? 'rgba(127,184,148,0.25)' : isNow && exerciseTimer?.wmId !== wm.id ? 'transparent' : 'var(--crimson-border)'}`,
-                                color: isComplete ? 'var(--green)' : isNow && exerciseTimer?.wmId !== wm.id ? 'var(--on-accent)' : 'var(--crimson-bright)',
-                                transition: 'all 0.15s',
-                              }}>
-                              {isComplete ? '✓ Terminé' : exerciseTimer?.wmId === wm.id ? '⏱ En cours…' : `▶ Démarrer · ${wm.duration}s`}
-                            </button>
-                            {exerciseTimer?.wmId === wm.id && (
-                              <button onClick={() => setExerciseTimer(e => e ? { ...e, sec: 0 } : null)}
-                                style={{ minHeight: 44, padding: '10px 16px', borderRadius: 'var(--r-sm)', fontSize: 12, cursor: 'pointer', background: 'transparent', border: '1px solid var(--crimson-border)', color: 'var(--crimson-bright)' }}
-                                title="Valider maintenant sans attendre la fin du timer">
-                                ✓ Skip
-                              </button>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <button onClick={() => handleSet(wm)} disabled={isComplete || (isSuperset && wm.id !== activeMovId)}
-                              style={{
-                                flex: 1, padding: '13px', borderRadius: 'var(--r-sm)', fontSize: 14, cursor: isComplete ? 'default' : 'pointer',
-                                fontWeight: isNow ? 800 : 700,
-                                letterSpacing: isNow ? '0.03em' : 0,
-                                textTransform: isNow ? 'uppercase' : 'none',
-                                // Terracotta plein pour le mouvement actif : geste principal de
-                                // la séance, identique à celui du bouton collant en haut de
-                                // page — qui était déjà terracotta. L'or était employé ici
-                                // alors qu'il appartient à la marque et à la progression.
-                                background: isComplete ? 'var(--cypress-ghost)' : isNow ? 'var(--accent)' : 'var(--crimson-ghost)',
-                                border: `1px solid ${isComplete ? 'rgba(127,184,148,0.25)' : isNow ? 'transparent' : 'var(--crimson-border)'}`,
-                                color: isComplete ? 'var(--green)' : isNow ? 'var(--on-accent)' : 'var(--crimson-bright)',
-                                boxShadow: isNow ? 'var(--elev-1)' : 'none',
-                                transition: 'all 0.15s',
-                              }}>
-                              {isComplete ? '✓ Terminé' : `Série ${setsNow + 1} / ${target}`}
-                            </button>
-                            {setsNow > 0 && !isComplete && (
-                              <button onClick={() => handleUndo(wm)}
-                                style={{ minWidth: 44, minHeight: 44, padding: '10px 16px', borderRadius: 'var(--r-sm)', fontSize: 14, cursor: 'pointer', background: 'transparent', border: `1px solid ${isNow ? 'rgba(240,235,225,0.22)' : 'rgba(255,255,255,0.1)'}`, color: isNow ? 'rgba(240,235,225,0.6)' : 'rgba(255,255,255,0.35)' }}>
-                                ↩
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
+                    <button key={wm.id} onClick={() => { ensureAudio(); setCursorWmId(wm.id) }}
+                      aria-label={`${wm.movement.name} — ${d}/${t} séries`}
+                      title={`${b ? `Bloc ${bi + 1} · ` : ''}${wm.movement.name}`}
+                      style={{
+                        height: 30, minWidth: isHere ? 26 : 16, padding: 0, cursor: 'pointer',
+                        borderRadius: 'var(--r-xs)', border: 'none',
+                        background: isDone ? 'var(--cypress-light)' : isHere ? 'var(--accent)' : 'rgba(240,235,225,0.12)',
+                        boxShadow: isHere ? '0 0 0 1px var(--crimson-border)' : 'none',
+                        transition: 'min-width 0.15s, background 0.2s',
+                      }} />
                   )
                 })}
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
 
-      {/* ── Minuteur de repos ──────────────────────────────────────────────
-          Panneau sombre, pas ivoire. L'écran de séance est un plein écran
-          quasi noir : un cartouche clair y perçait un trou lumineux, à contre-
-          emploi de la charte — et éblouissant quand on s'entraîne le soir.
-          L'anneau porte désormais le terracotta, comme le petit anneau de
-          repos déjà présent dans le bandeau vidéo de ce même écran : le repos
-          est bien « le maintenant », il n'a aucune raison d'être traité
-          autrement à deux endroits de la même page. */}
-      {rest && (
-        <div className="modal-in" style={{
-          position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 20,
-          borderRadius: 'var(--r-lg)', padding: '14px 20px',
-          display: 'flex', alignItems: 'center', gap: 18, minWidth: 288, maxWidth: 'calc(100vw - 32px)',
-          background: 'rgba(29,25,20,0.94)',
-          border: '1px solid var(--crimson-border)',
-          boxShadow: 'var(--elev-3)',
-          backdropFilter: 'blur(12px)',
-        }}>
-          <ProgressRing progress={rest.sec / rest.total} size={58} stroke={4} color="var(--crimson-bright)" track="rgba(240,235,225,0.10)">
-            <span className="tnum display" style={{ fontSize: 19, fontWeight: 700, color: 'var(--text-primary)' }}>{rest.sec}</span>
-          </ProgressRing>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 'var(--fs-micro)', fontWeight: 800, letterSpacing: 'var(--ls-caps)', textTransform: 'uppercase', color: 'var(--crimson-bright)', marginBottom: 3 }}>Repos</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {workout.movements.find(wm => wm.id === rest.wmId)?.movement.name}
+      {/* ══ ZONE B — CONTENU (la seule qui defile) ═════════════════════════ */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: 'var(--sp-4) var(--sp-4) var(--sp-6)' }}>
+
+          {/* ── Fin de circuit : l'ecran calme ──────────────────────────────
+              On ajoute un disque au deuxieme tour et le circuit n'a aucun
+              moment pour l'entendre. La correction se fait ici, une fois. */}
+          {circuitReview ? (
+            <>
+              <div className="display" style={{ fontSize: 'var(--fs-h2)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 'var(--sp-1)' }}>Circuit terminé</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 'var(--sp-4)', lineHeight: 1.5 }}>
+                Corrige les charges si tu as changé quelque chose en cours de route.
+              </div>
+              {reviewMovs.map(wm => {
+                const rounds = done[wm.id] ?? 0
+                if (isBodyweight(wm.movement.equipment)) {
+                  return (
+                    <div key={wm.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', padding: 'var(--sp-2) 0', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ flex: 1, fontSize: 'var(--fs-body)', color: 'var(--text-muted)' }}>{wm.movement.name}</span>
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-dim)' }}>poids du corps</span>
+                    </div>
+                  )
+                }
+                return (
+                  <div key={wm.id} style={{ padding: 'var(--sp-3) 0', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 'var(--fs-body)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 'var(--sp-2)' }}>{wm.movement.name}</div>
+                    <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
+                      {Array.from({ length: rounds }).map((_, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-1)' }}>
+                          <span className="tnum" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-dim)', fontWeight: 800 }}>T{i + 1}</span>
+                          <input type="text" inputMode="decimal"
+                            aria-label={`Charge tour ${i + 1} — ${wm.movement.name}`}
+                            placeholder="kg" value={perfLog[wm.id]?.[i]?.weight ?? ''}
+                            onChange={e => setLog(wm.id, i, 'weight', e.target.value)}
+                            style={{ ...fieldStyle, width: 70 }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </>
+          ) : showPrep ? (
+            /* ── Preparation du circuit ───────────────────────────────────
+               Les charges se reglent AVANT le lancement : pendant le circuit
+               on passe d'une station a l'autre sans une main libre pour taper. */
+            <>
+              <div className="display" style={{ fontSize: 'var(--fs-h2)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 'var(--sp-1)' }}>{curBlockLabel}</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 'var(--sp-4)', lineHeight: 1.5 }}>
+                {circuitMovs.length} stations · règle les charges maintenant, tu les auras en lecture seule pendant le circuit.
+              </div>
+              <button type="button"
+                onClick={() => circuitMovs.forEach(wm => { const w = lastPerf[wm.movement.id]?.last?.weight; if (w != null) setLog(wm.id, 0, 'weight', String(w)) })}
+                style={{ minHeight: 44, width: '100%', marginBottom: 'var(--sp-4)', borderRadius: 'var(--r-sm)', background: 'var(--gold-ghost)', border: '1px solid var(--gold-border)', color: 'var(--gold)', fontSize: 'var(--fs-body)', fontWeight: 700, cursor: 'pointer' }}>
+                Reprendre les charges de la dernière fois
+              </button>
+              {circuitMovs.map((wm, i) => {
+                const bw = isBodyweight(wm.movement.equipment)
+                const typed = perfLog[wm.id]?.[0]?.weight ?? ''
+                return (
+                  <div key={wm.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', padding: 'var(--sp-3) 0', borderBottom: '1px solid var(--border)' }}>
+                    <span className="tnum" style={{ width: 18, flexShrink: 0, fontSize: 'var(--fs-micro)', fontWeight: 800, color: 'var(--text-dim)' }}>{i + 1}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 'var(--fs-body)', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{wm.movement.name}</div>
+                      <div style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-dim)' }}>
+                        {wm.duration != null ? `${wm.duration} s` : (wm.reps ?? `${wm.sets ?? 3} séries`)}
+                        {bw ? ' · poids du corps' : ''}
+                      </div>
+                    </div>
+                    {/* Le champ est OMIS pour « Poids corps » : 137 des 377
+                        mouvements du referentiel le sont, et demander combien
+                        pese une traction est une question sans reponse. Le
+                        gilet leste reste a un appui. */}
+                    {bw && !typed ? (
+                      // L'espace est un marqueur « champ demande » : `num` le
+                      // rejette comme une saisie vide, donc rien de faux ne
+                      // part en base si l'utilisateur ne tape finalement rien,
+                      // et vider le champ fait revenir le bouton.
+                      <button type="button" onClick={() => setLog(wm.id, 0, 'weight', ' ')}
+                        style={{ minHeight: 44, padding: '0 var(--sp-3)', flexShrink: 0, borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px dashed var(--border-plus)', color: 'var(--text-dim)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }}>
+                        + charge
+                      </button>
+                    ) : (
+                      <input type="text" inputMode="decimal" enterKeyHint="next"
+                        aria-label={`Charge — ${wm.movement.name}`}
+                        placeholder={lastPerf[wm.movement.id]?.last?.weight != null ? String(lastPerf[wm.movement.id]!.last!.weight) : 'kg'}
+                        value={typed.trim()}
+                        onChange={e => setLog(wm.id, 0, 'weight', e.target.value)}
+                        style={{ ...fieldStyle, width: 74, flexShrink: 0 }} />
+                    )}
+                  </div>
+                )
+              })}
+            </>
+          ) : currentWm ? (
+            <>
+              {/* Le nom en serif : c'est le titre de ce qu'on fait, pas une
+                  etiquette d'interface. */}
+              <div className="display" style={{ fontSize: 'var(--fs-h2)', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.15 }}>
+                {currentWm.movement.name}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginTop: 'var(--sp-2)', flexWrap: 'wrap' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: BIO_TYPE_COLORS[currentWm.movement.bioType] || '#888', flexShrink: 0 }} />
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>
+                  {currentWm.movement.bioType}
+                  {' · '}
+                  {currentWm.duration != null ? `${currentWm.duration} s` : (currentWm.reps ? currentWm.reps : `${curTarget} séries`)}
+                  {currentWm.movement.equipment ? ` · ${currentWm.movement.equipment}` : ''}
+                </span>
+              </div>
+
+              {/* ── Mise en place : gros chiffres ─────────────────────────
+                  On a la tete sous la barre, pas sur l'ecran : le chiffre
+                  doit se lire du coin de l'oeil, et le tic suffit au reste. */}
+              {setup && setup.wmId === currentWm.id && (
+                <div style={{ display: 'flex', justifyContent: 'center', margin: 'var(--sp-5) 0' }}>
+                  <ProgressRing progress={setup.sec / Math.max(setup.total, 1)} size={132} stroke={6} color="var(--crimson-bright)" track="rgba(240,235,225,0.12)">
+                    <span className="tnum display" style={{ fontSize: 48, fontWeight: 800, color: 'var(--text-primary)' }}>{setup.sec}</span>
+                  </ProgressRing>
+                </div>
+              )}
+
+              {/* ── La demonstration ─────────────────────────────────────
+                  Une bande 16/9 SEULEMENT quand il y a de quoi la remplir.
+                  Instagram et TikTok n'exposent aucune vignette : pour eux,
+                  une ligne qui nomme la source, et pas un cadre noir. */}
+              {canEmbed && currentEmbed ? (
+                <div style={{ position: 'relative', aspectRatio: '16 / 9', width: '100%', marginTop: 'var(--sp-4)', borderRadius: 'var(--r-md)', overflow: 'hidden', background: '#0e0d0a', border: '1px solid var(--border)' }}>
+                  {currentEmbed.type === 'video' ? (
+                    <video key={currentEmbed.url} src={currentEmbed.url} autoPlay muted loop playsInline controls
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : extractEmbedVideoId(currentEmbed.url) ? (
+                    <YouTubeLoopEmbed videoId={extractEmbedVideoId(currentEmbed.url)!} />
+                  ) : (
+                    <iframe key={currentEmbed.url} src={currentEmbed.url} title={`Démonstration — ${currentWm.movement.name}`}
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                  )}
+                </div>
+              ) : currentWm.movement.videoUrl ? (
+                <a href={currentWm.movement.videoUrl} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', minHeight: 44, marginTop: 'var(--sp-3)', fontSize: 'var(--fs-body)', fontWeight: 600, color: 'var(--text-muted)', textDecoration: 'none' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  Voir la démonstration{curSource ? ` sur ${curSource}` : ''}
+                </a>
+              ) : null}
+
+              {/* ── Les lignes de serie ──────────────────────────────────── */}
+              {(() => {
+                const lp = lastPerf[currentWm.movement.id]
+                const rows = perfLog[currentWm.id] ?? []
+                const hasHint = !!(lp?.last && (lp.last.weight != null || lp.last.reps != null))
+                // Series faites, plus la suivante : on remplit apres avoir
+                // souleve, pas avant la seance.
+                const visibleRows = Math.min(curTarget, curDone + 1)
+                // Le record se juge sur la serie la plus lourde SAISIE : c'est
+                // tres souvent la derniere qui le bat, pas la premiere.
+                const topTyped = rows.reduce((max, r) => { const v = num(r?.weight); return v != null && v > max ? v : max }, 0)
+                const isPR = lp?.bestWeight != null && topTyped > 0 && topTyped > lp.bestWeight
+                const bw = isBodyweight(currentWm.movement.equipment)
+                return (
+                  <div style={{ marginTop: 'var(--sp-5)' }}>
+                    {hasHint && (
+                      <div style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-dim)', marginBottom: 'var(--sp-2)' }}>
+                        Dernière&nbsp;: {lp!.last!.weight != null ? `${lp!.last!.weight}kg` : ''}{lp!.last!.weight != null && lp!.last!.reps != null ? ' × ' : ''}{lp!.last!.reps != null ? lp!.last!.reps : ''}
+                      </div>
+                    )}
+                    {Array.from({ length: Math.max(visibleRows, 0) }).map((_, i) => {
+                      const row = rows[i]
+                      const isPending = i >= curDone
+                      const canCopy = i > 0 && num(rows[i - 1]?.weight) != null && !row?.weight
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginTop: i === 0 ? 0 : 'var(--sp-2)' }}>
+                          <span className="tnum" style={{ width: 20, flexShrink: 0, textAlign: 'center', fontSize: 'var(--fs-micro)', fontWeight: 800, color: isPending ? 'var(--text-dim)' : 'var(--green)' }}>{i + 1}</span>
+                          {/* En circuit, la charge est en lecture seule : on
+                              n'a pas les mains libres entre deux stations, et
+                              l'ecran de fin de circuit sert a corriger. */}
+                          {isCircuit ? (
+                            <span className="tnum" style={{ ...fieldStyle, width: 74, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', color: 'var(--text-muted)' }}>
+                              {row?.weight?.trim() ? row.weight : (bw ? '—' : '·')}
+                            </span>
+                          ) : (
+                            <input type="text" inputMode="decimal" enterKeyHint="next"
+                              aria-label={`Charge série ${i + 1} — ${currentWm.movement.name}`}
+                              placeholder={lp?.last?.weight != null ? String(lp.last.weight) : (bw ? '+ lest' : 'kg')}
+                              value={row?.weight ?? ''}
+                              onChange={e => setLog(currentWm.id, i, 'weight', e.target.value)}
+                              style={{ ...fieldStyle, width: 74,
+                                // L'or sur la seule serie qui bat le record, pas
+                                // sur toutes : c'est un fait precis, pas un decor.
+                                ...(isPR && num(row?.weight) != null && num(row?.weight) === topTyped
+                                  ? { color: 'var(--gold)', borderColor: 'var(--gold-border)' }
+                                  : null) }} />
+                          )}
+                          {currentWm.duration != null ? (
+                            <span style={{ color: 'var(--text-dim)', fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap' }}>kg&nbsp;·&nbsp;{currentWm.duration}s</span>
+                          ) : (
+                            <>
+                              <span style={{ color: 'var(--text-dim)', fontSize: 'var(--fs-sm)', fontWeight: 700 }}>kg&nbsp;×</span>
+                              <input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done"
+                                aria-label={`Répétitions série ${i + 1} — ${currentWm.movement.name}`}
+                                placeholder={lp?.last?.reps != null ? String(lp.last.reps) : 'reps'}
+                                value={row?.reps ?? ''}
+                                onChange={e => setLog(currentWm.id, i, 'reps', e.target.value)}
+                                style={{ ...fieldStyle, width: 66 }} />
+                            </>
+                          )}
+                          {canCopy && !isCircuit && (
+                            <button type="button" onClick={() => copyPrevSet(currentWm.id, i)}
+                              aria-label={`Reprendre la saisie de la série ${i}`}
+                              style={{ marginLeft: 'auto', minWidth: 44, minHeight: 44, borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px solid var(--border-plus)', color: 'var(--text-dim)', fontSize: 'var(--fs-body)', cursor: 'pointer' }}>
+                              ↑
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                    {curDone > 0 && (
+                      <button type="button" onClick={() => handleUndo(currentWm)}
+                        style={{ minHeight: 44, marginTop: 'var(--sp-3)', padding: '0 var(--sp-3)', borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }}>
+                        ↩ Décocher la série {curDone}
+                      </button>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {curBlock?.instructions && (
+                <div style={{ marginTop: 'var(--sp-4)', fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', lineHeight: 1.5 }}>{curBlock.instructions}</div>
+              )}
+
+              <a href={`/workouts/${id}`}
+                style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, marginTop: 'var(--sp-5)', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--text-dim)', textDecoration: 'none' }}>
+                Voir le plan complet de la séance →
+              </a>
+            </>
+          ) : (
+            <div style={{ textAlign: 'center', padding: 'var(--sp-8) 0' }}>
+              <div className="display" style={{ fontSize: 'var(--fs-h2)', fontWeight: 700, color: 'var(--green)' }}>Toutes les séries sont faites</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginTop: 'var(--sp-2)' }}>{doneSets} séries · {fmt(elapsed)}</div>
             </div>
-          </div>
-          <button onClick={() => setRest(null)}
-            style={{ padding: '9px 15px', borderRadius: 'var(--r-sm)', background: 'none', border: '1px solid var(--border-plus)', color: 'var(--text-muted)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-            Passer
+          )}
+        </div>
+      </div>
+
+      {/* ══ ZONE D — ACTION ════════════════════════════════════════════════
+          Hauteur et composition fixes : une ligne d'information, puis trois
+          controles. Le lateral qui s'eclipse pendant le repos est le bouton
+          qu'on cherche au moment ou l'on en a le plus besoin. */}
+      <div style={{ flexShrink: 0, background: 'var(--bg-elevated)', borderTop: '1px solid var(--border)', padding: 'var(--sp-2) var(--sp-3) calc(var(--sp-3) + env(safe-area-inset-bottom))' }}>
+        <div style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-dim)', marginBottom: 'var(--sp-2)', paddingLeft: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', height: 15, lineHeight: '15px' }}>
+          {infoLine}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'stretch', gap: 'var(--sp-2)' }}>
+          <button onClick={goPrev} disabled={curIndex <= 0} style={{ ...sideBtn, opacity: curIndex <= 0 ? 0.35 : 1, cursor: curIndex <= 0 ? 'default' : 'pointer' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <span>Précédent</span>
+          </button>
+          {/* Remplissage degressif EN FOND : le temps restant se lit sans
+              deplacer le regard du bouton sur lequel le pouce est deja pose. */}
+          <button onClick={main.onPress}
+            style={{
+              flex: 1, minWidth: 0, minHeight: 56, borderRadius: 'var(--r-sm)', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+              color: main.tone === 'green' ? 'var(--ink)' : 'var(--on-accent)',
+              background: main.fill > 0
+                ? `linear-gradient(90deg, var(--crimson) 0%, var(--crimson) ${main.fill * 100}%, var(--crimson-ghost) ${main.fill * 100}%, var(--crimson-ghost) 100%)`
+                : main.tone === 'green' ? 'var(--green)' : 'var(--accent)',
+              boxShadow: 'var(--elev-1)',
+              transition: 'background 0.2s linear',
+            }}>
+            <span style={{ fontSize: 'var(--fs-body)', fontWeight: 800, letterSpacing: '0.02em' }}>{main.label}</span>
+            {main.sub && <span style={{ fontSize: 'var(--fs-micro)', fontWeight: 700, opacity: 0.8 }}>{main.sub}</span>}
+          </button>
+          <button onClick={goNext} style={sideBtn}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>Suivant</span>
           </button>
         </div>
+      </div>
+
+      {/* ── Reglages : repos par defaut, mise en place, circuits ───────────
+          Tires de l'ecran principal : trois reglages consultes une fois par
+          seance n'ont pas a occuper la place d'un controle utilise a chaque
+          serie. On y arrive par le chronometre. */}
+      {showSettings && (
+        <Modal onClose={() => setShowSettings(false)} maxWidth={420}>
+          <div style={{ padding: 'var(--sp-5)' }}>
+            <div className="display" style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, marginBottom: 'var(--sp-4)' }}>Réglages de séance</div>
+
+            <div style={{ fontSize: 'var(--fs-micro)', fontWeight: 800, letterSpacing: 'var(--ls-caps)', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 'var(--sp-2)' }}>Repos par défaut</div>
+            <div style={{ display: 'flex', gap: 'var(--sp-2)', marginBottom: 'var(--sp-5)' }}>
+              {REST_OPTIONS.map(s => (
+                <button key={s} onClick={() => setDefaultRest(s)}
+                  style={{ flex: 1, minHeight: 44, borderRadius: 'var(--r-sm)', fontSize: 'var(--fs-body)', fontWeight: 700, cursor: 'pointer', border: `1px solid ${defaultRest === s ? 'var(--crimson)' : 'var(--border-plus)'}`, background: defaultRest === s ? 'var(--crimson-ghost)' : 'transparent', color: defaultRest === s ? 'var(--crimson-bright)' : 'var(--text-dim)' }}>
+                  {s}s
+                </button>
+              ))}
+            </div>
+
+            <div style={{ fontSize: 'var(--fs-micro)', fontWeight: 800, letterSpacing: 'var(--ls-caps)', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 'var(--sp-2)' }}>Mise en place</div>
+            <div style={{ display: 'flex', gap: 'var(--sp-2)', marginBottom: 'var(--sp-5)' }}>
+              {SETUP_OPTIONS.map(s => (
+                <button key={s} onClick={() => setSetupSeconds(s)}
+                  style={{ flex: 1, minHeight: 44, borderRadius: 'var(--r-sm)', fontSize: 'var(--fs-body)', fontWeight: 700, cursor: 'pointer', border: `1px solid ${setupSeconds === s ? 'var(--crimson)' : 'var(--border-plus)'}`, background: setupSeconds === s ? 'var(--crimson-ghost)' : 'transparent', color: setupSeconds === s ? 'var(--crimson-bright)' : 'var(--text-dim)' }}>
+                  {s === 0 ? 'aucune' : `${s}s`}
+                </button>
+              ))}
+            </div>
+
+            {workout.blocks.filter(b => workout.movements.filter(m => m.blockId === b.id).length > 1).length > 0 && (
+              <>
+                <div style={{ fontSize: 'var(--fs-micro)', fontWeight: 800, letterSpacing: 'var(--ls-caps)', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 'var(--sp-2)' }}>Circuits</div>
+                {workout.blocks.filter(b => workout.movements.filter(m => m.blockId === b.id).length > 1).map(b => (
+                  <button key={b.id} onClick={() => toggleSuperset(b.id)}
+                    style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', minHeight: 44, marginBottom: 'var(--sp-2)', padding: '0 var(--sp-3)', borderRadius: 'var(--r-sm)', cursor: 'pointer', border: `1px solid ${supersetBlocs.has(b.id) ? 'var(--crimson)' : 'var(--border-plus)'}`, background: supersetBlocs.has(b.id) ? 'var(--crimson-ghost)' : 'transparent', color: supersetBlocs.has(b.id) ? 'var(--crimson-bright)' : 'var(--text-dim)', fontSize: 'var(--fs-body)', fontWeight: 700 }}>
+                    <span>Bloc {workout.blocks.indexOf(b) + 1}{b.bioType ? ` · ${b.bioType}` : ''}</span>
+                    <span>{supersetBlocs.has(b.id) ? 'en circuit' : 'une à une'}</span>
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        </Modal>
       )}
 
-      {/* ── Bottom bar ── */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--bg-elevated)', borderTop: '1px solid var(--border)', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'center' }}>
-        {showFinish ? (
-          <>
-            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Note optionnelle…"
-              style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9, padding: '10px 14px', color: '#fff', fontSize: 13, outline: 'none' }} />
-            <button onClick={handleFinish} disabled={finishing}
-              style={{ padding: '10px 20px', borderRadius: 9, background: 'var(--green)', border: 'none', color: 'var(--ink)', fontSize: 13, fontWeight: 800, cursor: finishing ? 'wait' : 'pointer', flexShrink: 0 }}>
-              {finishing ? '…' : 'Enregistrer'}
-            </button>
-            <button onClick={() => setShowFinish(false)}
-              style={{ padding: '10px 14px', borderRadius: 9, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)', fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>
-              ✕
-            </button>
-          </>
-        ) : (
-          <>
-            <div style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
-              {allDone ? '🎉 Toutes les séries terminées !' : `${pct}% · ${doneSets}/${totalSets()} séries`}
+      {/* ── Sortie en enregistrant ──────────────────────────────────────── */}
+      {showFinish && (
+        <Modal onClose={() => setShowFinish(false)} maxWidth={420}>
+          <div style={{ padding: 'var(--sp-5)' }}>
+            <div className="display" style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, marginBottom: 'var(--sp-2)' }}>Enregistrer et sortir ?</div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 'var(--sp-4)' }}>
+              {doneSets} série{doneSets > 1 ? 's' : ''} sur {totalSets()} · {fmt(elapsed)}
+              {allDone ? ' · séance complète.' : ` · ${pct}% de la séance.`}
             </div>
-            {/* Mousse — « l'accompli » dans la palette. L'or était réservé à la
-                marque et à la progression, et le terracotta sert déjà au bouton
-                de série suivante juste au-dessus : deux actions terracotta
-                simultanées se seraient disputé le regard en pleine séance. */}
-            <button onClick={() => setShowFinish(true)}
-              style={{
-                padding: '11px 24px', borderRadius: 'var(--r-sm)', fontSize: 14, fontWeight: 800, cursor: 'pointer', flexShrink: 0,
-                background: allDone ? 'var(--green)' : 'var(--cypress-ghost)',
-                border: `1px solid ${allDone ? 'transparent' : 'var(--cypress-light)'}`,
-                color: allDone ? 'var(--ink)' : 'var(--cypress-light)',
-                boxShadow: allDone ? '0 0 20px rgba(134,160,107,0.35)' : 'none',
-                transition: 'all var(--t-med) var(--ease)',
-              }}>
-              {allDone ? '🏁 Terminer la séance' : 'Terminer'}
-            </button>
-          </>
-        )}
-      </div>
+            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Note optionnelle…"
+              style={{ ...fieldStyle, width: '100%', textAlign: 'left', padding: '11px var(--sp-3)', marginBottom: 'var(--sp-4)' }} />
+            <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
+              <button onClick={() => setShowFinish(false)}
+                style={{ minHeight: 48, padding: '0 var(--sp-4)', borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px solid var(--border-plus)', color: 'var(--text-muted)', fontSize: 'var(--fs-body)', fontWeight: 700, cursor: 'pointer' }}>
+                Annuler
+              </button>
+              <button onClick={handleFinish} disabled={finishing}
+                style={{ flex: 1, minHeight: 48, borderRadius: 'var(--r-sm)', background: 'var(--green)', border: 'none', color: 'var(--ink)', fontSize: 'var(--fs-body)', fontWeight: 800, cursor: finishing ? 'wait' : 'pointer' }}>
+                {finishing ? '…' : 'Enregistrer la séance'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
     </div>
   )
