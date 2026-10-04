@@ -13,7 +13,8 @@ async function authorize(id: string, wmId: string) {
   return null
 }
 
-// PATCH: update movement id and/or sets/reps/duration
+// PATCH: met à jour le mouvement référencé, ses séries/répétitions/durée/repos,
+// son ordre, et son rattachement à un bloc (blockId)
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; wmId: string }> }
@@ -22,7 +23,7 @@ export async function PATCH(
   const denied = await authorize(id, wmId)
   if (denied) return denied
   const body = await req.json()
-  const { newMovementId, sets, reps, duration, rest, order } = body
+  const { newMovementId, sets, reps, duration, rest, order, blockId } = body
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: Record<string, any> = {}
@@ -32,6 +33,20 @@ export async function PATCH(
   if (duration !== undefined) data.duration = duration === '' || duration === null ? null : Number(duration)
   if (rest !== undefined) data.rest = rest === '' || rest === null ? null : Number(rest)
   if (order !== undefined) data.order = Number(order)
+
+  // Rattachement à un bloc. Comme pour les autres champs, « blockId » absent du
+  // corps ne touche à rien ; présent à null (ou chaîne vide) détache le
+  // mouvement de son bloc. Validation reprise de
+  // POST /api/workouts/[id]/movements : un bloc d'un AUTRE workout est refusé,
+  // sinon un rattachement croisé corromprait deux séances d'un coup.
+  if (blockId !== undefined) {
+    const nouveauBlockId = blockId === '' || blockId === null ? null : String(blockId)
+    if (nouveauBlockId !== null) {
+      const block = await prisma.workoutBlock.findUnique({ where: { id: nouveauBlockId }, select: { workoutId: true } })
+      if (!block || block.workoutId !== id) return NextResponse.json({ error: 'Bloc introuvable' }, { status: 404 })
+    }
+    data.blockId = nouveauBlockId
+  }
 
   const updated = await prisma.workoutMovement.update({
     where: { id: wmId },

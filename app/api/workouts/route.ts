@@ -110,6 +110,27 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/** Un bloc tel qu'il arrive dans le corps de la requête POST. */
+type BlocEntrant = {
+  order?: number
+  bioType?: string | null
+  instructions?: string | null
+  restAfter?: number | null
+  superset?: boolean
+}
+
+/** Un mouvement tel qu'il arrive dans le corps de la requête POST. */
+type MouvementEntrant = {
+  movementId: string
+  order: number
+  sets?: number
+  reps?: string
+  rest?: number
+  duration?: number | null
+  /** Position du bloc dans le tableau « blocks ». Absent = mouvement hors bloc. */
+  blockIndex?: number | null
+}
+
 export async function POST(req: NextRequest) {
   try {
     const currentUserId = await getCurrentUserId()
@@ -119,6 +140,78 @@ export async function POST(req: NextRequest) {
     }
     const body = await req.json()
     const { name, duration, notes, description, movements, templateId, blocks, blockRest } = body
+
+    // ── Garde-fous sur la liaison mouvement ↔ bloc ──────────────────────────
+    // C'est ici que la liaison s'est perdue : `blockId` retombait
+    // silencieusement sur null dès que `blockIndex` manquait, ou qu'il ne
+    // désignait aucun bloc créé. Résultat, tous les mouvements de la base sont
+    // orphelins, aucun bloc superset ne contient de mouvement et aucun circuit
+    // ne se déclenche — sans un mot d'erreur, ni à l'import ni dans
+    // l'application. On refuse désormais la requête plutôt que de la perdre.
+    if (!Array.isArray(movements)) {
+      return NextResponse.json(
+        { error: 'Requête invalide : « movements » doit être un tableau de mouvements.' },
+        { status: 400 },
+      )
+    }
+    if (blocks != null && !Array.isArray(blocks)) {
+      return NextResponse.json(
+        { error: 'Requête invalide : « blocks » doit être un tableau de blocs.' },
+        { status: 400 },
+      )
+    }
+    const blocsRecus = (blocks ?? []) as BlocEntrant[]
+    const mouvementsRecus = movements as MouvementEntrant[]
+
+    // « blockIndex » désigne la POSITION du bloc dans le tableau « blocks » :
+    // c'est ce qu'envoie app/(app)/generator/page.tsx, qui pose order: i. Si
+    // les `order` cessent de suivre les positions, les deux lectures divergent
+    // et un mouvement se retrouverait rattaché au mauvais bloc : on arrête.
+    const positionOrdreIncoherent = blocsRecus.findIndex((b, i) => b.order != null && Number(b.order) !== i)
+    if (positionOrdreIncoherent !== -1) {
+      return NextResponse.json(
+        {
+          error: `Requête invalide : le bloc en position ${positionOrdreIncoherent} déclare order=${blocsRecus[positionOrdreIncoherent].order}. « blockIndex » est résolu par la position dans « blocks » : chaque bloc doit porter un order égal à sa position (0, 1, 2…).`,
+        },
+        { status: 400 },
+      )
+    }
+
+    // Index réclamé par chaque mouvement, normalisé : null = hors bloc,
+    // NaN = valeur fournie mais inexploitable (chaîne vide, objet, décimale…).
+    const indexDemandes = mouvementsRecus.map((m) => {
+      if (m.blockIndex == null) return null
+      const index = Number(m.blockIndex)
+      return Number.isInteger(index) ? index : NaN
+    })
+
+    const positionHorsBornes = indexDemandes.findIndex(
+      (index) => index !== null && (Number.isNaN(index) || index < 0 || index >= blocsRecus.length),
+    )
+    if (positionHorsBornes !== -1) {
+      const valeur = mouvementsRecus[positionHorsBornes].blockIndex
+      return NextResponse.json(
+        {
+          error: blocsRecus.length === 0
+            ? `Requête invalide : le mouvement en position ${positionHorsBornes} renvoie à blockIndex=${valeur}, alors que la requête ne déclare aucun bloc. Envoie les blocs correspondants dans « blocks », ou retire « blockIndex » pour une séance à plat.`
+            : `Requête invalide : le mouvement en position ${positionHorsBornes} renvoie à blockIndex=${valeur}, or la requête déclare ${blocsRecus.length} bloc(s). « blockIndex » doit être un entier compris entre 0 et ${blocsRecus.length - 1}, ou être absent pour un mouvement hors bloc.`,
+        },
+        { status: 400 },
+      )
+    }
+
+    // La signature exacte du bug : des blocs, des mouvements, et pas un seul
+    // « blockIndex ». Restent légitimes la séance à plat (aucun bloc déclaré,
+    // tous les mouvements sans blockIndex) et la séance dont les blocs sont
+    // encore vides (aucun mouvement du tout) : le générateur produit les deux.
+    if (blocsRecus.length > 0 && mouvementsRecus.length > 0 && indexDemandes.every((index) => index === null)) {
+      return NextResponse.json(
+        {
+          error: `Requête invalide : la séance déclare ${blocsRecus.length} bloc(s) et ${mouvementsRecus.length} mouvement(s), mais aucun mouvement ne porte de « blockIndex » — la liaison mouvement ↔ bloc serait perdue et aucun circuit ne se déclencherait. Renseigne « blockIndex » (la position du bloc dans « blocks », à partir de 0) sur chaque mouvement, ou n'envoie aucun bloc pour une séance à plat.`,
+        },
+        { status: 400 },
+      )
+    }
 
     const workout = await prisma.$transaction(async (txArg) => {
       // Contournement d'un bug de typage Prisma 7 : le type généré du client de
@@ -138,27 +231,35 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      const blockIdMap: Record<number, string> = {}
-      if (blocks && blocks.length > 0) {
-        for (const b of blocks as { order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean }[]) {
-          const block = await tx.workoutBlock.create({
-            data: { workoutId: w.id, order: b.order, bioType: b.bioType || null, instructions: b.instructions || null, restAfter: b.restAfter != null ? Number(b.restAfter) : null, superset: !!b.superset },
-          })
-          blockIdMap[b.order] = block.id
-        }
+      // Indexé par position dans « blocks », comme « blockIndex ».
+      const idsBlocs: string[] = []
+      for (const [position, b] of blocsRecus.entries()) {
+        const block = await tx.workoutBlock.create({
+          data: { workoutId: w.id, order: b.order != null ? Number(b.order) : position, bioType: b.bioType || null, instructions: b.instructions || null, restAfter: b.restAfter != null ? Number(b.restAfter) : null, superset: !!b.superset },
+        })
+        idsBlocs[position] = block.id
       }
 
       await tx.workoutMovement.createMany({
-        data: (movements as { movementId: string; order: number; sets?: number; reps?: string; rest?: number; duration?: number | null; blockIndex?: number }[]).map((m) => ({
-          workoutId: w.id,
-          movementId: m.movementId,
-          order: m.order,
-          sets: m.sets || null,
-          reps: m.reps || null,
-          rest: m.rest != null ? Number(m.rest) : null,
-          duration: m.duration != null ? Number(m.duration) : null,
-          blockId: m.blockIndex !== undefined ? (blockIdMap[m.blockIndex] ?? null) : null,
-        })),
+        data: mouvementsRecus.map((m, position) => {
+          const index = indexDemandes[position]
+          const blockId = index === null ? null : (idsBlocs[index] ?? null)
+          if (index !== null && !blockId) {
+            // Invariant : les bornes sont validées avant la transaction. Si on
+            // arrive ici, mieux vaut annuler que d'écrire un orphelin de plus.
+            throw new Error(`Bloc introuvable pour le mouvement en position ${position} (blockIndex=${index}) : la liaison mouvement ↔ bloc n'a pas pu être écrite.`)
+          }
+          return {
+            workoutId: w.id,
+            movementId: m.movementId,
+            order: m.order,
+            sets: m.sets || null,
+            reps: m.reps || null,
+            rest: m.rest != null ? Number(m.rest) : null,
+            duration: m.duration != null ? Number(m.duration) : null,
+            blockId,
+          }
+        }),
       })
 
       return w

@@ -92,6 +92,28 @@ const normalizePerfLog = (raw: unknown): Record<string, SetEntry[]> => {
   return out
 }
 
+// Tour courant d'un bloc en circuit : le plus petit nombre de séries déjà
+// faites, mais SEULEMENT parmi les mouvements qui n'ont pas encore atteint leur
+// cible. Si tous y sont, le circuit est terminé et on retombe sur le minimum du
+// bloc, faute de mieux à ouvrir.
+//
+// Le minimum brut sur TOUS les mouvements rendait la séance impossible à
+// terminer : dès qu'un mouvement atteignait sa cible, il épinglait le minimum
+// pour toujours. Le tour n'avançait plus, la porte d'ordre de `handleSet`
+// refusait tous les autres mouvements du bloc, et « Terminer la séance »
+// n'apparaissait jamais. Il suffisait de max(séries) > min(séries) + 1 dans le
+// bloc — un circuit où une station tourne en 1 série et une autre en 3.
+// `roundDone` avait déjà cette échappatoire (`d >= cible`) : c'est l'asymétrie
+// entre les deux calculs qui verrouillait tout.
+const tourCourantCircuit = (blocMovs: WM[], etatDone: Record<string, number>): number => {
+  const enCours = blocMovs.filter(m => (etatDone[m.id] ?? 0) < (m.sets ?? 3))
+  const base = enCours.length > 0 ? enCours : blocMovs
+  // Math.min() sans argument vaut Infinity : un bloc vide ne doit pas ouvrir
+  // une porte sur un tour imaginaire.
+  if (base.length === 0) return 0
+  return Math.min(...base.map(m => etatDone[m.id] ?? 0))
+}
+
 export default function ActivePage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
@@ -498,7 +520,7 @@ export default function ActivePage() {
       const restDur = (wm.rest && wm.rest >= 10) ? wm.rest : defaultRest
       if (wm.blockId && supersetBlocs.has(wm.blockId)) {
         const blocMovs = workout!.movements.filter(m => m.blockId === wm.blockId)
-        const completedRounds = Math.min(...blocMovs.map(m => doneRef.current[m.id] ?? 0))
+        const completedRounds = tourCourantCircuit(blocMovs, doneRef.current)
         const updatedDone = { ...doneRef.current, [wm.id]: next }
         setDone(() => updatedDone)
         const newRound = completedRounds + 1
@@ -564,7 +586,7 @@ export default function ActivePage() {
       const incomplete = movs.filter(m => (done[m.id] ?? 0) < (m.sets ?? 3))
       if (incomplete.length === 0) continue
       if (block && supersetBlocs.has(block.id)) {
-        const completedRounds = Math.min(...movs.map(m => done[m.id] ?? 0))
+        const completedRounds = tourCourantCircuit(movs, done)
         return incomplete.find(m => (done[m.id] ?? 0) === completedRounds) ?? incomplete[0]
       }
       return incomplete[0]
@@ -604,7 +626,7 @@ export default function ActivePage() {
 
     if (wm.blockId && supersetBlocs.has(wm.blockId)) {
       const blocMovs = workout!.movements.filter(m => m.blockId === wm.blockId)
-      const completedRounds = Math.min(...blocMovs.map(m => done[m.id] ?? 0))
+      const completedRounds = tourCourantCircuit(blocMovs, done)
       // Enforce order: only the active movement in the current round can be clicked
       if (current > completedRounds) return
       const next = current + 1
@@ -648,7 +670,10 @@ export default function ActivePage() {
     if (rest) { setRest(null); return }
     const i = flatMovs.findIndex(m => m.id === currentWm?.id)
     const next = i >= 0 ? flatMovs[i + 1] : flatMovs[0]
-    if (next) setCursorWmId(next.id)
+    // Au bas du rail il n'y a pas de suivant. Ne rien faire y transformait un
+    // etat dont on pouvait sortir en etat fige : le seul recours contre un
+    // bouton muet etait lui-meme muet. On rend la main a la deduction.
+    setCursorWmId(next ? next.id : null)
   }
 
   // « Precedent » recule sans confirmation et remet a zero le mouvement quitte :
@@ -677,11 +702,28 @@ export default function ActivePage() {
 
   // Le curseur se relache des que le mouvement qu'il designe est termine, sinon
   // « Valider la serie » resterait pose sur un mouvement complet.
+  //
+  // ET des que la porte d'ordre du circuit le refuserait. C'est le SECOND
+  // declencheur de l'impasse, et il ne doit rien a l'inegalite des series : il
+  // suffit que le curseur soit pose a la main sur une station en avance sur le
+  // tour, ce que font « Suivant » (dont c'est le role), « Precedent » et le
+  // rail. handleSet refusait alors en silence, le gros bouton ne faisait plus
+  // rien et « Terminer la seance » n'arrivait jamais — dans un circuit a series
+  // HOMOGENES, c'est-a-dire le cas ordinaire. Quatre appuis suffisaient.
   useEffect(() => {
     if (!cursorWmId || !workout) return
     const wm = workout.movements.find(m => m.id === cursorWmId)
-    if (!wm || (done[wm.id] ?? 0) >= (wm.sets ?? 3)) setCursorWmId(null)
-  }, [cursorWmId, done, workout])
+    if (!wm) { setCursorWmId(null); return }
+    const fait = done[wm.id] ?? 0
+    if (fait >= (wm.sets ?? 3)) { setCursorWmId(null); return }
+    if (wm.blockId && supersetBlocs.has(wm.blockId)) {
+      const blocMovs = workout.movements.filter(m => m.blockId === wm.blockId)
+      // Une station au tour courant reste parfaitement selectionnable : seule
+      // celle que la porte refuserait est rendue a la deduction. Le saut
+      // volontaire n'est donc pas perdu.
+      if (fait > tourCourantCircuit(blocMovs, done)) setCursorWmId(null)
+    }
+  }, [cursorWmId, done, workout, supersetBlocs])
 
   // Fin de circuit : on le detecte en QUITTANT le bloc, pas en y etant — une
   // fois le circuit complet, la deduction a deja porte le curseur ailleurs.
@@ -871,7 +913,12 @@ export default function ActivePage() {
   // Ligne d'information de la zone D : une seule ligne, toujours presente, pour
   // que la hauteur de la zone ne bouge pas d'un etat a l'autre.
   const infoLine = rest
-    ? `Repos · puis ${(workout.movements.find(m => m.id === rest.wmId)?.movement.name) ?? '—'}`
+    // On nomme la station sur laquelle l'ecran REPRENDRA, pas celle qu'on vient
+    // de quitter. Hors circuit les deux coincident — on enchaine les series du
+    // meme mouvement. En circuit non : le repos part justement quand le tour est
+    // boucle, donc apres la DERNIERE station, et l'ecran repart sur la PREMIERE.
+    // La ligne annoncait l'exercice qu'on venait de finir.
+    ? `Repos · puis ${currentWm?.movement.name ?? '—'}`
     : setup
       ? 'Mise en place · tiens la position'
       : nextWm
