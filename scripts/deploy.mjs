@@ -98,9 +98,35 @@ const dirty = changes.map(l => ({ new: l.startsWith('??'), path: l.slice(3).trim
 const pending = sh(`git log origin/${BRANCH}..HEAD --oneline`).split('\n').filter(l => l.trim())
 
 if (dirty.length === 0 && pending.length === 0) {
-  ok('Tout est déjà déployé — aucune modification locale, aucun commit en attente.')
+  ok('Rien à committer — aucune modification locale, aucun commit en attente.')
+
+  // Git à jour ne veut PAS dire production à jour : le webhook Vercel peut
+  // ne pas avoir déclenché sur le dernier push, et le site reste alors en
+  // arrière sans que rien ne le dise. C'est arrivé le 4 octobre 2026 : le
+  // commit était sur GitHub, aucun build ne partait, et la seule comparaison
+  // faite ici — HEAD contre origin — répondait « tout est déjà déployé ».
+  // On interroge donc la production elle-même avant de conclure.
+  const dateHead = new Date(sh(`git log -1 --format=%cI ${BRANCH}`).trim()).getTime()
+  let dateProd = NaN
+  try {
+    const vu = shAll(`npx vercel inspect ${PROD_ALIAS}`)
+    const cree = vu.match(/created\s+(.+?)\s*\[/)?.[1]
+    if (cree) dateProd = new Date(cree).getTime()
+  } catch { /* pas de réseau ou pas de jeton : on ne bloque pas pour ça */ }
+
+  if (Number.isFinite(dateProd) && Number.isFinite(dateHead) && dateProd < dateHead - 60_000) {
+    const retard = Math.round((dateHead - dateProd) / 60_000)
+    die(
+      `La production a du retard : son déploiement précède le dernier commit de ${retard} min.`,
+      'Git est pourtant à jour, donc il n\'y a rien à pousser : c\'est le build\n' +
+      'Vercel qui n\'est jamais parti. Relance-le depuis l\'interface Vercel\n' +
+      `(Deployments → Redeploy sur la branche ${BRANCH}), ou vérifie l\'intégration\n` +
+      'GitHub du projet. Le code local, lui, est bon.'
+    )
+  }
+
   if (!checkOnly) {
-    say(`\n${C.g}Rien à faire.${C.x} ${C.d}https://${PROD_ALIAS} est à jour.${C.x}`)
+    say(`\n${C.g}Rien à faire.${C.x} ${C.d}https://${PROD_ALIAS} sert bien ce commit.${C.x}`)
     process.exit(0)
   }
   warn('--check-only : la barrière qualité est tout de même exécutée.')
