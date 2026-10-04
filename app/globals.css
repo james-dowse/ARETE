@@ -836,40 +836,37 @@ h1,
       exactement son rapport de clarte avec le sol (1,10 — 1,11) aux trois
       crans : ce qui porte la lecture ne bouge pas.
 
-   4. LE SOL NE CHAUFFE PAS. SEULES LES CARTOUCHES CHAUFFENT. --bg-canvas et
-      --bg-primary sont identiques aux trois crans : ce sont les deux plus
-      grandes surfaces de l’application, et ce sont elles qui faisaient
-      basculer un ecran entier dans le rouge. La couleur vit desormais dans
-      les plaques et les creux — petits, cernes de gris, et c’est la qu’est
-      le contenu qu’on regarde. C’est aussi l’image juste : la piece chaude
-      sur une enclume qui reste froide.
+   4. RIEN NE SE REMPLIT DE COULEUR. SEUL LE TRAIT EN PORTE. Ni --bg-canvas,
+      ni --bg-primary, ni --bg-card, ni --bg-elevated ne changent d’un cran a
+      l’autre : les quatre surfaces sont identiques aux trois crans. Un cran
+      ne declare QUE --border-cartouche, le bord des cartouches.
 
-      Les deux variables qui chauffent sont massivement consommees — 112
-      usages de --bg-card et 142 de --bg-elevated dans le TSX, soit 254
-      surfaces. --bg-card-solid, lui, n’est lu par AUCUN fichier : ne le
-      remets pas dans les crans, c’est une variable morte.
+      On y est venu en trois temps, chacun corrige par l’usage :
+        • teinter le SOL — un ecran entier basculait dans le rouge ;
+        • teinter le REMPLISSAGE des cartouches — moins violent, mais sur
+          254 surfaces (112 usages de --bg-card, 142 de --bg-elevated) ca
+          reste une grande aire coloree : « trop jaune » sur progression,
+          « trop sature rouge » sur le generateur et les seances ;
+        • ne teinter que le TRAIT. Un liseré d’un pixel, c’est une aire
+          negligeable pour une lecture immediate — l’oeil suit les contours.
+      La regle qui en sort : la couleur d’un cran a droit au CONTOUR, jamais
+      a une AIRE. Si tu es tente de reteinter un fond, relis cette liste.
 
-   5. LE SEUIL DE 2,3 NE S’APPLIQUE PAS ICI, et l’avoir cru a coute deux
-      deploiements. Il vaut pour une comparaison SIMULTANEE, deux aplats
-      cote a cote. Dans l’application on compare SUCCESSIVEMENT : on
-      navigue, et la memoire des couleurs est mauvaise — il faut bien plus
-      d’ecart pour qu’une difference survive au trajet entre deux ecrans.
-      D’ou le symptome qui a fait tourner en rond : une maquette cote a
-      cote rend la gradation evidente alors que l’application, au meme
-      dosage, ne montre rien. UNE MAQUETTE NE PROUVE RIEN SUR CE POINT.
+      --bg-card-solid n’est lu par AUCUN fichier du depot : ne le remets pas
+      dans les crans, c’est une variable morte.
 
-      Dosage retenu : ecart percu de 7,3 a 8,4 sur les cartouches. Une
-      version a 3,3 — 5,5 etait invisible en usage reel. Une version a
-      8,0 — 9,6 a ete jugee trop marquee, mais elle teintait AUSSI le sol :
-      le pari fait ici est que la plainte portait sur le fond et non sur
-      les cartes, ce que l’utilisateur a lui-meme formule.
+   5. LES DEUX LISERES SONT CALIBRES A FORCE EGALE, pas a alpha egal. L’or
+      est plus clair que le terracotta : a 0,55 contre 0,60 il rendait quand
+      meme 3,20:1 sur la cartouche contre 2,47:1 pour la braise, et c’est ce
+      desequilibre qui faisait lire progression comme plus colore que le
+      reste. Les alphas retenus — 0,48 et 0,35 — donnent 2,0:1 sur la
+      cartouche et 2,19:1 sur le sol POUR LES DEUX. Si tu touches a l’un,
+      recalcule l’autre : viser le meme nombre, pas le meme alpha.
 
-      Contraintes verifiees a ce dosage : clarte identique sur chaque
-      surface (la carte garde son contraste de 1,10 sur le sol aux trois
-      crans), AA tenu partout (l’etiquette en capitales, le cas le plus
-      serre, reste a 4,69 — 4,71), et aucune couleur hors gamut sRGB.
-      L’or au cran chaud est a 11,7 de saturation pour un plafond de 13,7
-      a cette clarte : c’est la marge qu’il reste si on veut monter.
+      Le liseré reste sous le bouton primaire, qui doit continuer a gagner :
+      #B4552D est a 4,13:1 sur le sol et 54 de saturation, le liseré le plus
+      fort a 2,19:1 et 31. La charte dit terracotta = l’action ; un contour
+      terracotta partout la diluerait s’il rivalisait avec le bouton.
 
    Et aucune couleur de premier plan ne bouge : terracotta, or, mousse et les
    trois niveaux de texte gardent leur valeur exacte aux trois crans. C’est ce
@@ -877,28 +874,27 @@ h1,
    axe ne tiedit que la surface sous eux.
    ═════════════════════════════════════════════════════════════════════ */
 
-/* La braise. Le froid, lui, n’a pas de bloc : il EST l’apparence actuelle. */
+/* Les deux crans ne declarent plus QU’UNE SEULE chose. Le froid, lui, n’a pas
+   de bloc du tout : il EST l’apparence de base. */
+
+/* La braise. */
 html[data-temp="forge"]:not([data-theme="light"]) {
-  --bg-card:          #1C110F;
-  --bg-elevated:      #221715;
-  --border-cartouche: rgba(201,101,56,0.60);
+  --border-cartouche: rgba(201,101,56,0.48);
 }
 
-/* Le métal à température. */
+/* Le métal à température. Alpha plus bas que la braise à dessein : l’or est
+   plus clair que le terracotta, donc à alpha égal il frappait plus fort. */
 html[data-temp="or"]:not([data-theme="light"]) {
-  --bg-card:          #171408;
-  --bg-elevated:      #1C1910;
-  --border-cartouche: rgba(201,165,53,0.55);
+  --border-cartouche: rgba(201,165,53,0.35);
 }
 
 /* Le passage se fait entre deux ecrans, jamais sous les yeux : une teinte qui
-   derive pendant qu’on regarde se lit comme un defaut d’affichage. Depuis que
-   le sol ne chauffe plus, c’est la carte qu’il faut adoucir, pas le fond. */
+   derive pendant qu’on regarde se lit comme un defaut d’affichage. Seul le
+   trait change desormais, donc seul border-color est anime. */
 @media (prefers-reduced-motion: no-preference) {
   html[data-temp] .card,
   html[data-temp] .card-hero,
   html[data-temp] .panel {
-    transition: background-color 380ms cubic-bezier(0.4, 0, 0.2, 1),
-                border-color 380ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: border-color 380ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
