@@ -52,3 +52,11 @@ prisma/*.db-wal
 REDESIGN_BRIEF.md
 REPAIR-GENERATEUR.md
 .env*.local
+
+# Toute copie de base, quel que soit le suffixe. La regle « prisma/*.db » ne
+# couvrait pas « dev.db.bak-… » : une sauvegarde faite a la main s'est donc
+# retrouvee commitee le 04/10/2026, avec les adresses des trois comptes.
+prisma/*.db*
+*.sqlite
+*.sqlite3
+*.db.bak*
