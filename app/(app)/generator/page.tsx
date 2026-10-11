@@ -64,7 +64,24 @@ export default function GeneratorPage() {
   const [templates, setTemplates] = useState<{ id: string; name: string; blocks: Block[] }[]>([])
   const [loadingTemplates, setLoadingTemplates] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
+  // Deux messages distincts, chacun à côté de son contrôle : l'un pour la
+  // liste des templates, l'autre pour l'enregistrement de la structure.
+  const [templatesError, setTemplatesError] = useState<string | null>(null)
+  const [saveTemplateError, setSaveTemplateError] = useState<string | null>(null)
   const [claimingTemplates, setClaimingTemplates] = useState(false)
+
+  // Les routes de récupération sont réservées à l’administrateur : sans
+  // cette garde, deux comptes sur trois voient un bouton qui ne peut que
+  // rendre une erreur. /api/me est mis en cache 120 s par le navigateur.
+  const [estAdmin, setEstAdmin] = useState(false)
+  useEffect(() => {
+    let vivant = true
+    fetch('/api/me')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (vivant) setEstAdmin(!!d?.isAdmin) })
+      .catch(() => {})
+    return () => { vivant = false }
+  }, [])
   const [videoOnly, setVideoOnly] = useState(false)
 
   // Track which block cards are collapsed
@@ -239,6 +256,12 @@ export default function GeneratorPage() {
           videoOnly,
         }),
       })
+      if (!res.ok) {
+        setInfoGeneration(res.status === 401
+          ? 'Session expirée — reconnecte-toi pour générer une séance.'
+          : 'La génération a échoué. Réessaie dans un instant.')
+        return
+      }
       const data = await res.json()
       const newMov = data.movements?.[0]
       if (newMov) {
@@ -295,6 +318,12 @@ export default function GeneratorPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blocks: blocks.map(b => ({ bioTypes: b.bioTypes, complexities: b.complexities, equipments: b.equipments, count: b.count })), videoOnly }),
       })
+      if (!res.ok) {
+        setInfoGeneration(res.status === 401
+          ? 'Session expirée — reconnecte-toi pour générer une séance.'
+          : 'La génération a échoué. Réessaie dans un instant.')
+        return
+      }
       const data = await res.json()
       // Mode sur mesure : les filtres viennent de l'utilisateur, on les respecte tels
       // quels — mais on l'avertit si la bibliothèque n'a pas pu servir son quota.
@@ -413,32 +442,65 @@ export default function GeneratorPage() {
     }
   }
 
+  // Même forme que saveWorkout plus haut. Avant, « Enregistrer le modèle »
+  // refermait sa fenêtre et effaçait le nom saisi sans rien vérifier : la
+  // structure n'était pas enregistrée et il fallait tout resaisir.
   const saveTemplate = async () => {
     if (!templateName.trim()) return
     setSavingTemplate(true)
+    setSaveTemplateError(null)
     try {
-      await fetch('/api/templates', {
+      const res = await fetch('/api/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: templateName, blocks }),
       })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setSaveTemplateError(data?.error ?? `Erreur ${res.status}`)
+        return
+      }
       setShowSaveTemplate(false)
       setTemplateName('')
+    } catch (err) {
+      setSaveTemplateError(err instanceof Error ? err.message : 'Erreur réseau')
     } finally {
       setSavingTemplate(false)
     }
   }
 
+  // `data.map` sans contrôle jetait sur une réponse d'erreur (un objet, pas un
+  // tableau) : l'exception remontait dans le gestionnaire de clic et le bouton
+  // « Mes templates » ne faisait littéralement rien de visible.
   const loadTemplates = async () => {
     setLoadingTemplates(true)
+    setTemplatesError(null)
     try {
       const res = await fetch('/api/templates')
-      const data = await res.json()
-      setTemplates(data.map((t: { id: string; name: string; blocks: { bioType: string | null; complexity: string | null; count: number; order: number }[] }) => ({
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !Array.isArray(data)) {
+        setTemplatesError(data?.error ?? (res.ok ? 'Réponse inattendue du serveur' : `Erreur ${res.status}`))
+        return
+      }
+      // L'annotation disait `bioType`/`complexity` au singulier alors que la
+      // route renvoie DÉJÀ les tableaux désérialisés (voir api/templates :
+      // parseArr). Le spread les portait à l'exécution, mais le type était faux
+      // — il restait invisible tant que `data` était `any`.
+      type BlocServi = {
+        bioTypes: string[]; complexities: string[]; equipments: string[]
+        count: number; order: number
+      }
+      setTemplates(data.map((t: { id: string; name: string; blocks: BlocServi[] }) => ({
         ...t,
-        blocks: t.blocks.map((b: { bioType: string | null; complexity: string | null; count: number; order: number }) => ({ ...b, id: uid(), instructions: '', sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST, duration: null })),
+        blocks: t.blocks.map((b: BlocServi) => ({ ...b, id: uid(), instructions: '', sets: DEFAULT_SETS, reps: DEFAULT_REPS, rest: DEFAULT_REST, duration: null })),
       })))
       setShowTemplates(true)
+      // La liste s'affiche dans le panneau « Structure personnalisée » alors que
+      // le bouton est dans l'en-tête : panneau replié, le clic n'avait aucun
+      // effet visible.
+      setCollapsedStructure(false)
+    } catch (err) {
+      setTemplatesError(err instanceof Error ? err.message : 'Erreur réseau')
     } finally {
       setLoadingTemplates(false)
     }
@@ -452,11 +514,21 @@ export default function GeneratorPage() {
 
   const claimTemplates = async () => {
     setClaimingTemplates(true)
+    setTemplatesError(null)
     try {
       const res = await fetch('/api/templates/claim', { method: 'POST' })
-      const { claimed } = await res.json()
-      if (claimed > 0) await loadTemplates()
+      const data = await res.json().catch(() => null)
+      // Sans ce contrôle, une erreur serveur donnait `claimed === undefined` et
+      // la fenêtre se refermait : l'utilisateur lisait « aucun template » là où
+      // la récupération n'avait simplement pas abouti.
+      if (!res.ok) {
+        setTemplatesError(data?.error ?? `Erreur ${res.status}`)
+        return
+      }
+      if ((data?.claimed ?? 0) > 0) await loadTemplates()
       else setShowTemplates(false)
+    } catch (err) {
+      setTemplatesError(err instanceof Error ? err.message : 'Erreur réseau')
     } finally {
       setClaimingTemplates(false)
     }
@@ -584,6 +656,12 @@ export default function GeneratorPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blocks: randomBlocks }),
       })
+      if (!res.ok) {
+        setInfoGeneration(res.status === 401
+          ? 'Session expirée — reconnecte-toi pour générer une séance.'
+          : 'La génération a échoué. Réessaie dans un instant.')
+        return
+      }
       const data = await res.json()
       setResultBlocks([...randomBlocks])
       setBlockRests(Array(Math.max(0, randomBlocks.length - 1)).fill(globalBlockRest))
@@ -746,18 +824,26 @@ export default function GeneratorPage() {
               </button>
             </div>
 
+            {/* Hors du replié : « Mes templates » est dans l'en-tête, donc
+                cliquable panneau fermé — l'erreur doit rester visible. */}
+            {templatesError && (
+              <div style={{ padding: '8px 12px', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.25)', borderRadius: 7, fontSize: 12, color: 'var(--red)', marginBottom: 14 }}>
+                ⚠ {templatesError}
+              </div>
+            )}
+
             {!collapsedStructure && (<>
 
             {showTemplates && templates.length === 0 && (
               <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-cartouche)', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Aucun template trouvé pour ce compte.</span>
-                <button
+                {estAdmin && (<button
                   onClick={claimTemplates}
                   disabled={claimingTemplates}
                   style={{ fontSize: 12, color: 'var(--gold)', background: 'none', border: '1px solid rgba(200,165,95,0.35)', borderRadius: 6, padding: '5px 11px', cursor: claimingTemplates ? 'wait' : 'pointer', whiteSpace: 'nowrap', opacity: claimingTemplates ? 0.6 : 1 }}
                 >
                   {claimingTemplates ? '…' : '↩ Récupérer mes anciens templates'}
-                </button>
+                </button>)}
               </div>
             )}
 
@@ -774,7 +860,12 @@ export default function GeneratorPage() {
                     <button
                       onClick={async e => {
                         e.stopPropagation()
-                        await fetch(`/api/templates/${t.id}`, { method: 'DELETE' })
+                        // La ligne disparaissait de la liste même quand la
+                        // suppression échouait : le template revenait au clic
+                        // suivant sur « Mes templates ».
+                        const res = await fetch(`/api/templates/${t.id}`, { method: 'DELETE' }).catch(() => null)
+                        if (!res || !res.ok) { setTemplatesError('Suppression du template impossible — réessaie.'); return }
+                        setTemplatesError(null)
                         setTemplates(prev => prev.filter(x => x.id !== t.id))
                       }}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'var(--text-dim)', flexShrink: 0, lineHeight: 1 }}
@@ -1041,12 +1132,19 @@ export default function GeneratorPage() {
             </div>
 
             {showSaveTemplate && (
-              <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-                <input value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Nom du template" style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }} />
-                <button onClick={saveTemplate} disabled={savingTemplate} className="btn btn-sm btn-secondary">
-                  {savingTemplate ? '...' : 'OK'}
-                </button>
-              </div>
+              <>
+                <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+                  <input value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Nom du template" style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }} />
+                  <button onClick={saveTemplate} disabled={savingTemplate} className="btn btn-sm btn-secondary">
+                    {savingTemplate ? '...' : 'OK'}
+                  </button>
+                </div>
+                {saveTemplateError && (
+                  <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.25)', borderRadius: 7, fontSize: 12, color: 'var(--red)' }}>
+                    ⚠ {saveTemplateError}
+                  </div>
+                )}
+              </>
             )}
             </>)}
             </>)}

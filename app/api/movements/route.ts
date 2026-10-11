@@ -6,6 +6,12 @@ import { isAdmin } from '@/lib/admin'
 import { nextMovementId } from '@/lib/movement-id'
 
 export async function GET(req: NextRequest) {
+  // Le référentiel entier se lisait sans cookie : proxy.ts protège les pages,
+  // pas /api. Le contrôle est posé en tête plutôt que dans la seule branche
+  // « favoris », qui était jusqu'ici la seule à regarder la session.
+  const userId = await getCurrentUserId()
+  if (!userId) return NextResponse.json({ error: 'Authentification requise' }, { status: 401 })
+
   const { searchParams } = new URL(req.url)
   const bioType = searchParams.get('bioType')
   const complexity = searchParams.get('complexity')
@@ -29,8 +35,6 @@ export async function GET(req: NextRequest) {
   if (search) where.name = { contains: search }
 
   if (favoritesOnly) {
-    const userId = await getCurrentUserId()
-    if (!userId) return NextResponse.json([])
     where.favorites = { some: { userId } }
   }
 

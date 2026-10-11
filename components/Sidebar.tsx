@@ -53,6 +53,10 @@ export default function Sidebar() {
   const [searchQ, setSearchQ] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult | null>(null)
   const [searchLoading, setSearchLoading] = useState(false)
+  const [searchEchec, setSearchEchec] = useState(false)
+  // Numéro de la dernière recherche lancée : sert à ignorer les réponses
+  // retardataires d'un terme déjà abandonné.
+  const rechercheSeq = useRef(0)
   const searchRef = useRef<HTMLInputElement>(null)
   const [showNotifs, setShowNotifs] = useState(false)
   const [notifs, setNotifs] = useState<NotifItem[]>([])
@@ -156,13 +160,42 @@ export default function Sidebar() {
   }, [])
 
   // Global search
+  //
+  // La longueur se mesure APRÈS trim : testée sur la chaîne brute, « a » suivi
+  // d'une espace ou deux espaces passaient la garde, partaient au serveur et en
+  // ramenaient un corps incomplet — voir app/api/search/route.ts. Les deux côtés
+  // sont corrigés ; on garde ici la normalisation de la réponse, parce qu'une
+  // sidebar qui plante emmène toute l'application avec elle.
   const doSearch = useCallback(async (q: string) => {
-    if (q.length < 2) { setSearchResults(null); return }
+    const terme = q.trim()
+    // Le numéro s'incrémente même quand on n'interroge pas : effacer la saisie
+    // doit aussi invalider la réponse de la frappe précédente encore en vol.
+    const seq = ++rechercheSeq.current
+    if (terme.length < 2) { setSearchResults(null); setSearchEchec(false); setSearchLoading(false); return }
     setSearchLoading(true)
-    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
-    const data = await res.json()
-    setSearchResults(data)
-    setSearchLoading(false)
+    setSearchEchec(false)
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(terme)}`)
+      if (!res.ok) throw new Error(String(res.status))
+      const data = await res.json()
+      // Réponse d'une frappe précédente arrivée en retard : on la jette, sinon
+      // elle écrase les résultats du terme courant.
+      if (seq !== rechercheSeq.current) return
+      setSearchResults({
+        workouts: data?.workouts ?? [],
+        movements: data?.movements ?? [],
+        users: data?.users ?? [],
+      })
+    } catch {
+      // Sans ce rattrapage, un échec réseau (PWA en salle) laissait
+      // « Recherche… » affiché indéfiniment : il n'y avait ni test de res.ok
+      // ni catch, et le rejet de la promesse n'éteignait jamais le chargement.
+      if (seq !== rechercheSeq.current) return
+      setSearchResults(null)
+      setSearchEchec(true)
+    } finally {
+      if (seq === rechercheSeq.current) setSearchLoading(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -177,6 +210,7 @@ export default function Sidebar() {
         setShowSearch(s => !s)
         setSearchQ('')
         setSearchResults(null)
+        setSearchEchec(false)
         setTimeout(() => searchRef.current?.focus(), 50)
       }
       if (e.key === 'Escape') { setShowSearch(false); setSearchQ('') }
@@ -186,7 +220,7 @@ export default function Sidebar() {
   }, [])
 
   const openSearch = () => {
-    setShowSearch(true); setSearchQ(''); setSearchResults(null)
+    setShowSearch(true); setSearchQ(''); setSearchResults(null); setSearchEchec(false)
     setTimeout(() => searchRef.current?.focus(), 50)
   }
 
@@ -459,6 +493,17 @@ export default function Sidebar() {
             {searchLoading && (
               <div style={{ padding: '20px 16px', fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>Recherche…</div>
             )}
+            {!searchLoading && searchEchec && (
+              <div style={{ padding: '20px 16px', fontSize: 13, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
+                <div style={{ marginBottom: 10 }}>Recherche indisponible. Vérifie ta connexion.</div>
+                <button
+                  onClick={() => doSearch(searchQ)}
+                  style={{ background: 'rgba(200,165,95,0.1)', border: '1px solid var(--gold-border)', borderRadius: 'var(--r-sm)', color: 'var(--gold)', fontSize: 12, fontWeight: 600, padding: '6px 14px', cursor: 'pointer' }}
+                >
+                  Réessayer
+                </button>
+              </div>
+            )}
             {!searchLoading && searchResults && searchResults.workouts.length === 0 && searchResults.movements.length === 0 && searchResults.users.length === 0 && (
               <div style={{ padding: '20px 16px', fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>Aucun résultat</div>
             )}
@@ -530,7 +575,10 @@ export default function Sidebar() {
                 ))}
               </>
             )}
-            {!searchQ && (
+            {/* Invite tant que le terme utile fait moins de deux caractères :
+                une saisie d'espaces seules ne lance rien, l'écran ne doit pas
+                rester vide pour autant. */}
+            {!searchLoading && !searchEchec && searchQ.trim().length < 2 && (
               <div style={{ padding: '18px 16px', fontSize: 13, color: 'rgba(255,255,255,0.25)', textAlign: 'center' }}>Tapez pour rechercher…</div>
             )}
           </div>

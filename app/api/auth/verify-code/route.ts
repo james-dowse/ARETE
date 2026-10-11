@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { SESSION_COOKIE } from '@/lib/session'
+import { SESSION_COOKIE, sessionCookieValue } from '@/lib/session'
 
 // Connexion par code : saisi DANS l'app → pose le cookie dans le bon contexte
 // (indispensable pour les PWA installées iOS/Android, cookies isolés de Safari/Chrome).
@@ -33,7 +33,9 @@ export async function POST(req: NextRequest) {
   })
 
   const res = NextResponse.json({ ok: true })
-  res.cookies.set(SESSION_COOKIE, user.id, {
+  // sessionCookieValue et non user.id : le cookie doit être signé, sinon il
+  // suffit d'y coller l'identifiant de quelqu'un d'autre (voir lib/session.ts).
+  res.cookies.set(SESSION_COOKIE, sessionCookieValue(user.id), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

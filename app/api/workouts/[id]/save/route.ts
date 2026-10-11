@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserId } from '@/lib/session'
+import { requireWorkoutReader } from '@/lib/authz'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 // POST → importer/sauvegarder un workout depuis la communauté
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const currentUserId = await getCurrentUserId()
-  if (!currentUserId) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
-
   const { id: workoutId } = await params
-  const workout = await prisma.workout.findUnique({ where: { id: workoutId } })
+  // Avec la seule session, cette route fabriquait le laissez-passer que
+  // requireWorkoutReader accepte ensuite : POST /save sur une séance privée
+  // d'un autre compte répondait 200, créait le SavedWorkout, et le GET suivant
+  // servait la séance entière AVEC { id, email } de son auteur.
+  const authz = await requireWorkoutReader(workoutId)
+  if (!authz.ok) return authz.response
+  const currentUserId = authz.userId
+
+  // select restreint : on ne lit cette ligne que pour les deux refus ci-dessous.
+  const workout = await prisma.workout.findUnique({ where: { id: workoutId }, select: { userId: true } })
   if (!workout) return NextResponse.json({ error: 'Workout introuvable' }, { status: 404 })
   if (!workout.userId) {
     return NextResponse.json({ error: 'Ce workout ne peut pas être sauvegardé' }, { status: 400 })

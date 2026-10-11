@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireUser } from '@/lib/authz'
+import { requireWorkoutReader } from '@/lib/authz'
 
 export async function POST(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const authz = await requireUser()
+  // requireWorkoutReader et non requireUser : avec la seule session, n'importe
+  // quelle séance privée d'un autre compte se copiait — et la copie naissait
+  // avec userId = le copieur, qui en devenait donc propriétaire.
+  const authz = await requireWorkoutReader(id)
   if (!authz.ok) return authz.response
 
   const original = await prisma.workout.findUnique({

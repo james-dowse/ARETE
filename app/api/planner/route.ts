@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserId } from '@/lib/session'
+import { requireWorkoutReader } from '@/lib/authz'
 
 // GET /api/planner?weekStart=2026-06-09  → entries for that week
 export async function GET(req: NextRequest) {
@@ -53,6 +54,12 @@ export async function POST(req: NextRequest) {
   if (!workoutId || dayOfWeek === undefined || !weekStartStr) {
     return NextResponse.json({ error: 'workoutId, dayOfWeek et weekStart requis' }, { status: 400 })
   }
+
+  // Le workoutId arrivait tel quel dans le WeekPlanEntry, et la réponse 201
+  // renvoie le workout joint : planifier une séance privée d'un autre compte
+  // en divulguait déjà nom, durée, étiquettes et répartition biomécanique.
+  const lecture = await requireWorkoutReader(workoutId)
+  if (!lecture.ok) return lecture.response
 
   const weekStart = new Date(weekStartStr)
 

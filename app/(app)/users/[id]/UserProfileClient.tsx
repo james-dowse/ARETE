@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Clock, UserPlus, UserCheck, Bell, BellOff } from 'lucide-react'
 import { COMPLEXITY_COLORS, effectiveDifficulty } from '@/lib/types'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
+import { useToast } from '@/components/Toast'
 import { readableAccent } from '@/lib/color'
 
 interface ProfileUser { id: string; firstName: string | null; lastName: string | null; bio: string | null; avatarUrl: string | null }
@@ -27,37 +28,55 @@ const fmtMin = (min: number) => min < 60 ? `~${min}min` : `~${Math.floor(min / 6
 export default function UserProfileClient({ userId }: { userId: string }) {
   const [data, setData] = useState<ProfileData | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [following, setFollowing] = useState(false)
   const [notify, setNotify] = useState(true)
   const [busy, setBusy] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
+    // `catch` distinct du 404 : hors réseau, `fetch` rejetait et la page restait
+    // sur « Chargement… » indéfiniment, sans dire qu'elle avait abandonné.
     fetch(`/api/users/${userId}`).then(async r => {
       if (!r.ok) { setNotFound(true); return }
       const d: ProfileData = await r.json()
       setData(d)
       setFollowing(d.isFollowing)
       setNotify(d.notifyByEmail)
-    })
+    }).catch(() => setLoadFailed(true))
   }, [userId])
 
+  // L'étiquette basculait sur « Abonné » — et ouvrait la cloche de
+  // notifications, qui n'est affichée que dans cet état — sans qu'aucun
+  // abonnement n'ait été créé : au rechargement suivant, tout était revenu.
   async function handleToggleFollow() {
     setBusy(true)
-    await fetch(`/api/users/${userId}/follow`, { method: following ? 'DELETE' : 'POST' })
-    setFollowing(!following)
+    const res = await fetch(`/api/users/${userId}/follow`, { method: following ? 'DELETE' : 'POST' }).catch(() => null)
     setBusy(false)
+    if (!res || !res.ok) {
+      toast(following ? 'Impossible de te désabonner' : "Impossible de t'abonner", 'error')
+      return
+    }
+    setFollowing(!following)
   }
 
+  // Bascule optimiste, puis retour en arrière si le serveur refuse — même forme
+  // que le déplacement de séance dans le planning.
   async function handleToggleNotify() {
     const next = !notify
     setNotify(next)
-    await fetch(`/api/users/${userId}/follow`, {
+    const res = await fetch(`/api/users/${userId}/follow`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ notifyByEmail: next }),
-    })
+    }).catch(() => null)
+    if (!res || !res.ok) {
+      setNotify(!next)
+      toast('Impossible de changer les notifications', 'error')
+    }
   }
 
   if (notFound) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Profil introuvable.</div>
+  if (loadFailed) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Profil indisponible — vérifie ta connexion et recharge la page.</div>
   if (!data) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Chargement…</div>
 
   const { user, workouts, isSelf } = data

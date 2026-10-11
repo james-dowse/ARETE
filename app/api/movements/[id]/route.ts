@@ -9,17 +9,17 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     prisma.movement.findUnique({ where: { id } }),
     getCurrentUserId(),
   ])
+  // La fiche détail (description, image, vidéo) était servie sans cookie :
+  // proxy.ts ne contrôle rien sous /api. La session se lisait déjà ici, mais
+  // seulement pour décider de l'état « favori ».
+  if (!userId) return NextResponse.json({ error: 'Authentification requise' }, { status: 401 })
   if (!m) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  let favorited = false
-  if (userId) {
-    const fav = await prisma.favoriteMovement.findUnique({
-      where: { userId_movementId: { userId, movementId: id } },
-    })
-    favorited = !!fav
-  }
+  const fav = await prisma.favoriteMovement.findUnique({
+    where: { userId_movementId: { userId, movementId: id } },
+  })
 
-  return NextResponse.json({ ...m, favorited })
+  return NextResponse.json({ ...m, favorited: !!fav })
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getCurrentUserId } from '@/lib/session'
 
 // GET a single random movement, optionally filtered by bioType and/or complexity
 // Excludes a list of movement IDs already in the workout
 export async function GET(req: NextRequest) {
+  // Piochait dans le référentiel sans cookie, comme /api/movements : proxy.ts
+  // garde les pages, pas /api.
+  const userId = await getCurrentUserId()
+  if (!userId) return NextResponse.json({ error: 'Authentification requise' }, { status: 401 })
+
   const { searchParams } = new URL(req.url)
   const bioType = searchParams.get('bioType')
   const complexity = searchParams.get('complexity')

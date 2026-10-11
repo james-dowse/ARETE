@@ -27,6 +27,16 @@ export async function GET(req: NextRequest) {
     },
     // Pas d'`avatarUrl` : data URI base64, répété pour chaque résultat à chaque
     // frappe au clavier. L'image passe par /api/users/[id]/avatar (cacheable).
+    //
+    // `id` et `email` sortent ici à dessein, et les deux sont consommés — ne
+    // pas les retirer en croyant resserrer : `id` devient `assignedToId` quand
+    // l'admin assigne un WOD (app/(app)/workouts/[id]/parts.tsx) et `email`
+    // devient la cible du partage (components/ShareModal.tsx), en plus de
+    // distinguer à l'écran deux homonymes. L'identifiant n'est d'ailleurs plus
+    // une clé d'accès depuis que le cookie de session est signé
+    // (lib/session.ts) : le voir ne permet plus de se faire passer pour qui
+    // que ce soit. Le filtre `status: 'accepted'` reste la vraie limite — une
+    // invitation en attente n'apparaît jamais.
     select: { id: true, firstName: true, lastName: true, email: true },
     take: 8,
   }) as { id: string }[]

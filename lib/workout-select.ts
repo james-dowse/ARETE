@@ -26,7 +26,14 @@ export const WORKOUT_SELECT = {
   userId: true,
   public: true,
   difficultyOverride: true,
-  user: { select: { id: true, email: true, firstName: true, lastName: true } },
+  // Pas d'`email` : une liste de séances publiques distribuait l'adresse de
+  // chaque auteur à tout utilisateur connecté (onglet Communauté), alors que
+  // l'affichage n'en a besoin que comme repli de `creatorName` quand l'auteur
+  // n'a renseigné ni prénom ni nom. Dans ce cas le nom reste vide et l'avatar
+  // suffit — une adresse personnelle n'a pas à voyager pour autant.
+  // `id` reste nécessaire : lien vers le profil, filtre « suivis uniquement »
+  // et chargement de l'avatar via /api/users/[id]/avatar.
+  user: { select: { id: true, firstName: true, lastName: true } },
   _count: { select: { savedBy: true } },
   blocks: { select: { id: true, superset: true, restAfter: true, order: true, bioType: true }, orderBy: { order: 'asc' } },
   movements: {

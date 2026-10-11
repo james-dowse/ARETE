@@ -4,6 +4,7 @@ import { X, Play, ExternalLink, Heart } from 'lucide-react'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, EQUIPMENT_ICONS } from '@/lib/types'
 import { getEmbedInfo, extractEmbedVideoId } from '@/lib/video'
 import YouTubeLoopEmbed from './YouTubeLoopEmbed'
+import { useToast } from '@/components/Toast'
 
 interface Movement {
   id: string
@@ -25,18 +26,43 @@ interface Props {
 export default function MovementModal({ movementId, onClose }: Props) {
   const [movement, setMovement] = useState<Movement | null>(null)
   const [loading, setLoading] = useState(false)
+  const [echec, setEchec] = useState(false)
   const [favorited, setFavorited] = useState<boolean | null>(null)
   const [togglingFav, setTogglingFav] = useState(false)
+  // Compteur de tentatives : l'incrémenter rejoue l'effet de chargement, ce qui
+  // donne un « Réessayer » sans dupliquer la logique de fetch.
+  const [tentative, setTentative] = useState(0)
+  const toast = useToast()
 
+  // Chargement de la fiche. Avant : `.then(r => r.json())` sans test de res.ok
+  // et sans catch — une réponse d'erreur (`{ error }`) devenait le mouvement
+  // affiché (nom vide, pastilles vides) et `data.favorited ?? false` posait un
+  // cœur ÉTEINT alors que l'état réel était inconnu. Un clic dessus basculait
+  // un favori existant, donc le supprimait.
   useEffect(() => {
-    if (!movementId) { setMovement(null); setFavorited(null); return }
+    if (!movementId) { setMovement(null); setFavorited(null); setEchec(false); return }
+    let annule = false
     setLoading(true)
     setFavorited(null)
+    setEchec(false)
     fetch(`/api/movements/${movementId}`)
-      .then(r => r.json())
-      .then(data => { setMovement(data); setFavorited(data.favorited ?? false) })
-      .finally(() => setLoading(false))
-  }, [movementId])
+      .then(r => {
+        if (!r.ok) throw new Error(String(r.status))
+        return r.json()
+      })
+      .then(data => {
+        if (annule) return
+        if (!data?.id) throw new Error('réponse inattendue')
+        setMovement(data)
+        // `favorited` absent = état inconnu : on laisse null, et le bouton
+        // (rendu seulement si favorited !== null) reste masqué. Mieux vaut pas
+        // de cœur qu'un cœur qui ment.
+        setFavorited(typeof data.favorited === 'boolean' ? data.favorited : null)
+      })
+      .catch(() => { if (!annule) { setMovement(null); setEchec(true) } })
+      .finally(() => { if (!annule) setLoading(false) })
+    return () => { annule = true }
+  }, [movementId, tentative])
 
   const toggleFavorite = async () => {
     if (!movementId || togglingFav) return
@@ -47,8 +73,14 @@ export default function MovementModal({ movementId, onClose }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ movementId }),
       })
+      if (!res.ok) throw new Error(String(res.status))
       const data = await res.json()
+      // Sur un 401, le corps est `{ error }` : `data.favorited` valait undefined
+      // et le cœur s'éteignait sans que rien n'ait bougé en base.
+      if (typeof data?.favorited !== 'boolean') throw new Error('réponse inattendue')
       setFavorited(data.favorited)
+    } catch {
+      toast('Favori non enregistré', 'error')
     } finally {
       setTogglingFav(false)
     }
@@ -74,7 +106,9 @@ export default function MovementModal({ movementId, onClose }: Props) {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '20px 20px 0' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            {loading || !movement ? (
+            {echec ? (
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, lineHeight: 1.2, color: 'var(--red)' }}>Fiche indisponible</h2>
+            ) : loading || !movement ? (
               <div style={{ height: 24, width: 180, background: 'var(--border)', borderRadius: 6, marginBottom: 8 }} />
             ) : (
               <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, lineHeight: 1.2 }}>{movement.name}</h2>
@@ -134,6 +168,17 @@ export default function MovementModal({ movementId, onClose }: Props) {
               {[140, 100, 80].map(w => (
                 <div key={w} style={{ height: 14, width: w, background: 'var(--border)', borderRadius: 4 }} />
               ))}
+            </div>
+          )}
+
+          {/* Un échec se dit : sans ça, la fiche restait un cadre vide sans
+              explication ni moyen de réessayer. */}
+          {!loading && echec && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Ce mouvement n’a pas pu être chargé. Vérifie ta connexion.
+              </p>
+              <button className="btn btn-sm btn-primary" onClick={() => setTentative(t => t + 1)}>Réessayer</button>
             </div>
           )}
 

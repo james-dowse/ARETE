@@ -36,22 +36,45 @@ export default function ProfileClient() {
     })
   }, [])
 
+  // `finally` : sans lui, un réseau lent ou un fichier illisible laissait le
+  // rouet tourner sur l'avatar indéfiniment — il fallait recharger la page. Et
+  // `res.ok` : sur un 401, `data.avatarUrl` valait undefined, donc les initiales
+  // remplaçaient une photo qui était pourtant toujours en base.
   async function handleAvatar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     setUploading(true)
-    const resized = await resizeImage(file, 400)
-    const fd = new FormData()
-    fd.append('file', resized, file.name)
-    const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd })
-    const data = await res.json()
-    setAvatarUrl(data.avatarUrl)
-    setUploading(false)
-    if (fileRef.current) fileRef.current.value = ''
+    try {
+      // Les deux échecs sont distingués : un fichier que le navigateur ne sait
+      // pas décoder n'est pas une panne d'envoi, et l'utilisateur n'a pas la
+      // même chose à faire dans les deux cas.
+      let resized: File
+      try {
+        resized = await resizeImage(file, 400)
+      } catch {
+        toast("Cette image n'a pas pu être lue — essaie un autre fichier.", 'error')
+        return
+      }
+      const fd = new FormData()
+      fd.append('file', resized, file.name)
+      const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd }).catch(() => null)
+      const data = res && res.ok ? await res.json().catch(() => null) : null
+      if (!data?.avatarUrl) {
+        toast('Envoi de la photo impossible — réessaie.', 'error')
+        return
+      }
+      setAvatarUrl(data.avatarUrl)
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
   }
 
+  // La photo ne disparaissait de l'écran qu'en apparence : sur un échec elle
+  // était toujours en base et revenait au rechargement suivant.
   async function handleRemoveAvatar() {
-    await fetch('/api/profile/avatar', { method: 'DELETE' })
+    const res = await fetch('/api/profile/avatar', { method: 'DELETE' }).catch(() => null)
+    if (!res || !res.ok) { toast('Suppression de la photo impossible — réessaie.', 'error'); return }
     setAvatarUrl(null)
   }
 
@@ -227,9 +250,16 @@ export default function ProfileClient() {
   )
 }
 
+// `onerror` et le garde sur `blob` : sans eux, un fichier illisible (HEIC sur
+// un navigateur qui ne le décode pas, image tronquée, faux .jpg) ne déclenchait
+// jamais `onload` et la promesse ne se réglait pas — l'appelant restait bloqué
+// sur son rouet pour toujours. `revokeObjectURL` ferme l'URL dans tous les cas.
 async function resizeImage(file: File, maxSize: number): Promise<File> {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     const img = new Image()
+    const url = URL.createObjectURL(file)
+    const ok = (f: File) => { URL.revokeObjectURL(url); resolve(f) }
+    const ko = (message: string) => { URL.revokeObjectURL(url); reject(new Error(message)) }
     img.onload = () => {
       let { width, height } = img
       if (width > height) {
@@ -239,12 +269,17 @@ async function resizeImage(file: File, maxSize: number): Promise<File> {
       }
       const canvas = document.createElement('canvas')
       canvas.width = width; canvas.height = height
-      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { ko('Canvas indisponible'); return }
+      ctx.drawImage(img, 0, 0, width, height)
       canvas.toBlob(
-        blob => resolve(new File([blob!], file.name, { type: 'image/jpeg' })),
+        blob => blob
+          ? ok(new File([blob], file.name, { type: 'image/jpeg' }))
+          : ko('Encodage JPEG impossible'),
         'image/jpeg', 0.85
       )
     }
-    img.src = URL.createObjectURL(file)
+    img.onerror = () => ko('Image illisible')
+    img.src = url
   })
 }

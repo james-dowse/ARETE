@@ -6,6 +6,7 @@ import { Search, X, Star, BookOpen, ArrowUpDown, ChevronDown, ChevronUp } from '
 import FilterPanel, { FilterGroup, type ActiveFilter } from '@/components/FilterPanel'
 import { readableAccent } from '@/lib/color'
 import { youtubeThumbnail, thumbnailSrcSet } from '@/lib/video'
+import { useToast } from '@/components/Toast'
 
 type SortOption = 'name' | 'name-desc' | 'complexity' | 'complexity-desc'
 
@@ -48,14 +49,33 @@ export default function LibraryPage() {
   }
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
   const [favIds, setFavIds] = useState<Set<string>>(new Set())
+  const [favsEchec, setFavsEchec] = useState(false)
   const [tab, setTab] = useState<'all' | 'favorites'>('all')
+  const toast = useToast()
 
-  // Load favorites once
-  useEffect(() => {
-    fetch('/api/favorites').then(r => r.json()).then((ids: string[]) => {
-      setFavIds(new Set(ids))
-    }).catch(() => {})
+  // Chargement des favoris.
+  //
+  // L'appel était suivi d'un `.catch(() => {})` : en cas d'échec, toutes les
+  // étoiles s'affichaient vides et rien ne le signalait. L'utilisateur
+  // rappuyait pour « remettre » un favori qu'il croyait perdu — et comme
+  // /api/favorites BASCULE, le serveur le SUPPRIMAIT. Un échec de lecture
+  // détruisait donc des données. Désormais l'échec est visible (bandeau +
+  // étoiles grisées) et toute modification est refusée tant qu'on ne connaît
+  // pas l'état réel.
+  const chargerFavoris = useCallback(async () => {
+    try {
+      const res = await fetch('/api/favorites')
+      if (!res.ok) throw new Error(String(res.status))
+      const ids = await res.json()
+      if (!Array.isArray(ids)) throw new Error('réponse inattendue')
+      setFavIds(new Set(ids as string[]))
+      setFavsEchec(false)
+    } catch {
+      setFavsEchec(true)
+    }
   }, [])
+
+  useEffect(() => { chargerFavoris() }, [chargerFavoris])
 
   // bioType/complexity/equipment sont désormais filtrés côté client (multi-sélection) :
   // seule la recherche texte reste envoyée au serveur.
@@ -106,18 +126,31 @@ export default function LibraryPage() {
   }, [fetchMovements, search])
 
   const toggleFav = async (id: string) => {
-    const res = await fetch('/api/favorites', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ movementId: id }),
-    })
-    const data = await res.json()
-    setFavIds(prev => {
-      const next = new Set(prev)
-      if (data.favorited) next.add(id)
-      else next.delete(id)
-      return next
-    })
+    // On ne touche pas aux favoris quand on ne sait pas lesquels sont posés :
+    // l'appel BASCULE, donc un clic sur une étoile faussement vide retire le
+    // favori au lieu de l'ajouter.
+    if (favsEchec) { toast('Favoris indisponibles — recharge la liste avant de les modifier', 'error'); return }
+    try {
+      const res = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ movementId: id }),
+      })
+      if (!res.ok) throw new Error(String(res.status))
+      const data = await res.json()
+      // Sur un 401, le corps est `{ error }` : `data.favorited` valait undefined
+      // et l'étoile s'éteignait alors que rien n'avait bougé en base.
+      if (typeof data?.favorited !== 'boolean') throw new Error('réponse inattendue')
+      setFavIds(prev => {
+        const next = new Set(prev)
+        if (data.favorited) next.add(id)
+        else next.delete(id)
+        return next
+      })
+    } catch {
+      setFavsEchec(true)
+      toast('Favori non enregistré', 'error')
+    }
   }
 
   // Tri par pertinence quand une recherche est active, alphabétique sinon
@@ -228,9 +261,22 @@ export default function LibraryPage() {
         <div className="card" style={{ display: 'flex', gap: 4, marginBottom: 20, padding: 4, width: 'fit-content' }}>
           <button style={tabBtn('all')} onClick={() => setTab('all')}><BookOpen size={13} /> Tous</button>
           <button style={tabBtn('favorites')} onClick={() => setTab('favorites')}>
-            <Star size={13} fill={tab === 'favorites' ? 'var(--on-accent)' : 'none'} /> Favoris {favIds.size > 0 && <span style={{ fontSize: 11, opacity: 0.75 }}>({favIds.size})</span>}
+            <Star size={13} fill={tab === 'favorites' ? 'var(--on-accent)' : 'none'} /> Favoris {!favsEchec && favIds.size > 0 && <span style={{ fontSize: 11, opacity: 0.75 }}>({favIds.size})</span>}
           </button>
         </div>
+
+        {/* L'indisponibilité des favoris se DIT : sans ce bandeau, l'utilisateur
+            agissait sur une image fausse (toutes les étoiles vides) et finissait
+            par effacer les favoris qu'il croyait remettre. */}
+        {favsEchec && (
+          <div className="card" style={{ marginBottom: 20, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', borderColor: 'var(--red)' }}>
+            <span className="t-sm" style={{ color: 'var(--red)', fontWeight: 600 }}>Favoris indisponibles</span>
+            <span className="t-sm" style={{ color: 'var(--text-muted)', flex: 1, minWidth: 180 }}>
+              Les étoiles ci-dessous ne reflètent pas l’état réel : modification désactivée.
+            </span>
+            <button className="btn btn-sm btn-ghost" onClick={() => chargerFavoris()}>Réessayer</button>
+          </div>
+        )}
 
         {/* Filters (hidden in favorites tab) */}
         {tab === 'all' && (
@@ -354,7 +400,7 @@ export default function LibraryPage() {
                 </div>
                 {!collapsed && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
-                    {mvts.map(m => <MovementCard key={m.id} movement={m} isFav={favIds.has(m.id)} onFav={toggleFav} onClick={() => setSelectedMovementId(m.id)} />)}
+                    {mvts.map(m => <MovementCard key={m.id} movement={m} isFav={favIds.has(m.id)} favIndispo={favsEchec} onFav={toggleFav} onClick={() => setSelectedMovementId(m.id)} />)}
                   </div>
                 )}
               </div>
@@ -364,7 +410,7 @@ export default function LibraryPage() {
 
         {!loading && !groupByBio && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
-            {displayed.map(m => <MovementCard key={m.id} movement={m} isFav={favIds.has(m.id)} onFav={toggleFav} onClick={() => setSelectedMovementId(m.id)} />)}
+            {displayed.map(m => <MovementCard key={m.id} movement={m} isFav={favIds.has(m.id)} favIndispo={favsEchec} onFav={toggleFav} onClick={() => setSelectedMovementId(m.id)} />)}
           </div>
         )}
 
@@ -386,10 +432,14 @@ export default function LibraryPage() {
               ? <Star size={34} style={{ opacity: 0.3, marginBottom: 14 }} />
               : <Search size={34} style={{ opacity: 0.3, marginBottom: 14 }} />}
             <div className="display r-h2" style={{ color: 'var(--text-primary)', marginBottom: 6 }}>
-              {tab === 'favorites' ? 'Aucun favori' : 'Aucun mouvement'}
+              {tab === 'favorites' ? (favsEchec ? 'Favoris indisponibles' : 'Aucun favori') : 'Aucun mouvement'}
             </div>
             <div className="t-body">
-              {tab === 'favorites' ? 'L’étoile sur une fiche de mouvement l’ajoute ici.' : 'Aucun résultat pour cette recherche ou ces filtres.'}
+              {tab === 'favorites'
+                // Une liste vide parce que le chargement a échoué n'est pas une
+                // liste vide : le dire évite de croire ses favoris perdus.
+                ? (favsEchec ? 'La liste n’a pas pu être chargée : elle n’est pas vide pour autant.' : 'L’étoile sur une fiche de mouvement l’ajoute ici.')
+                : 'Aucun résultat pour cette recherche ou ces filtres.'}
             </div>
           </div>
         )}
@@ -402,7 +452,7 @@ export default function LibraryPage() {
   )
 }
 
-function MovementCard({ movement: m, isFav, onFav, onClick }: { movement: Movement; isFav: boolean; onFav: (id: string) => void; onClick: () => void }) {
+function MovementCard({ movement: m, isFav, favIndispo, onFav, onClick }: { movement: Movement; isFav: boolean; favIndispo: boolean; onFav: (id: string) => void; onClick: () => void }) {
   const thumb = youtubeThumbnail(m.videoUrl)
   // Surface du système : .card porte fond, bordure, rayon et ombre, et
   // .card-interactive reprend le survol qui était recalculé ici à la main
@@ -456,8 +506,11 @@ function MovementCard({ movement: m, isFav, onFav, onClick }: { movement: Moveme
       </div>
       <button
         onClick={e => { e.stopPropagation(); onFav(m.id) }}
-        title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: isFav ? 'var(--gold)' : 'var(--text-dim)', flexShrink: 0, transition: 'color 0.15s' }}
+        disabled={favIndispo}
+        // L'étoile grisée dit « on ne sait pas » plutôt que « pas en favori » :
+        // c'est la différence entre informer et inventer un état.
+        title={favIndispo ? 'Favoris indisponibles' : isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+        style={{ background: 'none', border: 'none', cursor: favIndispo ? 'not-allowed' : 'pointer', padding: 4, color: isFav ? 'var(--gold)' : 'var(--text-dim)', flexShrink: 0, transition: 'color 0.15s', opacity: favIndispo ? 0.35 : 1 }}
       >
         <Star size={14} fill={isFav ? 'var(--gold)' : 'none'} />
       </button>

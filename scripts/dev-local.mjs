@@ -24,6 +24,15 @@ delete env.TURSO_AUTH_TOKEN
 // d'adaptateur dans lib/prisma.ts et a la priorité sur tout le reste.
 env.ARETE_LOCAL_DB = '1'
 
+// La clé de signature du cookie de session se dérive de TURSO_AUTH_TOKEN
+// (lib/session.ts), que les deux lignes ci-dessus viennent justement de
+// supprimer : sans secret explicite, toute requête authentifiée lèverait et le
+// serveur local serait inutilisable. On en pose donc un, propre au
+// développement. Il n'a pas à être secret — il ne signe que des sessions sur
+// prisma/dev.db — mais il doit être STABLE, sinon chaque redémarrage
+// déconnecterait.
+env.SESSION_SECRET = env.SESSION_SECRET || 'arete-developpement-local-ne-pas-utiliser-en-production'
+
 console.log('\x1b[33m⚑ Base LOCALE (prisma/dev.db) — la production n\'est pas touchée.\x1b[0m\n')
 
 const child = spawn('npx', ['next', 'dev', '--port', process.env.PORT || '3051'], {

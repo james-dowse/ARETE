@@ -8,13 +8,20 @@ import { getCurrentUserId } from '@/lib/session'
 // d'abonnement de l'utilisateur courant, strictement privé).
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+
+  // « Public » veut dire « visible des autres comptes invités », pas « ouvert
+  // au tout-venant » : la route servait nom, bio, avatar et jusqu'à 100 séances
+  // sans aucun cookie, alors que la route sœur /api/users/[id]/avatar pose un
+  // 401 explicite pour cette exacte raison.
+  const currentUserId = await getCurrentUserId()
+  if (!currentUserId) return NextResponse.json({ error: 'Authentification requise' }, { status: 401 })
+
   const user = await prisma.invitedUser.findUnique({
     where: { id },
     select: { id: true, firstName: true, lastName: true, bio: true, avatarUrl: true },
   })
   if (!user) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
 
-  const currentUserId = await getCurrentUserId()
   const workouts = await prisma.workout.findMany({
     where: { userId: id, public: true },
     orderBy: { createdAt: 'desc' },
@@ -28,7 +35,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
   let isFollowing = false
   let notifyByEmail = true
-  if (currentUserId && currentUserId !== id) {
+  if (currentUserId !== id) {
     const follow = await prisma.follow.findUnique({
       where: { followerId_followedId: { followerId: currentUserId, followedId: id } },
     })

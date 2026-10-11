@@ -14,7 +14,14 @@ interface CreatorUser {
 export function creatorName(user: CreatorUser | null | undefined): string {
   if (!user) return ''
   const full = [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
-  return full || user.email?.split('@')[0] || ''
+  if (full) return full
+  // L'e-mail reste un repli pour les écrans qui en disposent encore, mais les
+  // listes ne le transportent plus (voir lib/workout-select.ts) : sans ce
+  // dernier repli, un auteur qui n'a renseigné ni prénom ni nom voyait son
+  // badge devenir muet dans l'onglet Communauté. C'est le cas d'un compte sur
+  // trois aujourd'hui. « Membre » ne dit pas grand-chose, mais il dit qu'il y a
+  // quelqu'un — et il ne fait voyager l'adresse de personne.
+  return user.email?.split('@')[0] || 'Membre'
 }
 
 // Filigrane casque spartiate — même technique que le watermark SVG bas-opacité

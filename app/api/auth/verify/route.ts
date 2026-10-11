@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { SESSION_COOKIE } from '@/lib/session'
+import { SESSION_COOKIE, sessionCookieValue } from '@/lib/session'
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')
@@ -22,7 +22,9 @@ export async function GET(req: NextRequest) {
   })
 
   const res = NextResponse.redirect(new URL('/', req.url))
-  res.cookies.set(SESSION_COOKIE, user.id, {
+  // sessionCookieValue et non user.id : le cookie doit être signé, sinon il
+  // suffit d'y coller l'identifiant de quelqu'un d'autre (voir lib/session.ts).
+  res.cookies.set(SESSION_COOKIE, sessionCookieValue(user.id), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

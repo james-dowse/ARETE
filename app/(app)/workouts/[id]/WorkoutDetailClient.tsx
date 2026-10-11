@@ -494,12 +494,24 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     router.push(`/workouts/${copy.id}`)
   }
 
+  // Le DELETE cascade (prisma/schema.prisma) sur WorkoutSession — et donc sur
+  // ses SessionSet : les passages déjà faits, leurs séries, leurs charges et
+  // leur ressenti partent avec la séance. C'est la seule donnée que
+  // l'utilisateur ne peut pas refaire de mémoire, et l'ancien message n'en
+  // disait rien : il ne parlait que du nombre de personnes ayant sauvegardé le
+  // workout, c'est-à-dire de la perte la plus facile à réparer. `passages` est
+  // déjà en props (compté côté serveur dans page.tsx), donc on le chiffre.
   const handleDelete = async () => {
     const savedCount = initial._count?.savedBy ?? 0
-    const msg = savedCount > 0
-      ? `Supprimer définitivement cette séance ? ${savedCount} utilisateur${savedCount > 1 ? 's ont' : ' a'} sauvegardé ce workout et perdra${savedCount > 1 ? 'ont' : ''} l'accès.`
-      : 'Supprimer définitivement cette séance ?'
-    if (!await confirm(msg, { danger: true })) return
+    const perte = passages === 0
+      ? 'Tous les passages enregistrés sur cette séance seront supprimés avec elle : séries, charges et ressenti, sans retour possible.'
+      : passages === 1
+        ? 'Ton passage sur cette séance sera supprimé avec elle : séries, charges et ressenti, sans retour possible.'
+        : `Tes ${passages} passages sur cette séance seront supprimés avec elle : séries, charges et ressenti, sans retour possible.`
+    const partage = savedCount === 0 ? ''
+      : savedCount === 1 ? " Un autre utilisateur l'a sauvegardée : il perdra son accès et son propre historique."
+      : ` ${savedCount} autres utilisateurs l'ont sauvegardée : ils perdront leur accès et leur propre historique.`
+    if (!await confirm(perte + partage, { title: 'Supprimer définitivement cette séance ?', danger: true })) return
     setDeleting(true)
     const res = await fetch(`/api/workouts/${initial.id}`, { method: 'DELETE' }).catch(() => null)
     if (!res || !res.ok) {

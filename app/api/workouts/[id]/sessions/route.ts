@@ -6,7 +6,11 @@ type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(_: NextRequest, { params }: Ctx) {
   const userId = await getCurrentUserId()
-  if (!userId) return NextResponse.json([], { status: 200 })
+  // 401 et non un 200 vide : un corps vide repondu 200 est indistinguable
+  // d une absence reelle de donnees, et le service worker le met alors en
+  // cache. La fiche annonce ensuite « jamais fait » sur une seance faite dix
+  // fois, hors connexion, sans que rien ne purge l entree.
+  if (!userId) return NextResponse.json({ error: 'Non authentifie' }, { status: 401 })
   const { id: workoutId } = await params
   const sessions = await prisma.workoutSession.findMany({
     where: { workoutId, userId },

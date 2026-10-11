@@ -5,7 +5,13 @@ import { getAvatarOwnerIds, withHasAvatar } from '@/lib/avatar-server'
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim()
-  if (!q || q.length < 2) return NextResponse.json({ workouts: [], movements: [] })
+  // Forme COMPLÈTE même quand il n'y a rien à chercher. Ce raccourci renvoyait
+  // un corps sans `users` : la sidebar, qui lit `searchResults.users.length`
+  // sans garde, plantait dès qu'une requête passait sa validation côté client
+  // mais pas celle-ci (« a » + espace, deux espaces). Et comme <Sidebar/> est
+  // au-dessus de app/(app)/error.tsx dans l'arbre, c'était TOUTE l'application
+  // qui tombait sur la carte d'erreur, pas une zone.
+  if (!q || q.length < 2) return NextResponse.json({ workouts: [], movements: [], users: [] })
 
   const userId = await getCurrentUserId()
 

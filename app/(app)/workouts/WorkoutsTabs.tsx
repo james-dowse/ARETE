@@ -195,19 +195,24 @@ const DAYS_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: string; onClose: () => void; onAdded: () => void }) {
   const [selected, setSelected] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
+  const toast = useToast()
   const weekStart = toISODate(getMonday(new Date()))
   const todayIdx = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1 })()
 
   async function handleAdd() {
     if (selected === null) return
     setSaving(true)
+    // `catch` puis `res.ok` : hors réseau `fetch` rejette, et l'exception
+    // laissait le bouton figé sur « Ajout… » à jamais ; sur un 500 la modale se
+    // refermait en silence sans que rien ne soit ajouté à la semaine.
     const res = await fetch('/api/planner', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workoutId, dayOfWeek: selected, weekStart }),
-    })
+    }).catch(() => null)
     setSaving(false)
-    if (!res.ok) return
+    if (!res || !res.ok) { toast("Impossible d'ajouter cette séance à ta semaine", 'error'); return }
+    toast(`Ajoutée à ta semaine — ${DAYS_FR[selected]}`, 'info')
     onAdded()
     onClose()
   }
@@ -250,6 +255,23 @@ function AddToWeekModal({ workoutId, onClose, onAdded }: { workoutId: string; on
   )
 }
 
+// ── Message de suppression ───────────────────────────────────────────────────
+// Le DELETE d'une séance cascade (prisma/schema.prisma) sur WorkoutSession —
+// et donc sur ses SessionSet : les passages déjà faits, leurs séries, leurs
+// charges et leur ressenti partent avec elle. C'est la seule donnée que
+// l'utilisateur ne peut pas refaire de mémoire, et l'ancien message n'en
+// parlait pas : il ne mentionnait que le nombre de personnes ayant sauvegardé
+// la séance, c'est-à-dire la perte la plus facile à réparer.
+// La liste ne transporte pas le compte de passages (WORKOUT_SELECT ne remonte
+// que `savedBy`), d'où la formulation sans chiffre ici ; la fiche détail, qui
+// reçoit `passages` en props, le nomme.
+function deleteWorkoutMessage(savedCount: number): string {
+  const perte = 'Tous les passages enregistrés sur cette séance seront supprimés avec elle : séries, charges et ressenti, sans retour possible.'
+  if (savedCount === 0) return perte
+  if (savedCount === 1) return `${perte} Un autre utilisateur l'a sauvegardée : il perdra son accès et son propre historique.`
+  return `${perte} ${savedCount} autres utilisateurs l'ont sauvegardée : ils perdront leur accès et leur propre historique.`
+}
+
 // ── Workout card ─────────────────────────────────────────────────────────────
 function WorkoutCard({
   w, context, onShare, onToggleSave, onDelete, onToggleFavorite,
@@ -263,6 +285,7 @@ function WorkoutCard({
 }) {
   const router = useRouter()
   const confirm = useConfirm()
+  const toast = useToast()
   const [saving, setSaving] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [isSaved, setIsSaved] = useState(w.isSaved ?? false)
@@ -275,47 +298,57 @@ function WorkoutCard({
   const estMin = estimateWorkoutMinutes(toDurationMovements(w.movements), w.blocks)
   const { columns: previewColumns, hiddenBlocksCount } = buildCardPreview(w)
 
+  // Même forme pour les quatre actions qui suivent : `catch` sur le fetch, puis
+  // `res.ok` avant de toucher à l'état. Sans ça, l'interface confirmait des
+  // actions qui n'avaient pas eu lieu — ou restait figée sur son libellé de
+  // chargement, l'exception de `fetch` empêchant le `setXxx(false)` qui suivait.
   // `e` optionnel : ces actions sont aussi déclenchées depuis le menu « … »,
   // qui n'a pas d'événement de carte à neutraliser.
   async function handleDuplicate(e?: React.MouseEvent) {
     e?.preventDefault(); e?.stopPropagation()
     setDuplicating(true)
-    const res = await fetch(`/api/workouts/${w.id}/duplicate`, { method: 'POST' })
-    const copy = await res.json()
+    const res = await fetch(`/api/workouts/${w.id}/duplicate`, { method: 'POST' }).catch(() => null)
+    if (!res || !res.ok) { setDuplicating(false); toast('Échec de la duplication', 'error'); return }
+    const copy = await res.json().catch(() => null)
     setDuplicating(false)
+    if (!copy?.id) { toast('Échec de la duplication', 'error'); return }
     router.push(`/workouts/${copy.id}`)
   }
 
   async function handleDelete(e?: React.MouseEvent) {
     e?.preventDefault(); e?.stopPropagation()
-    const savedCount = w._count?.savedBy ?? 0
-    const msg = savedCount > 0
-      ? `Supprimer cette séance ? ${savedCount} utilisateur${savedCount > 1 ? 's ont' : ' a'} sauvegardé ce workout et perdra${savedCount > 1 ? 'ont' : ''} l'accès.`
-      : 'Supprimer cette séance ?'
-    if (!await confirm(msg, { danger: true })) return
+    if (!await confirm(deleteWorkoutMessage(w._count?.savedBy ?? 0), { title: 'Supprimer cette séance ?', danger: true })) return
     setDeleting(true)
-    await fetch(`/api/workouts/${w.id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/workouts/${w.id}`, { method: 'DELETE' }).catch(() => null)
     setDeleting(false)
+    // Avant ce contrôle, un 500 faisait disparaître la carte de la liste alors
+    // que la séance existait toujours : elle réapparaissait au rechargement.
+    if (!res || !res.ok) { toast('Échec de la suppression', 'error'); return }
     onDelete?.()
   }
 
   async function handleToggleSave() {
     setSaving(true)
     const method = isSaved ? 'DELETE' : 'POST'
-    await fetch(`/api/workouts/${w.id}/save`, { method })
+    const res = await fetch(`/api/workouts/${w.id}/save`, { method }).catch(() => null)
+    setSaving(false)
+    if (!res || !res.ok) {
+      toast(isSaved ? 'Impossible de retirer cette séance' : 'Impossible de sauvegarder cette séance', 'error')
+      return
+    }
     const next = !isSaved
     setIsSaved(next)
-    setSaving(false)
     onToggleSave?.(next)
   }
 
   async function handleToggleFavorite(e: React.MouseEvent) {
     e.preventDefault()
     setToggling(true)
-    const res = await fetch(`/api/workouts/${w.id}/favorite`, { method: 'POST' })
-    const data = await res.json()
-    setIsFavorite(data.favorited)
+    const res = await fetch(`/api/workouts/${w.id}/favorite`, { method: 'POST' }).catch(() => null)
+    const data = res && res.ok ? await res.json().catch(() => null) : null
     setToggling(false)
+    if (!data || typeof data.favorited !== 'boolean') { toast('Impossible de changer ce favori', 'error'); return }
+    setIsFavorite(data.favorited)
     onToggleFavorite?.(data.favorited)
   }
 
@@ -538,6 +571,18 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const [sharingWorkout, setSharingWorkout] = useState<Workout | null>(null)
   const toast = useToast()
   const [claiming, setClaiming] = useState(false)
+  // La route de récupération est réservée à l’administrateur : sans cette
+  // garde, deux comptes sur trois voient un bouton qui ne peut que rendre une
+  // erreur. /api/me est mis en cache 120 s par le navigateur.
+  const [estAdmin, setEstAdmin] = useState(false)
+  useEffect(() => {
+    let vivant = true
+    fetch('/api/me')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (vivant) setEstAdmin(!!d?.isAdmin) })
+      .catch(() => {})
+    return () => { vivant = false }
+  }, [])
   const [recentsOpen, setRecentsOpen] = useState(false)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
   // Filtres multi-sélection : un ensemble vide = pas de restriction sur ce critère
@@ -595,17 +640,32 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
     }
   }, [])
 
+  // Même garde que loadMine. Avant, une réponse d'erreur était stockée telle
+  // quelle dans communityWorkouts : le `.filter` du rendu suivant jetait sur un
+  // objet et toute la page tombait dans la frontière d'erreur.
   const loadCommunity = useCallback(async () => {
-    const [data, follows] = await Promise.all([
-      fetch('/api/workouts?filter=community').then(r => r.json()),
-      fetch('/api/follows').then(r => r.json()).catch(() => ({ followedIds: [] })),
-    ])
-    setCommunityWorkouts(data)
-    setFollowedIds(new Set(follows.followedIds ?? []))
+    setFetchError(null)
+    try {
+      const [data, follows] = await Promise.all([
+        fetch('/api/workouts?filter=community').then(async r => {
+          const d = await r.json()
+          if (!r.ok) throw new Error(d?.details ?? d?.error ?? `HTTP ${r.status}`)
+          return Array.isArray(d) ? d : []
+        }),
+        fetch('/api/follows').then(r => r.json()).catch(() => ({ followedIds: [] })),
+      ])
+      setCommunityWorkouts(data)
+      setFollowedIds(new Set(follows?.followedIds ?? []))
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Erreur de chargement')
+    }
   }, [])
 
+  // Celle-ci part aussi au montage, hors de l'onglet coach : une promesse
+  // rejetée y restait non traitée, sans rien afficher.
   const loadCoach = useCallback(async () => {
-    const data = await fetch('/api/assignments').then(r => r.json())
+    const res = await fetch('/api/assignments').catch(() => null)
+    const data = res && res.ok ? await res.json().catch(() => null) : null
     setAssignments(Array.isArray(data) ? data : [])
   }, [])
 
@@ -641,8 +701,12 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
   const handleClaimWorkouts = async () => {
     setClaiming(true)
     try {
-      const res = await fetch('/api/workouts/claim', { method: 'POST' })
-      const { claimed } = await res.json()
+      const res = await fetch('/api/workouts/claim', { method: 'POST' }).catch(() => null)
+      // Sans ce contrôle, une erreur serveur donnait `claimed === undefined` et
+      // l'écran annonçait « Aucune séance orpheline trouvée » : l'utilisateur
+      // concluait qu'il n'avait rien à récupérer.
+      if (!res || !res.ok) { toast('Récupération impossible — réessaie.', 'error'); return }
+      const { claimed } = await res.json().catch(() => ({ claimed: 0 }))
       if (claimed > 0) {
         toast(`${claimed} séance${claimed > 1 ? 's' : ''} récupérée${claimed > 1 ? 's' : ''} ✓`)
         await loadMine()
@@ -985,13 +1049,13 @@ export default function WorkoutsTabs({ currentUserId }: { currentUserId: string 
                     <Zap size={14} /> Générer
                   </button>
                 </Link>
-                <button
+                {estAdmin && (<button
                   onClick={handleClaimWorkouts}
                   disabled={claiming}
                   className="btn btn-md btn-ghost"
                 >
                   {claiming ? '…' : '↩ Récupérer mes anciennes séances'}
-                </button>
+                </button>)}
               </div>
             </div>
           )}
