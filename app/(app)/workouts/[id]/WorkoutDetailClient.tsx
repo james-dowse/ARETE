@@ -1,4 +1,5 @@
 'use client'
+import React from 'react'
 import RichEditor from '@/components/RichEditor'
 import MovementModal from '@/components/MovementModal'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
@@ -79,41 +80,182 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const [editDifficultyOverride, setEditDifficultyOverride] = useState(initial.difficultyOverride ?? '')
   const [movementOrder, setMovementOrder] = useState<Record<string, number>>({})
   const [draggedWmId, setDraggedWmId] = useState<string | null>(null)
+  // Le bloc d’un mouvement devient un état modifiable : sans lui, le
+  // regroupement lisait `orig.blockId` et déplacer un mouvement d’un bloc à
+  // l’autre était impossible par construction, quoi qu’on fasse à l’écran.
+  const [movementBlock, setMovementBlock] = useState<Record<string, string>>({})
+  // La cible de dépôt, visée précisément : un bloc et une position entre deux
+  // lignes. L’ancien modèle réordonnait pendant le survol, ce qui faisait
+  // vibrer la liste et interdisait de viser le début ou la fin d’un bloc.
+  const [cibleDepot, setCibleDepot] = useState<{ blockId: string; pos: number } | null>(null)
   // Ordre des blocs (édition) — même mécanique que movementOrder pour les
   // mouvements : un glisser-déposer réordonne localement, la vraie valeur
   // `order` n'est envoyée au serveur qu'à la sauvegarde, sur les blocs dont
   // la position a réellement changé.
   const [blockOrder, setBlockOrder] = useState<Record<string, number>>({})
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null)
+  // Même traitement que pour les mouvements : une position visée entre deux
+  // blocs, plutôt qu’un réordonnancement pendant le survol.
+  const [cibleBloc, setCibleBloc] = useState<number | null>(null)
 
-  const handleReorder = (draggedId: string, targetId: string) => {
-    if (draggedId === targetId) return
-    setMovementOrder(prev => {
-      const ids = Object.keys(prev).sort((a, b) => prev[a] - prev[b])
-      const from = ids.indexOf(draggedId)
-      const to = ids.indexOf(targetId)
-      if (from === -1 || to === -1) return prev
-      ids.splice(from, 1)
-      ids.splice(to, 0, draggedId)
-      const next: Record<string, number> = {}
-      ids.forEach((id, idx) => { next[id] = idx })
-      return next
-    })
+  // Déplace un mouvement vers un bloc et une position donnés, puis renumérote
+  // tout le monde. La renumérotation globale est volontaire : `order` est un
+  // rang global dans ce schéma, et ne renuméroter qu’un bloc laisserait des
+  // rangs qui s’entrelacent entre blocs.
+  const deplacerMouvement = (wmId: string, versBlocId: string, pos: number) => {
+    const pend = pendingAdds.find(p => p.tempId === wmId)
+
+    // Ordre d’affichage actuel des blocs, pour renuméroter dans le bon sens.
+    const blocsOrdonnes = initial.blocks
+      .filter(b => !removedBlockIds.has(b.id))
+      .slice()
+      .sort((a, b) => (blockOrder[a.id] ?? a.order) - (blockOrder[b.id] ?? b.order))
+      .map(b => b.id)
+
+    // Contenu de chaque bloc avant déplacement, le mouvement déplacé retiré.
+    const contenu: Record<string, string[]> = {}
+    for (const bid of blocsOrdonnes) contenu[bid] = getBlockOrderedIds(bid).filter(id => id !== wmId)
+    if (!contenu[versBlocId]) return
+
+    const borne = Math.max(0, Math.min(pos, contenu[versBlocId].length))
+    contenu[versBlocId].splice(borne, 0, wmId)
+
+    if (pend) {
+      // Un mouvement pas encore enregistré n’a pas de ligne en base : c’est
+      // `pendingAdds` qui porte son bloc.
+      setPendingAdds(prev => prev.map(x => x.tempId === wmId ? { ...x, blockId: versBlocId } : x))
+    } else {
+      setMovementBlock(prev => ({ ...prev, [wmId]: versBlocId }))
+    }
+
+    const rangs: Record<string, number> = {}
+    let n = 0
+    for (const bid of blocsOrdonnes) for (const id of contenu[bid]) rangs[id] = n++
+    setMovementOrder(prev => ({ ...prev, ...rangs }))
   }
 
-  const handleReorderBlock = (draggedId: string, targetId: string) => {
-    if (draggedId === targetId) return
-    setBlockOrder(prev => {
-      const ids = Object.keys(prev).sort((a, b) => prev[a] - prev[b])
-      const from = ids.indexOf(draggedId)
-      const to = ids.indexOf(targetId)
-      if (from === -1 || to === -1) return prev
-      ids.splice(from, 1)
-      ids.splice(to, 0, draggedId)
-      const next: Record<string, number> = {}
-      ids.forEach((id, idx) => { next[id] = idx })
-      return next
-    })
+  // Une zone de dépôt entre deux lignes. Haute de 2 px au repos pour ne pas
+  // écarter la liste, elle s’épaissit et se colore dès qu’on la survole avec
+  // un mouvement en main. Le padding invisible lui donne une cible de 14 px,
+  // sinon elle serait impossible à viser.
+  // Fonction de rendu, PAS un composant : defini dans le corps du composant,
+  // un composant est un type neuf a chaque rendu, et React demonte puis remonte
+  // son sous-arbre. La zone disparaissait donc sous le curseur en plein glisser.
+  const zoneDepot = (blockId: string, pos: number) => {
+    const actif = !!draggedWmId
+    const vise = cibleDepot?.blockId === blockId && cibleDepot?.pos === pos
+    if (!actif) return null
+    return (
+      <div
+        onDragOver={e => { e.preventDefault(); if (!vise) setCibleDepot({ blockId, pos }) }}
+        onDragLeave={() => { if (vise) setCibleDepot(null) }}
+        onDrop={e => {
+          e.preventDefault()
+          if (draggedWmId) deplacerMouvement(draggedWmId, blockId, pos)
+          setDraggedWmId(null); setCibleDepot(null)
+        }}
+        style={{ height: 2, margin: '-6px 0', padding: '6px 0', boxSizing: 'content-box' }}
+      >
+        <div style={{
+          height: 2, borderRadius: 2,
+          background: vise ? 'var(--accent)' : 'transparent',
+          boxShadow: vise ? '0 0 0 3px rgba(180,85,45,0.18)' : 'none',
+          transition: 'background 90ms',
+        }} />
+      </div>
+    )
+  }
+
+  const deplacerBloc = (blocId: string, pos: number) => {
+    const ids = initial.blocks
+      .filter(b => !removedBlockIds.has(b.id))
+      .slice()
+      .sort((a, b) => (blockOrder[a.id] ?? a.order) - (blockOrder[b.id] ?? b.order))
+      .map(b => b.id)
+    const depuis = ids.indexOf(blocId)
+    if (depuis === -1) return
+    ids.splice(depuis, 1)
+    // La position visée est comptée AVANT le retrait : si on descend un bloc,
+    // tout ce qui le suivait a reculé d’un cran.
+    const vers = Math.max(0, Math.min(pos > depuis ? pos - 1 : pos, ids.length))
+    ids.splice(vers, 0, blocId)
+    const rangs: Record<string, number> = {}
+    ids.forEach((id, i) => { rangs[id] = i })
+    setBlockOrder(prev => ({ ...prev, ...rangs }))
+
+    // Les mouvements suivent leur bloc : leur rang global doit être recalculé,
+    // sinon l’ordre affiché et l’ordre enregistré divergent.
+    const rangsMvt: Record<string, number> = {}
+    let n = 0
+    for (const bid of ids) for (const mid of getBlockOrderedIds(bid)) rangsMvt[mid] = n++
+    setMovementOrder(prev => ({ ...prev, ...rangsMvt }))
+  }
+
+  // Séance sans aucun bloc : les mouvements forment une liste plate, qui
+  // souffrait exactement du même défaut.
+  const deplacerDansListePlate = (wmId: string, pos: number) => {
+    const ids = editStates
+      .map((_, i) => originals[i])
+      .filter(o => o && !removedWmIds.has(o.id))
+      .sort((a, b) => (movementOrder[a.id] ?? a.order) - (movementOrder[b.id] ?? b.order))
+      .map(o => o.id)
+    const depuis = ids.indexOf(wmId)
+    if (depuis === -1) return
+    ids.splice(depuis, 1)
+    const vers = Math.max(0, Math.min(pos > depuis ? pos - 1 : pos, ids.length))
+    ids.splice(vers, 0, wmId)
+    const rangs: Record<string, number> = {}
+    ids.forEach((id, i) => { rangs[id] = i })
+    setMovementOrder(prev => ({ ...prev, ...rangs }))
+  }
+
+  const zonePlate = (pos: number) => {
+    if (!draggedWmId) return null
+    const vise = cibleDepot?.blockId === '__plat__' && cibleDepot?.pos === pos
+    return (
+      <div
+        onDragOver={e => { e.preventDefault(); if (!vise) setCibleDepot({ blockId: '__plat__', pos }) }}
+        onDragLeave={() => { if (vise) setCibleDepot(null) }}
+        onDrop={e => {
+          e.preventDefault()
+          if (draggedWmId) deplacerDansListePlate(draggedWmId, pos)
+          setDraggedWmId(null); setCibleDepot(null)
+        }}
+        style={{ height: 2, margin: '-6px 0', padding: '6px 0', boxSizing: 'content-box' }}
+      >
+        <div style={{
+          height: 2, borderRadius: 2,
+          background: vise ? 'var(--accent)' : 'transparent',
+          boxShadow: vise ? '0 0 0 3px rgba(180,85,45,0.18)' : 'none',
+          transition: 'background 90ms',
+        }} />
+      </div>
+    )
+  }
+
+  // Zone de dépôt entre deux blocs.
+  const zoneBloc = (pos: number) => {
+    if (!draggedBlockId) return null
+    const vise = cibleBloc === pos
+    return (
+      <div
+        onDragOver={e => { e.preventDefault(); if (!vise) setCibleBloc(pos) }}
+        onDragLeave={() => { if (vise) setCibleBloc(null) }}
+        onDrop={e => {
+          e.preventDefault()
+          if (draggedBlockId) deplacerBloc(draggedBlockId, pos)
+          setDraggedBlockId(null); setCibleBloc(null)
+        }}
+        style={{ height: 3, margin: '-8px 0', padding: '8px 0', boxSizing: 'content-box' }}
+      >
+        <div style={{
+          height: 3, borderRadius: 2,
+          background: vise ? 'var(--gold)' : 'transparent',
+          boxShadow: vise ? '0 0 0 3px rgba(201,165,53,0.20)' : 'none',
+          transition: 'background 90ms',
+        }} />
+      </div>
+    )
   }
 
   // ── Superset : mêmes séries pour tout le bloc, repos 0 sauf sur le dernier ──
@@ -126,10 +268,15 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   // Ordre d'un bloc = mouvements existants (triés) puis mouvements en attente
   // (dans leur ordre d'ajout) — fonctionne aussi bien pour un bloc existant
   // que pour un bloc tout juste créé (où seuls des pendingAdds existent).
+  // Le bloc courant d’un mouvement : celui où le glisser-déposer l’a mis,
+  // sinon celui d’origine.
+  const blocDe = (o: { id: string; blockId?: string | null }): string | null =>
+    movementBlock[o.id] ?? o.blockId ?? null
+
   const getBlockOrderedIds = (blockId: string): string[] => {
     const existingIds = originals
       .map((o, i) => ({ o, i }))
-      .filter(({ o }) => o.blockId === blockId && !removedWmIds.has(o.id))
+      .filter(({ o }) => blocDe(o) === blockId && !removedWmIds.has(o.id))
       .sort((a, b) => (movementOrder[a.o.id] ?? a.o.order) - (movementOrder[b.o.id] ?? b.o.order))
       .map(({ o }) => o.id)
     const pendingIds = pendingAdds.filter(p => p.blockId === blockId).map(p => p.tempId)
@@ -409,6 +556,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
       return es.movementId !== orig.movementId || effSets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10')
         || es.duration !== (orig.duration ?? null) || effRest !== (orig.rest ?? null)
         || (movementOrder[orig.id] ?? orig.order) !== orig.order
+        || (movementBlock[orig.id] ?? orig.blockId ?? null) !== (orig.blockId ?? null)
     })
     const blockOrderChanged = (b: WorkoutBlock) => (blockOrder[b.id] ?? b.order) !== b.order
     const changedBlocks = initial.blocks.filter(b => blockChanged(b) || blockOrderChanged(b))
@@ -427,6 +575,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
         if (es.duration !== (orig.duration ?? null)) body.duration = es.duration
         if (effRest !== (orig.rest ?? null)) body.rest = effRest
         if ((movementOrder[orig.id] ?? orig.order) !== orig.order) body.order = movementOrder[orig.id]
+        // Le PATCH accepte blockId depuis le 11/10 ; le client ne s’en servait
+        // pas, d’où l’impossibilité de déplacer un mouvement entre deux blocs.
+        const bidCible = movementBlock[orig.id] ?? orig.blockId ?? null
+        if (bidCible !== (orig.blockId ?? null)) body.blockId = bidCible
         return fetch(`/api/workouts/${initial.id}/movements/${orig.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
         }).catch(() => null)
@@ -585,8 +737,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
       // rendu qui suit router.refresh(), avant que l'effect ne rattrape `editStates` (un
       // render plus tard). Sans ce garde, `editStates[absIdx]` vaut undefined pour l'entrée
       // fraîchement ajoutée et fait planter MovementRowEdit.
-      if (orig.blockId && blockEditStatesMap[orig.blockId] && editStates[absIdx])
-        blockEditStatesMap[orig.blockId].push({ es: editStates[absIdx], orig, absIdx })
+      const bid = blocDe(orig)
+      if (bid && blockEditStatesMap[bid] && editStates[absIdx])
+        blockEditStatesMap[bid].push({ es: editStates[absIdx], orig, absIdx })
     })
     Object.values(blockEditStatesMap).forEach(list =>
       list.sort((a, b) => (movementOrder[a.orig.id] ?? a.orig.order) - (movementOrder[b.orig.id] ?? b.orig.order))
@@ -865,6 +1018,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                 !blockIsSuper ? 'none' : (id === lastInBlockId ? 'last' : 'linked')
               return (
                 <div key={block.id}>
+                  {editMode && zoneBloc(bi)}
                   {editMode ? (
                     <BlockHeaderEdit
                       block={block} index={bi}
@@ -879,9 +1033,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                       onRemove={() => setRemovedBlockIds(prev => new Set([...prev, block.id]))}
                       isDragging={draggedBlockId === block.id}
                       onDragStart={() => setDraggedBlockId(block.id)}
-                      onDragOver={() => { if (draggedBlockId) handleReorderBlock(draggedBlockId, block.id) }}
-                      onDrop={() => setDraggedBlockId(null)}
-                      onDragEnd={() => setDraggedBlockId(null)}
+                      onDragOver={() => {}}
+                      onDrop={() => { setDraggedBlockId(null); setCibleBloc(null) }}
+                      onDragEnd={() => { setDraggedBlockId(null); setCibleBloc(null) }}
                     />
                   ) : (
                     <BlockHeaderView
@@ -894,16 +1048,23 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                       {editMode
                         ? <>
                             {blockES.map(({ es, orig, absIdx }, pos) => (
-                              <MovementRowEdit key={orig.id} es={es} original={orig} index={absIdx} displayNumber={pos + 1} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
+                              <React.Fragment key={orig.id}>
+                              {zoneDepot(block.id, pos)}
+                              <MovementRowEdit es={es} original={orig} index={absIdx} displayNumber={pos + 1} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
                                 supersetRole={roleFor(orig.id)}
                                 onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))}
                                 isDragging={draggedWmId === orig.id}
                                 onDragStart={() => setDraggedWmId(orig.id)}
-                                onDragOver={() => { if (draggedWmId) handleReorder(draggedWmId, orig.id) }}
-                                onDrop={() => setDraggedWmId(null)}
-                                onDragEnd={() => setDraggedWmId(null)}
+                                // Le survol d’une ligne ne réordonne plus : c’est la zone
+                                // entre les lignes qui porte la cible, pour pouvoir viser
+                                // le début et la fin d’un bloc.
+                                onDragOver={() => {}}
+                                onDrop={() => { setDraggedWmId(null); setCibleDepot(null) }}
+                                onDragEnd={() => { setDraggedWmId(null); setCibleDepot(null) }}
                               />
+                              </React.Fragment>
                             ))}
+                            {zoneDepot(block.id, blockES.length)}
                             {pendingAdds.filter(p => p.blockId === block.id).map((p, pos) => (
                               <MovementRowEdit key={p.tempId} es={p.es} original={p.orig} index={-1} displayNumber={blockES.length + pos + 1} allMovementIds={allMovementIds} onMovementClick={setSelectedMovementId}
                                 supersetRole={roleFor(p.tempId)}
@@ -952,15 +1113,19 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                     .filter(({ orig }) => !removedWmIds.has(orig.id))
                     .sort((a, b) => (movementOrder[a.orig.id] ?? a.orig.order) - (movementOrder[b.orig.id] ?? b.orig.order))
                     .map(({ es, orig, i }, pos) => (
-                      <MovementRowEdit key={orig.id} es={es} original={orig} index={i} displayNumber={pos + 1} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
+                      <React.Fragment key={orig.id}>
+                      {zonePlate(pos)}
+                      <MovementRowEdit es={es} original={orig} index={i} displayNumber={pos + 1} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
                         onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))}
                         isDragging={draggedWmId === orig.id}
                         onDragStart={() => setDraggedWmId(orig.id)}
-                        onDragOver={() => { if (draggedWmId) handleReorder(draggedWmId, orig.id) }}
-                        onDrop={() => setDraggedWmId(null)}
-                        onDragEnd={() => setDraggedWmId(null)}
+                        onDragOver={() => {}}
+                        onDrop={() => { setDraggedWmId(null); setCibleDepot(null) }}
+                        onDragEnd={() => { setDraggedWmId(null); setCibleDepot(null) }}
                       />
+                      </React.Fragment>
                     ))}
+                  {zonePlate(editStates.filter((_, i) => originals[i] && !removedWmIds.has(originals[i].id)).length)}
                   {pendingAdds.filter(p => p.blockId === null).map((p, pos) => (
                     <MovementRowEdit key={p.tempId} es={p.es} original={p.orig} index={-1} displayNumber={editStates.length + pos + 1} allMovementIds={allMovementIds} onMovementClick={setSelectedMovementId}
                       onUpdate={(_, patch) => setPendingAdds(prev => prev.map(x => x.tempId === p.tempId ? { ...x, es: { ...x.es, ...patch } } : x))}

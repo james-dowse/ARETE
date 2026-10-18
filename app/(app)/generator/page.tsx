@@ -1,9 +1,10 @@
 'use client'
+import React from 'react'
 import { BIO_TYPES, COMPLEXITIES, EQUIPMENT_TYPES, EQUIPMENT_ICONS, BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, FAILURE_REPS, computeWorkoutDifficulty, type GeneratedMovement } from '@/lib/types'
 import RichEditor from '@/components/RichEditor'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Zap, Save, RefreshCw, Clock, Minus, ChevronDown, ChevronUp, Dices, Search } from 'lucide-react'
+import { Plus, Trash2, Zap, Save, RefreshCw, Clock, Minus, ChevronDown, ChevronUp, Dices, Search, GripVertical } from 'lucide-react'
 import MovementModal from '@/components/MovementModal'
 import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
 import {
@@ -295,6 +296,54 @@ export default function GeneratorPage() {
     }))
   }
   const removeBlock = (id: string) => setBlocks(prev => prev.filter(b => b.id !== id))
+
+  // Les blocs portaient un `order` mais rien ne permettait de les réordonner :
+  // il fallait tout supprimer et refaire dans le bon sens. Même modèle que
+  // l’éditeur de séance — une position visée entre deux blocs, et un dépôt
+  // explicite, plutôt qu’un réordonnancement pendant le survol.
+  const [blocGlisse, setBlocGlisse] = useState<string | null>(null)
+  const [cibleBloc, setCibleBloc] = useState<number | null>(null)
+
+  const deplacerBloc = (id: string, pos: number) => {
+    setBlocks(prev => {
+      const depuis = prev.findIndex(b => b.id === id)
+      if (depuis === -1) return prev
+      const copie = prev.slice()
+      const [pris] = copie.splice(depuis, 1)
+      // La position visée est comptée AVANT le retrait : descendre un bloc
+      // décale d’un cran tout ce qui le suivait.
+      const vers = Math.max(0, Math.min(pos > depuis ? pos - 1 : pos, copie.length))
+      copie.splice(vers, 0, pris)
+      return copie.map((b, i) => ({ ...b, order: i }))
+    })
+  }
+
+  // Fonction de rendu, pas un composant : un composant défini dans le corps
+  // est un type neuf à chaque rendu, et React démonterait la zone sous le
+  // curseur en plein glisser.
+  const zoneBloc = (pos: number) => {
+    if (!blocGlisse) return null
+    const vise = cibleBloc === pos
+    return (
+      <div
+        onDragOver={e => { e.preventDefault(); if (!vise) setCibleBloc(pos) }}
+        onDragLeave={() => { if (vise) setCibleBloc(null) }}
+        onDrop={e => {
+          e.preventDefault()
+          if (blocGlisse) deplacerBloc(blocGlisse, pos)
+          setBlocGlisse(null); setCibleBloc(null)
+        }}
+        style={{ height: 3, margin: '-7px 0', padding: '7px 0', boxSizing: 'content-box' }}
+      >
+        <div style={{
+          height: 3, borderRadius: 2,
+          background: vise ? 'var(--accent)' : 'transparent',
+          boxShadow: vise ? '0 0 0 3px rgba(180,85,45,0.18)' : 'none',
+          transition: 'background 90ms',
+        }} />
+      </div>
+    )
+  }
   const updateBlock = (id: string, field: keyof Block, value: string | number | null) =>
     setBlocks(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b))
   const toggleBlockArr = (id: string, field: 'bioTypes' | 'complexities' | 'equipments', value: string) =>
@@ -885,10 +934,19 @@ export default function GeneratorPage() {
               {blocks.map((block, idx) => {
                 const collapsed = !!collapsedBlocks[block.id]
                 return (
-                  <div key={block.id} className="card" style={{ overflow: 'hidden' }}>
+                  <React.Fragment key={block.id}>
+                  {zoneBloc(idx)}
+                  <div className="card" style={{ overflow: 'hidden', opacity: blocGlisse === block.id ? 0.45 : 1 }}>
                     {/* Block header row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', cursor: 'pointer' }} onClick={() => toggleCollapse(block.id)}>
+                    <div
+                      draggable
+                      onDragStart={() => setBlocGlisse(block.id)}
+                      onDragEnd={() => { setBlocGlisse(null); setCibleBloc(null) }}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', cursor: 'pointer' }}
+                      onClick={() => toggleCollapse(block.id)}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <GripVertical size={13} style={{ color: 'var(--text-dim)', cursor: 'grab', flexShrink: 0 }} />
                         <span className="t-micro" style={{ color: 'var(--text-muted)' }}>BLOC {idx + 1}</span>
                         {block.bioTypes.map(bt => (
                           <span key={bt} style={{ fontSize: 11, padding: '1px 8px', borderRadius: 20, background: `${BIO_TYPE_COLORS[bt]}22`, color: BIO_TYPE_COLORS[bt], border: `1px solid ${BIO_TYPE_COLORS[bt]}44`, fontWeight: 600 }}>
@@ -1051,8 +1109,10 @@ export default function GeneratorPage() {
                       </div>
                     )}
                   </div>
+                  </React.Fragment>
                 )
               })}
+              {zoneBloc(blocks.length)}
             </div>
 
             <button onClick={addBlock} style={{ width: '100%', padding: '10px', border: '1px dashed var(--border)', borderRadius: 10, background: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
