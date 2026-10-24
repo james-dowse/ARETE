@@ -1,7 +1,8 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { Camera, Trash2, Save, Check } from 'lucide-react'
+import { Camera, Trash2, Save, Check, LogOut } from 'lucide-react'
 import { useToast } from '@/components/Toast'
+import { useConfirm } from '@/components/ConfirmDialog'
 
 interface Profile {
   id: string; email: string
@@ -16,6 +17,8 @@ export default function ProfileClient() {
   const [bio, setBio] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const toast = useToast()
+  const confirm = useConfirm()
+  const [loggingOut, setLoggingOut] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -92,6 +95,36 @@ export default function ProfileClient() {
     if (!res || !res.ok) { toast('Enregistrement impossible — reessaie.', 'error'); return }
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
+  }
+
+  const handleLogout = async () => {
+    const ok = await confirm(
+      'Il faudra un nouveau code par email pour revenir.',
+      { title: 'Se déconnecter ?', confirmLabel: 'Se déconnecter' },
+    )
+    if (!ok) return
+    setLoggingOut(true)
+    const res = await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
+    if (!res?.ok) {
+      setLoggingOut(false)
+      toast('La déconnexion a échoué', 'error')
+      return
+    }
+
+    // Le service worker met en cache les réponses d'API (public/sw.js) : sans ce
+    // vidage, les séances du compte quitté restent lisibles hors ligne après la
+    // déconnexion — sur un téléphone partagé, c'est la seule chose qui compte.
+    if ('caches' in window) {
+      await caches.keys()
+        .then(noms => Promise.all(noms.map(n => caches.delete(n))))
+        .catch(() => {})
+    }
+
+    // Navigation complète (et non router.replace) : le cookie disparu doit être
+    // constaté par le proxy, et l'arbre serveur rendu avec la session fermée.
+    // `replace` pour que le bouton Retour ne ramène pas sur une page qui aurait
+    // encore l'air connectée.
+    window.location.replace('/login')
   }
 
   if (notLoggedIn) {
@@ -242,6 +275,25 @@ export default function ProfileClient() {
           {saved
             ? <><Check size={15} /> Enregistré</>
             : <><Save size={15} /> {saving ? 'Sauvegarde…' : 'Enregistrer'}</>}
+        </button>
+      </div>
+
+      {/* ── Session ──────────────────────────────────────────────────────────
+          Fond transparent et texte estompe : la charte reserve le terracotta a
+          l'action primaire de l'ecran, et c'est Enregistrer. Partir n'est pas
+          l'action principale d'une page de profil, c'est la sortie — elle doit
+          se trouver sans s'imposer. */}
+      <div className="page-reading" style={{ marginTop: 'var(--sp-6)', paddingTop: 'var(--sp-5)', borderTop: '1px solid var(--border)' }}>
+        <div className="t-micro" style={{ marginBottom: 6 }}>SESSION</div>
+        <div className="t-sm" style={{ color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>
+          Connecté avec {profile.email}. La reconnexion se fait par code envoyé à cette adresse.
+        </div>
+        <button
+          onClick={handleLogout} disabled={loggingOut}
+          className="btn btn-md"
+          style={{ background: 'transparent', border: '1px solid var(--border-plus)', color: 'var(--text-dim)', cursor: loggingOut ? 'wait' : 'pointer' }}
+        >
+          <LogOut size={15} /> {loggingOut ? 'Déconnexion…' : 'Se déconnecter'}
         </button>
       </div>
 

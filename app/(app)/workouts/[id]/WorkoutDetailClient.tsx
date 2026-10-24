@@ -297,8 +297,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     return idx !== -1 ? editStates[idx].rest : null
   }
 
+  // Ces trois fonctions passent par `blocDe` et non par `originals[i].blockId` :
+  // depuis le glisser-déposer entre blocs, le bloc d'un mouvement est celui où la
+  // souris l'a posé, et le `blockId` d'origine ne vaut plus que jusqu'au premier
+  // déplacement. Les lire sur l'original égalisait l'ancien bloc et pas le nouveau.
   const syncSupersetSets = (blockId: string, sets: number) => {
-    setEditStates(prev => prev.map((es, i) => originals[i]?.blockId === blockId ? { ...es, sets } : es))
+    setEditStates(prev => prev.map((es, i) => originals[i] && blocDe(originals[i]) === blockId ? { ...es, sets } : es))
     setPendingAdds(prev => prev.map(p => p.blockId === blockId ? { ...p, es: { ...p.es, sets } } : p))
   }
 
@@ -307,7 +311,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     const lastId = orderedIds[orderedIds.length - 1]
     setEditStates(prev => prev.map((es, i) => {
       const o = originals[i]
-      return (o?.blockId === blockId && o.id !== lastId) ? { ...es, rest: 0 } : es
+      return (o && blocDe(o) === blockId && o.id !== lastId) ? { ...es, rest: 0 } : es
     }))
     setPendingAdds(prev => prev.map(p => (p.blockId === blockId && p.tempId !== lastId) ? { ...p, es: { ...p.es, rest: 0 } } : p))
   }
@@ -490,7 +494,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     setEditStates(prev => prev.map((es, i) => i === idx ? { ...es, ...patch } : es))
     // Superset : les séries doivent rester identiques sur tout le bloc.
     if (patch.sets !== undefined) {
-      const blockId = originals[idx]?.blockId ?? null
+      const o = originals[idx]
+      const blockId = o ? blocDe(o) : null
       if (blockId && isSupersetBlock(blockId)) syncSupersetSets(blockId, patch.sets)
     }
   }
