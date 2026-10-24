@@ -23,10 +23,15 @@ import {
   Workout, WorkoutMovement, WorkoutBlock, Movement, EditState, LastPerf,
   WorkoutImage, ImageEditZone, MovementRowView, MovementRowEdit,
   BlockHeaderView, BlockHeaderEdit, BlockRestAfterEdit, EditBar, AddToWeekModal, Stat,
-  AssignFromWorkoutModal,
+  AssignFromWorkoutModal, RailBloc, type ModeBloc,
   toEditState, toDurationMovement, stripHtml, fmtMin, fmtSec,
 } from './parts'
 import { ShareModal } from '@/components/ShareModal'
+
+// Le régime d'un bloc. `dropset` n'a pas encore de champ en base : la valeur
+// existe dans le type et dans le rendu, et ce sera le seul endroit à changer
+// quand la colonne sera là.
+const modeDuBloc = (b: WorkoutBlock): ModeBloc => (b.superset ? 'superset' : 'classique')
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin, passages = 0, dernierPassage = null }: { workout: Workout; backTo?: string; isAdmin?: boolean; passages?: number; dernierPassage?: string | null }) {
@@ -1046,6 +1051,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                     <BlockHeaderView
                       block={block} index={bi} movements={blockMovementsMap[block.id] || []}
                       collapsed={blockCollapsed} onToggle={() => toggleViewBlock(block.id)}
+                      mode={modeDuBloc(block)}
                     />
                   )}
                   {!blockCollapsed && (
@@ -1080,7 +1086,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                               />
                             ))}
                           </>
-                        : blockMovements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} lastPerf={lastPerf[wm.movement.id]} />)
+                        : <RailBloc
+                            mode={modeDuBloc(block)}
+                            tours={blockMovements[0]?.sets ?? 3}
+                            lignes={blockMovements.map((wm, i) => <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} lastPerf={lastPerf[wm.movement.id]} />)}
+                          />
                       }
                       {editMode && (
                         <button onClick={() => setAddingToBlockId(block.id)}

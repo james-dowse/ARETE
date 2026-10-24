@@ -16,6 +16,10 @@ interface Workout {
   user?: { firstName?: string | null; lastName?: string | null; email: string } | null
 }
 
+// Même régime qu'à l'écran. `dropset` n'a pas encore de champ en base.
+const modeDuBloc = (b: Block): 'classique' | 'superset' | 'dropset' =>
+  b.superset ? 'superset' : 'classique'
+
 const toDurationMovement = (wm: WorkoutMovement): DurationMovement => ({
   sets: wm.sets, reps: wm.reps, duration: wm.duration, rest: wm.rest,
   blockId: wm.blockId, order: wm.order, bioType: wm.movement.bioType,
@@ -98,14 +102,27 @@ export default function PrintPage() {
           // Les consignes sont du HTML (RichEditor) : sur la feuille imprimée
           // on en imprime le texte, hors de l’en-tête en capitales.
           const consignes = block.instructions ? stripHtmlMultiline(block.instructions) : ''
+          const mode = modeDuBloc(block)
+          const enchaine = mode !== 'classique'
           return (
-            <div key={block.id} className="block">
+            <div key={block.id} className={enchaine ? 'block enchaine' : 'block'}>
               <div className="block-header">
                 <span>Bloc {bi + 1}{block.bioType ? ` · ${block.bioType}` : ''}</span>
-                {block.superset && <span className="superset-chip">⚡ Superset</span>}
+                {enchaine && (
+                  <span className="mode-chip">{mode === 'superset' ? '↺ Superset' : '↓ Dropset'}</span>
+                )}
               </div>
               {consignes && <div className="block-instructions">{consignes}</div>}
-              {bMovs.map((wm, i) => <MovRow key={wm.id} wm={wm} i={i} />)}
+              {bMovs.map((wm, i) => (
+                <MovRow key={wm.id} wm={wm} i={i} decalage={mode === 'dropset' ? i * 14 : 0} />
+              ))}
+              {enchaine && (
+                <div className="mode-footer">
+                  {mode === 'superset'
+                    ? `↺ × ${bMovs[0]?.sets ?? 3} tours`
+                    : `↓ descente · ${bMovs.length} paliers`}
+                </div>
+              )}
               {block.restAfter && bi < workout.blocks.length - 1 && (
                 <div className="block-rest">⏸ {block.restAfter}s de repos avant le bloc suivant</div>
               )}
@@ -133,10 +150,10 @@ export default function PrintPage() {
   )
 }
 
-function MovRow({ wm, i }: { wm: WorkoutMovement; i: number }) {
+function MovRow({ wm, i, decalage = 0 }: { wm: WorkoutMovement; i: number; decalage?: number }) {
   const target = wm.sets ?? 0
   return (
-    <div className="movement-row">
+    <div className="movement-row" style={decalage ? { paddingLeft: 14 + decalage } : undefined}>
       <span className="num">{i + 1}</span>
       <span className="bt-dot" style={{ background: BIO_TYPE_COLORS[wm.movement.bioType] || '#ccc' }} />
       <span className="mov-name">{wm.movement.name}</span>

@@ -40,9 +40,16 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
           .block { border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 12px; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
           .block-header { background: #f9fafb; padding: 8px 14px; font-size: 11px; font-weight: 700; color: #555; letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
           .block-instructions { padding: 7px 14px; font-size: 11.5px; line-height: 1.55; color: #555; white-space: pre-line; }
-          .superset-chip { font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; color: #a07800; background: #fdf3d0; border: 1px solid #e8c84a; border-radius: 20px; padding: 1px 8px; text-transform: none; white-space: nowrap; }
+          .mode-chip { font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; color: #555; background: #fff; border: 1px solid #cfcfcf; border-radius: 20px; padding: 1px 8px; text-transform: none; white-space: nowrap; }
           .movement-row { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-top: 1px solid #f3f4f6; break-inside: avoid; page-break-inside: avoid; }
           .movement-row:first-child { border-top: none; }
+          /* La même grammaire qu'à l'écran, et elle survit au noir et blanc :
+             aéré = on se repose entre les séries, serré = on enchaîne. Les
+             filets de séparation disparaissent dans un bloc enchaîné, puisque
+             c'est précisément ce qui n'est PAS séparé. */
+          .block:not(.enchaine) .movement-row { padding-top: 11px; padding-bottom: 11px; }
+          .enchaine .movement-row { padding-top: 4.5px; padding-bottom: 4.5px; border-top: none; }
+          .mode-footer { padding: 3px 14px 8px; font-size: 10.5px; font-weight: 700; color: #777; }
           .num { font-size: 11px; color: #aaa; width: 18px; text-align: right; flex-shrink: 0; }
           .mov-name { font-weight: 600; font-size: 13px; }
           .bt-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }

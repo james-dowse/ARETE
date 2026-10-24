@@ -12,7 +12,7 @@ import { useState, useRef } from 'react'
 import {
   RefreshCw, Search, X, Save, Undo2, Minus, Plus,
   AlignLeft, Trash2, ChevronDown, ChevronUp, CalendarPlus, GripVertical,
-  UserPlus, Check,
+  UserPlus, Check, Repeat, ChevronsDown,
 } from 'lucide-react'
 import UserSearchPicker, { type FoundUser } from '@/components/UserSearchPicker'
 
@@ -423,10 +423,122 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
   )
 }
 
+// ─── Rail de bloc (vue lecture) ───────────────────────────────────────────────
+//
+// Trois modes, trois formes — et la forme dit la seule chose qui distingue
+// réellement les trois : OÙ SE TROUVE LE REPOS.
+//
+//   classique — rail interrompu : le blanc entre les segments EST le repos
+//   superset  — rail continu qui se referme : on enchaîne, et on revient
+//   dropset   — rail continu en escalier : on enchaîne, et on ne revient pas
+//
+// Le rail est en `--text-dim`, et c'est délibéré sur deux points.
+//
+// Pas de teinte de marque : terracotta est l'action, l'or la marque, la mousse
+// l'accompli. En prendre une pour étiqueter une structure, c'est la vider de son
+// sens partout ailleurs. La forme suffit à distinguer les trois modes.
+//
+// Pas la couleur du `bioType` du bloc non plus — c'était l'idée de départ, elle
+// ne tient pas : `WorkoutBlock.bioType` n'est pas un type biomécanique, c'est le
+// TITRE LIBRE du bloc (« CONDITIONNEMENT 1 », « HEAVY LIFT »…, cf. le champ de
+// BlockHeaderEdit). La correspondance avec BIO_TYPE_COLORS échoue donc presque
+// toujours, et quand elle réussit par hasard le rail change de couleur sans
+// raison lisible. Une seule encre, prévisible.
+//
+// `--text-dim` et non `--text-muted` : un trait de structure dessiné dans une
+// encre de TEXTE se lit comme une barre noire, surtout en thème clair où
+// --text-muted vaut #55503f.
+//
+// Le rail classique est volontairement un filet de `--border` : 56 blocs sur 72
+// sont classiques, et de l'encre pleine sur le cas par défaut ferait le mur que
+// la charte proscrit. L'encre suit l'information.
+export type ModeBloc = 'classique' | 'superset' | 'dropset'
+
+// La densité EST le mécanisme : serré = on enchaîne, aéré = on se repose.
+// C'est le seul signal qui ne coûte aucune encre — il se joue dans le vide qui
+// sépare déjà les cartouches.
+const ECART_AERE = 14   // classique : le blanc entre les cartouches est le repos
+const ECART_SERRE = 3   // enchaîné : les cartouches se touchent presque
+const MARCHE = 11       // dropset : décalage d'un palier au suivant
+
+// Trois habillages possibles pour les deux régimes enchaînés. Le choix n'est pas
+// cosmétique : terracotta est l'action, l'or la marque, la mousse l'accompli — en
+// prendre une pour étiqueter une structure la vide de son sens partout ailleurs.
+// D'où « surface », qui distingue par le FOND et n'emprunte aucune teinte.
+// Une troisième piste a été essayée et écartée : distinguer les deux régimes par
+// le RELIEF (plateau plus sombre pour l'un, plus clair pour l'autre, sans aucune
+// teinte). Elle tient en thème sombre et s'effondre en clair, où le plateau
+// sombre tombe exactement sur la couleur du fond de page et disparaît. Il aurait
+// fallu deux jeux de valeurs par thème pour un gain que `neutre` obtient déjà.
+export type VarianteRail = 'neutre' | 'couleur'
+
+interface Habillage { fond: string; bord: string; lisere: string; encre: string }
+
+const HABILLAGE: Record<VarianteRail, Record<'superset' | 'dropset', Habillage>> = {
+  // NEUTRE (en service) : un plateau, un liseré d'encre de structure.
+  neutre: {
+    superset: { fond: 'var(--bg-elevated)', bord: 'var(--border-plus)', lisere: 'var(--text-dim)', encre: 'var(--text-dim)' },
+    dropset: { fond: 'var(--bg-elevated)', bord: 'var(--border-plus)', lisere: 'var(--text-dim)', encre: 'var(--text-dim)' },
+  },
+  // COULEUR : plus immédiatement reconnaissable, et c'est une EXCEPTION À LA
+  // CHARTE — l'or cesse de vouloir dire « marque et progression » le jour où il
+  // veut aussi dire « superset ». À n'activer qu'en l'écrivant dans AGENTS.md.
+  couleur: {
+    superset: { fond: 'var(--bg-elevated)', bord: 'var(--gold-border)', lisere: 'var(--gold)', encre: 'var(--gold)' },
+    dropset: { fond: 'var(--bg-elevated)', bord: 'var(--crimson-border)', lisere: 'var(--crimson)', encre: 'var(--crimson-bright)' },
+  },
+}
+
+export function RailBloc({ mode, tours, lignes, variante = 'neutre' }: {
+  mode: ModeBloc
+  tours?: number
+  lignes: React.ReactNode[]
+  variante?: VarianteRail
+}) {
+  // Un seul mouvement : il n'y a rien à enchaîner, aucun régime à signaler.
+  if (lignes.length < 2) return <div style={{ display: 'flex', flexDirection: 'column', gap: ECART_AERE }}>{lignes}</div>
+
+  // CLASSIQUE — aéré. Chaque mouvement vit sa vie et se repose entre ses séries :
+  // les cartouches respirent, et rien ne les réunit. C'est le cas par défaut, il
+  // ne reçoit donc aucun ajout — ni cadre, ni étiquette, ni rail.
+  if (mode === 'classique') {
+    return <div style={{ display: 'flex', flexDirection: 'column', gap: ECART_AERE }}>{lignes}</div>
+  }
+
+  // SUPERSET et DROPSET — serrés et réunis dans un seul cadre, parce que ce sont
+  // UNE unité qu'on exécute d'un trait. Le décalage distingue ensuite les deux :
+  // le superset revient à la même marche à chaque tour, le dropset descend.
+  const dropset = mode === 'dropset'
+  const h = HABILLAGE[variante][dropset ? 'dropset' : 'superset']
+  return (
+    <div style={{
+      background: h.fond,
+      border: `1px solid ${h.bord}`,
+      borderLeft: h.lisere === 'transparent' ? `1px solid ${h.bord}` : `3px solid ${h.lisere}`,
+      borderRadius: 'var(--r-md)',
+      padding: '8px 8px 6px',
+      display: 'flex', flexDirection: 'column', gap: ECART_SERRE,
+    }}>
+      {lignes.map((ligne, i) => (
+        <div key={i} style={{ marginLeft: dropset ? i * MARCHE : 0 }}>{ligne}</div>
+      ))}
+      <div style={{
+        marginTop: 3, marginLeft: dropset ? (lignes.length - 1) * MARCHE : 0,
+        display: 'flex', alignItems: 'center', gap: 5,
+        color: h.encre, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+      }}>
+        {dropset
+          ? <><ChevronsDown size={13} /> descente · {lignes.length} paliers</>
+          : <><Repeat size={12} /> × {tours ?? 3} tours</>}
+      </div>
+    </div>
+  )
+}
+
 // ─── Block Header (view) ──────────────────────────────────────────────────────
-export function BlockHeaderView({ block, index, movements, collapsed, onToggle }: {
+export function BlockHeaderView({ block, index, movements, collapsed, onToggle, mode = 'classique' }: {
   block: WorkoutBlock; index: number; movements: WorkoutMovement[]
-  collapsed: boolean; onToggle: () => void
+  collapsed: boolean; onToggle: () => void; mode?: ModeBloc
 }) {
   const color = block.bioType ? BIO_TYPE_COLORS[block.bioType] : 'var(--text-muted)'
   // Un seul bloc dans le tableau : son propre restAfter n'est jamais compté (il
@@ -445,9 +557,15 @@ export function BlockHeaderView({ block, index, movements, collapsed, onToggle }
               {BIO_TYPE_ICONS[block.bioType]} {block.bioType}
             </span>
           )}
-          {block.superset && (
-            <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 20, background: 'var(--gold-ghost)', color: 'var(--gold)', border: '1px solid var(--gold-border)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              ⚡ Superset
+          {/* Étiquette neutre, et non plus la pastille or : l'or est réservé à la
+              marque et à la progression, pas à une étiquette de structure. Quand
+              le bloc est déplié c'est le rail qui porte le signal ; replié, il
+              n'y a plus que cette ligne, d'où le maintien d'un mot. */}
+          {mode !== 'classique' && (
+            <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 20, background: 'transparent', color: 'var(--text-dim)', border: '1px solid var(--border-plus)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              {mode === 'superset'
+                ? <><Repeat size={10} /> Superset</>
+                : <><ChevronsDown size={10} /> Dropset</>}
             </span>
           )}
           {movements.length > 0 && (
