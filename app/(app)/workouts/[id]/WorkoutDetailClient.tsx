@@ -33,6 +33,10 @@ import { ShareModal } from '@/components/ShareModal'
 // quand la colonne sera là.
 const modeDuBloc = (b: WorkoutBlock): ModeBloc => (b.superset ? 'superset' : 'classique')
 
+// Casier des mouvements rattachés à aucun bloc. Ce n'est pas un bloc en base :
+// juste une destination de glisser-déposer et un groupe d'affichage.
+const HORS_BLOC = '__hors__'
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin, passages = 0, dernierPassage = null }: { workout: Workout; backTo?: string; isAdmin?: boolean; passages?: number; dernierPassage?: string | null }) {
   const router = useRouter()
@@ -88,7 +92,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   // Le bloc d’un mouvement devient un état modifiable : sans lui, le
   // regroupement lisait `orig.blockId` et déplacer un mouvement d’un bloc à
   // l’autre était impossible par construction, quoi qu’on fasse à l’écran.
-  const [movementBlock, setMovementBlock] = useState<Record<string, string>>({})
+  // `null` est une valeur légitime ici : « détaché de tout bloc ». D'où le type
+  // nullable, et la lecture par `in` plutôt que par `??` partout — `??` ferait
+  // retomber un détachement explicite sur le blockId d'origine.
+  const [movementBlock, setMovementBlock] = useState<Record<string, string | null>>({})
   // La cible de dépôt, visée précisément : un bloc et une position entre deux
   // lignes. L’ancien modèle réordonnait pendant le survol, ce qui faisait
   // vibrer la liste et interdisait de viser le début ou la fin d’un bloc.
@@ -111,11 +118,15 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     const pend = pendingAdds.find(p => p.tempId === wmId)
 
     // Ordre d’affichage actuel des blocs, pour renuméroter dans le bon sens.
-    const blocsOrdonnes = initial.blocks
-      .filter(b => !removedBlockIds.has(b.id))
-      .slice()
-      .sort((a, b) => (blockOrder[a.id] ?? a.order) - (blockOrder[b.id] ?? b.order))
-      .map(b => b.id)
+    const blocsOrdonnes = [
+      ...initial.blocks
+        .filter(b => !removedBlockIds.has(b.id))
+        .slice()
+        .sort((a, b) => (blockOrder[a.id] ?? a.order) - (blockOrder[b.id] ?? b.order))
+        .map(b => b.id),
+      // En dernier, comme à l'affichage : les orphelins se lisent après les blocs.
+      HORS_BLOC,
+    ]
 
     // Contenu de chaque bloc avant déplacement, le mouvement déplacé retiré.
     const contenu: Record<string, string[]> = {}
@@ -125,12 +136,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     const borne = Math.max(0, Math.min(pos, contenu[versBlocId].length))
     contenu[versBlocId].splice(borne, 0, wmId)
 
+    const cible = versBlocId === HORS_BLOC ? null : versBlocId
     if (pend) {
       // Un mouvement pas encore enregistré n’a pas de ligne en base : c’est
       // `pendingAdds` qui porte son bloc.
-      setPendingAdds(prev => prev.map(x => x.tempId === wmId ? { ...x, blockId: versBlocId } : x))
+      setPendingAdds(prev => prev.map(x => x.tempId === wmId ? { ...x, blockId: cible } : x))
     } else {
-      setMovementBlock(prev => ({ ...prev, [wmId]: versBlocId }))
+      setMovementBlock(prev => ({ ...prev, [wmId]: cible }))
     }
 
     const rangs: Record<string, number> = {}
@@ -276,15 +288,31 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   // Le bloc courant d’un mouvement : celui où le glisser-déposer l’a mis,
   // sinon celui d’origine.
   const blocDe = (o: { id: string; blockId?: string | null }): string | null =>
-    movementBlock[o.id] ?? o.blockId ?? null
+    o.id in movementBlock ? movementBlock[o.id] : (o.blockId ?? null)
+
+  // « Hors bloc » se manipule comme un bloc : même groupement, mêmes zones de
+  // dépôt, même renumérotation. Sans ça, un mouvement détaché n'a aucun endroit
+  // où être déposé — et c'est exactement ce qui rendait les 15 orphelins d'Alan
+  // Hanik impossibles à rattacher.
+  // Trois cas tombent dans « hors bloc », et pas seulement le premier :
+  //   blockId nul ; blockId pointant vers un bloc qui n'existe plus (donnée
+  //   abîmée) ; bloc supprimé dans la session d'édition en cours — la relation
+  //   est optionnelle, donc sa suppression détachera ces mouvements plutôt que
+  //   de les effacer. Les montrer évite d'en fabriquer de nouveaux sans le voir.
+  const casier = (o: { id: string; blockId?: string | null }): string => {
+    const b = blocDe(o)
+    if (!b || removedBlockIds.has(b)) return HORS_BLOC
+    const existe = initial.blocks.some(x => x.id === b) || pendingBlocks.some(p => p.tempId === b)
+    return existe ? b : HORS_BLOC
+  }
 
   const getBlockOrderedIds = (blockId: string): string[] => {
     const existingIds = originals
       .map((o, i) => ({ o, i }))
-      .filter(({ o }) => blocDe(o) === blockId && !removedWmIds.has(o.id))
+      .filter(({ o }) => casier(o) === blockId && !removedWmIds.has(o.id))
       .sort((a, b) => (movementOrder[a.o.id] ?? a.o.order) - (movementOrder[b.o.id] ?? b.o.order))
       .map(({ o }) => o.id)
-    const pendingIds = pendingAdds.filter(p => p.blockId === blockId).map(p => p.tempId)
+    const pendingIds = pendingAdds.filter(p => (p.blockId ?? HORS_BLOC) === blockId).map(p => p.tempId)
     return [...existingIds, ...pendingIds]
   }
 
@@ -424,7 +452,15 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const isDirtyDifficultyOverride = editMode && editDifficultyOverride !== (initial.difficultyOverride ?? '')
   const isDirtyOrder = editMode && originals.some(o => (movementOrder[o.id] ?? o.order) !== o.order)
   const isDirtyBlockOrder = editMode && initial.blocks.some(b => (blockOrder[b.id] ?? b.order) !== b.order)
-  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyName || isDirtyDescription || isDirtyImage || isDirtyImagePosition || isDirtyTags || isDirtyPublic || isDirtyDifficultyOverride || isDirtyOrder || isDirtyBlockOrder || removedWmIds.size > 0 || removedBlockIds.size > 0 || pendingBlocks.length > 0
+  // Changer un mouvement de bloc sans changer son rang global n'était détecté
+  // par rien : ni `isDirtyMovements` (qui ne compare que les champs de série),
+  // ni `isDirtyOrder`. Déplacer la dernière ligne d'un bloc vers le début du
+  // suivant laisse justement le rang inchangé — la barre affichait « Aucune
+  // modification » et le bouton Sauvegarder disparaissait, alors que l'écran
+  // montrait bien le mouvement à sa nouvelle place. `handleSave`, lui, savait
+  // déjà envoyer le changement : il n'était jamais appelé.
+  const isDirtyBlockMembership = editMode && originals.some(o => blocDe(o) !== (o.blockId ?? null))
+  const isDirty = isDirtyMovements || isDirtyBlocks || isDirtyName || isDirtyDescription || isDirtyImage || isDirtyImagePosition || isDirtyTags || isDirtyPublic || isDirtyDifficultyOverride || isDirtyOrder || isDirtyBlockOrder || isDirtyBlockMembership || removedWmIds.size > 0 || removedBlockIds.size > 0 || pendingBlocks.length > 0
 
   const pendingCount = editMode
     ? editStates.filter((es, i) => {
@@ -437,6 +473,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
       + (isDirtyImage ? 1 : 0)
       + (isDirtyOrder ? 1 : 0)
       + (isDirtyBlockOrder ? 1 : 0)
+      + originals.filter(o => blocDe(o) !== (o.blockId ?? null)).length
       + removedWmIds.size
       + removedBlockIds.size
       + pendingAdds.length
@@ -566,7 +603,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
       return es.movementId !== orig.movementId || effSets !== (orig.sets ?? 2) || es.reps !== (orig.reps ?? '10')
         || es.duration !== (orig.duration ?? null) || effRest !== (orig.rest ?? null)
         || (movementOrder[orig.id] ?? orig.order) !== orig.order
-        || (movementBlock[orig.id] ?? orig.blockId ?? null) !== (orig.blockId ?? null)
+        || blocDe(orig) !== (orig.blockId ?? null)
     })
     const blockOrderChanged = (b: WorkoutBlock) => (blockOrder[b.id] ?? b.order) !== b.order
     const changedBlocks = initial.blocks.filter(b => blockChanged(b) || blockOrderChanged(b))
@@ -587,7 +624,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
         if ((movementOrder[orig.id] ?? orig.order) !== orig.order) body.order = movementOrder[orig.id]
         // Le PATCH accepte blockId depuis le 11/10 ; le client ne s’en servait
         // pas, d’où l’impossibilité de déplacer un mouvement entre deux blocs.
-        const bidCible = movementBlock[orig.id] ?? orig.blockId ?? null
+        // `blocDe` et non `movementBlock[...] ?? …` : la valeur null veut dire
+        // « détaché », et la route PATCH l'accepte comme tel.
+        const bidCible = blocDe(orig)
         if (bidCible !== (orig.blockId ?? null)) body.blockId = bidCible
         return fetch(`/api/workouts/${initial.id}/movements/${orig.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -742,13 +781,14 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const blockEditStatesMap: Record<string, { es: EditState; orig: WorkoutMovement; absIdx: number }[]> = {}
   if (hasBlocks && editMode) {
     initial.blocks.forEach(b => { blockEditStatesMap[b.id] = [] })
+    blockEditStatesMap[HORS_BLOC] = []
     originals.forEach((orig, absIdx) => {
       // Après un ajout de mouvement, `initial.movements` (donc `originals`) grandit sur le
       // rendu qui suit router.refresh(), avant que l'effect ne rattrape `editStates` (un
       // render plus tard). Sans ce garde, `editStates[absIdx]` vaut undefined pour l'entrée
       // fraîchement ajoutée et fait planter MovementRowEdit.
-      const bid = blocDe(orig)
-      if (bid && blockEditStatesMap[bid] && editStates[absIdx])
+      const bid = casier(orig)
+      if (blockEditStatesMap[bid] && editStates[absIdx] && !removedWmIds.has(orig.id))
         blockEditStatesMap[bid].push({ es: editStates[absIdx], orig, absIdx })
     })
     Object.values(blockEditStatesMap).forEach(list =>
@@ -1162,6 +1202,40 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
               {orphanMovements.map((wm, i) => (
                 <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} lastPerf={lastPerf[wm.movement.id]} />
               ))}
+            </div>
+          )}
+          {/* Les mêmes orphelins, mais EN ÉDITION. Sans cette section, la boucle
+              par bloc était le seul rendu du mode édition : une séance de 22
+              mouvements dont 15 détachés s'ouvrait à 7 lignes. Rien n'était
+              perdu en base — simplement invisible, donc irréparable depuis
+              l'application, ce qui est pire qu'une perte visible.
+              La section s'affiche aussi quand elle est vide pendant un glisser,
+              pour offrir une destination « détacher du bloc ». */}
+          {editMode && hasBlocks && ((blockEditStatesMap[HORS_BLOC] ?? []).length > 0 || !!draggedWmId) && (
+            <div style={{ marginTop: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1 }}>HORS BLOC</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {(blockEditStatesMap[HORS_BLOC] ?? []).map(({ es, orig, absIdx }, pos) => (
+                  <React.Fragment key={orig.id}>
+                    {zoneDepot(HORS_BLOC, pos)}
+                    <MovementRowEdit
+                      es={es} original={orig} index={absIdx} displayNumber={pos + 1}
+                      allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert}
+                      onMovementClick={setSelectedMovementId}
+                      onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))}
+                      isDragging={draggedWmId === orig.id}
+                      onDragStart={() => setDraggedWmId(orig.id)}
+                      onDragOver={() => {}}
+                      onDrop={() => { setDraggedWmId(null); setCibleDepot(null) }}
+                      onDragEnd={() => { setDraggedWmId(null); setCibleDepot(null) }}
+                    />
+                  </React.Fragment>
+                ))}
+                {zoneDepot(HORS_BLOC, (blockEditStatesMap[HORS_BLOC] ?? []).length)}
+              </div>
             </div>
           )}
           {editMode && !hasBlocks && (
