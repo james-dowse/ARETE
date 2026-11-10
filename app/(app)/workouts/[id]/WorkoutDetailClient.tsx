@@ -6,7 +6,7 @@ import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, COMPLEXITIES, effectiveDifficulty } from '@/lib/types'
 import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
-import { combine, cutWorkoutFrom, isCombinable, parseSessionCut, proposeVersions, sessionCutJson } from '@/lib/cuts'
+import { combine, cutWorkoutFrom, isCombinable, parseSessionCut, proposeVersions, sessionCutJson, whyNoVersions } from '@/lib/cuts'
 import CutModal from './CutModal'
 import { useToast } from '@/components/Toast'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
@@ -79,7 +79,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const [sessions, setSessions] = useState<{ id: string; doneAt: string; note?: string | null; cut?: string | null }[]>([])
   // Pastilles « Versions » cochées ; ['full'] = la séance entière.
   const [versionKeys, setVersionKeys] = useState<string[]>(['full'])
-  const [showCut, setShowCut] = useState(false)
+  const [showCut, setShowCut] = useState<false | 'duree' | 'blocs'>(false)
   const [savingVersion, setSavingVersion] = useState(false)
   const [syncingVersion, setSyncingVersion] = useState(false)
   const [sessionsOpen, setSessionsOpen] = useState(false)
@@ -805,6 +805,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const keptBlocks = new Set(isCut ? version.result.keptBlockIds : initial.blocks.map(b => b.id))
   const droppedWhy = new Map(isCut ? version.result.dropped.map(d => [d.blockId, d.reason] as const) : [])
   const versionMin = isCut ? Math.max(1, Math.round(version.result.seconds / 60)) : estimatedMin
+  // Blocs qui portent des mouvements : il en faut deux pour couper quoi que ce soit.
+  const cuttable = initial.blocks.filter(b => initial.movements.some(m => m.blockId === b.id)).length
+  const noVersionsWhy = editMode ? null : whyNoVersions(cutW)
   const toggleVersion = (key: string) => {
     const v = versions.find(x => x.key === key)
     if (!v) return
@@ -965,7 +968,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                   <CalendarPlus size={14} /> Planning
                 </button>
                 <OverflowMenu items={[
-                  ...(hasBlocks ? [{ label: 'Raccourcir…', icon: <Scissors size={14} />, onClick: () => setShowCut(true) }] : []),
+                  ...(hasBlocks ? [{ label: 'Raccourcir…', icon: <Scissors size={14} />, onClick: () => setShowCut('duree') }] : []),
                   { label: 'Recommander', icon: <Share2 size={14} />, onClick: () => setShowShare(true) },
                   ...(isAdmin ? [{ label: 'Assigner à un utilisateur', icon: <UserPlus size={14} />, onClick: () => setShowAssign(true) }] : []),
                   { label: 'Exporter en PDF', icon: <FileText size={14} />, onClick: () => window.open(`/workouts/${initial.id}/print`, '_blank') },
@@ -984,7 +987,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
         </div>
 
         {/* Versions — rangée de pastilles, rien n'est écrit en la touchant. */}
-        {!editMode && (versions.length > 1 || savedVersions.length > 0) && (
+        {!editMode && initial.movements.length > 0 && (versions.length > 1 || savedVersions.length > 0 || cuttable >= 2 || !!noVersionsWhy) && (
           <div style={{ marginBottom: 18 }}>
             <div className="t-micro" style={{ color: 'var(--text-dim)', marginBottom: 8 }}>Versions</div>
             <div role="group" aria-label="Versions de la séance" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
@@ -1003,7 +1006,20 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                   </button>
                 )
               })}
+              {cuttable >= 2 && (
+                <button onClick={() => setShowCut('blocs')}
+                  style={{
+                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px',
+                    borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                    border: '1px dashed var(--border-plus)', background: 'none', color: 'var(--text-muted)',
+                  }}>
+                  <Scissors size={12} /> Sur mesure…
+                </button>
+              )}
             </div>
+            {noVersionsWhy && (
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6, maxWidth: '68ch' }}>{noVersionsWhy}</div>
+            )}
             {isCut && (
               <button onClick={() => saveVersion(version.key)} disabled={savingVersion}
                 style={{ marginTop: 8, padding: 0, border: 'none', background: 'none', color: 'var(--crimson-bright)', fontWeight: 700, fontSize: 12.5, textDecoration: 'underline', textUnderlineOffset: 3, cursor: savingVersion ? 'wait' : 'pointer' }}>
@@ -1553,6 +1569,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
       {showCut && (
         <CutModal
           workout={cutW}
+          initialMode={showCut}
           saving={savingVersion}
           onClose={() => setShowCut(false)}
           onStart={key => { setShowCut(false); startVersion(key) }}

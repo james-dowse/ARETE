@@ -14,8 +14,9 @@ import { fmtMin } from './parts'
 
 const minutes = (s: number) => Math.max(1, Math.round(s / 60))
 
-export default function CutModal({ workout, onStart, onSave, onClose, saving }: {
+export default function CutModal({ workout, onStart, onSave, onClose, saving, initialMode }: {
   workout: CutWorkout
+  initialMode?: 'duree' | 'blocs'
   onStart: (key: string) => void
   onSave: (key: string) => void
   onClose: () => void
@@ -23,7 +24,7 @@ export default function CutModal({ workout, onStart, onSave, onClose, saving }: 
 }) {
   const fullMin = minutes(workoutSeconds(workout))
   const canShorten = fullMin >= 25
-  const [mode, setMode] = useState<'duree' | 'blocs'>(canShorten ? 'duree' : 'blocs')
+  const [mode, setMode] = useState<'duree' | 'blocs'>(initialMode === 'blocs' || !canShorten ? 'blocs' : 'duree')
   const maxTarget = Math.max(15, Math.floor((fullMin - 5) / 5) * 5)
   const [target, setTarget] = useState(() => Math.min(maxTarget, Math.max(15, Math.round(fullMin * 0.6 / 5) * 5)))
   const [lever, setLever] = useState(false)

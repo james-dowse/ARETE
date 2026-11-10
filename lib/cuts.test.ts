@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { inferRole, roleOf } from './block-role'
-import { applyCut, blocksKey, combine, cutWorkoutFrom, durationKey, setsAfterCut, focusOf, isCombinable, keepBlocks, movementsOf, parseSessionCut, proposeVersions, resolveVersion, sessionCutJson, workoutSeconds, type CutWorkout, type CutMovement, type CutRule } from './cuts'
+import { applyCut, blocksKey, combine, cutWorkoutFrom, whyNoVersions, durationKey, setsAfterCut, focusOf, isCombinable, keepBlocks, movementsOf, parseSessionCut, proposeVersions, resolveVersion, sessionCutJson, workoutSeconds, type CutWorkout, type CutMovement, type CutRule } from './cuts'
 
 // Deux séances de référence, celles de la note de conception : Supermover
 // (un bloc par grand type de travail) et Warrior Day (HIIT entouré de
@@ -92,6 +92,25 @@ describe('proposeVersions', () => {
   it('un seul bloc : rien d’autre que la séance complète', () => {
     const w: CutWorkout = { blocks: [SUPERMOVER.blocks[1]], movements: movementsOf(SUPERMOVER, 'b2') }
     expect(proposeVersions(w).map(x => x.label)).toEqual(['Complète'])
+  })
+})
+
+describe('whyNoVersions — dire pourquoi rien n’est proposé', () => {
+  it('rien à dire quand des versions existent', () => {
+    expect(whyNoVersions(SUPERMOVER)).toBeNull()
+  })
+  it('des blocs sans nom ni type net', () => {
+    const w: CutWorkout = {
+      blocks: [{ id: 'a', order: 0, bioType: '' }, { id: 'b', order: 1, bioType: 'BLOC 2' }],
+      movements: [{ blockId: 'a', bioType: 'Push' }, { blockId: 'a', bioType: 'Pull' }, { blockId: 'b', bioType: 'Lower body' }, { blockId: 'b', bioType: 'Core focus' }],
+    }
+    expect(whyNoVersions(w)).toMatch(/^Pas de version automatique : aucun bloc d’un seul type de travail, pas de bloc HIIT/)
+  })
+  it('des mouvements hors bloc', () => {
+    expect(whyNoVersions({ blocks: [], movements: [{ blockId: null, bioType: 'Push' }] })).toMatch(/aucun bloc/)
+  })
+  it('un seul bloc', () => {
+    expect(whyNoVersions({ blocks: [SUPERMOVER.blocks[1]], movements: movementsOf(SUPERMOVER, 'b2') })).toMatch(/Un seul bloc/)
   })
 })
 

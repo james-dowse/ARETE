@@ -369,3 +369,23 @@ export function parseSessionCut(raw: string | null | undefined): SessionCut | nu
     return v && typeof v.key === 'string' && typeof v.label === 'string' ? { key: v.key, label: v.label } : null
   } catch { return null }
 }
+
+// Pourquoi une séance n'a aucune version proposée, en une phrase pour l'écran.
+// null quand il y en a au moins une.
+export function whyNoVersions(w: CutWorkout, tempo: Record<string, number> = BIO_TYPE_TEMPO): string | null {
+  if (proposeVersions(w, tempo).length > 1) return null
+  const blocks = w.blocks.filter(b => movementsOf(w, b.id).length > 0)
+  if (!blocks.length) {
+    return w.movements.length
+      ? 'Les mouvements ne sont rangés dans aucun bloc : rangez-les en blocs (Modifier) pour pouvoir couper la séance.'
+      : null
+  }
+  if (blocks.length === 1) return 'Un seul bloc : il n’y a rien à couper.'
+  const foci = [...new Set(blocks.filter(b => roleOf(b).role === 'force').map(b => focusOf(b, movementsOf(w, b.id))))]
+    .filter(f => f !== 'Mixte' && f !== 'Vide')
+  const why: string[] = []
+  why.push(foci.length === 1 ? `un seul type de travail (${foci[0]})` : 'aucun bloc d’un seul type de travail')
+  if (!blocks.some(b => roleOf(b).role === 'conditionnement')) why.push('pas de bloc HIIT ou finisher')
+  if (!blocks.some(b => PREP_ROLES.has(roleOf(b).role))) why.push('ni échauffement, ni mobilité, ni retour au calme')
+  return `Pas de version automatique : ${why.join(', ')}. Nommez vos blocs (ÉCHAUFFEMENT, PUSH, PULL, HIIT…) ou réglez leur rôle en édition. « Sur mesure » marche dans tous les cas.`
+}
