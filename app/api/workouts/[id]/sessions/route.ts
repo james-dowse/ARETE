@@ -59,7 +59,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     // alors que son comportement à l'exécution est correct.
     const tx = txArg as unknown as typeof prisma
     const created = await tx.workoutSession.create({
-      data: { userId, workoutId, note: body.note || null },
+      // `cut` : la version faite (lib/cuts.ts, sessionCutJson), null = séance complète.
+      data: { userId, workoutId, note: body.note || null, cut: typeof body.cut === 'string' && body.cut.length <= 500 ? body.cut : null },
     })
     if (rows.length > 0) {
       await tx.sessionSet.createMany({

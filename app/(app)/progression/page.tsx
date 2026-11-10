@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { parseSessionCut } from '@/lib/cuts'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS } from '@/lib/types'
@@ -30,7 +31,7 @@ export default async function ProgressionPage() {
   await syncAttributesFromDb()
   const user = await getCurrentUser()
 
-  type ProgressionSession = { id: string; doneAt: Date; note: string | null; workout: { id: string; name: string; movements: { movement: { bioType: string } }[] } }
+  type ProgressionSession = { id: string; doneAt: Date; note: string | null; cut: string | null; workout: { id: string; name: string; movements: { movement: { bioType: string } }[] } }
 
   // Cast du ternary entier plutôt que branche par branche : TS abandonnait
   // l'inférence sur ce `findMany` à includes imbriqués et retombait sur `any`
@@ -221,6 +222,7 @@ export default async function ProgressionPage() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="t-body" style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {s.workout.name}
+                            {parseSessionCut(s.cut) && <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}> · {parseSessionCut(s.cut)!.label}</span>}
                           </div>
                           <div className="t-sm" style={{ color: 'var(--text-muted)', marginTop: 2 }}>
                             {doneStr} à {timeStr}

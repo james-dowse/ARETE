@@ -6,6 +6,7 @@ import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, COMPLEXITIES, effectiveDifficulty } from '@/lib/types'
 import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
+import { combine, cutWorkoutFrom, isCombinable, parseSessionCut, proposeVersions, sessionCutJson } from '@/lib/cuts'
 import { useToast } from '@/components/Toast'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
 import OverflowMenu from '@/components/OverflowMenu'
@@ -63,7 +64,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const toast = useToast()
   const confirm = useConfirm()
   const [saving, setSaving] = useState(false)
-  const [sessions, setSessions] = useState<{ id: string; doneAt: string; note?: string | null }[]>([])
+  const [sessions, setSessions] = useState<{ id: string; doneAt: string; note?: string | null; cut?: string | null }[]>([])
+  // Pastilles « Versions » cochées ; ['full'] = la séance entière.
+  const [versionKeys, setVersionKeys] = useState<string[]>(['full'])
   const [sessionsOpen, setSessionsOpen] = useState(false)
   const [loggingSession, setLoggingSession] = useState(false)
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
@@ -410,7 +413,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
 
   const handleLogSession = async () => {
     setLoggingSession(true)
-    const res = await fetch(`/api/workouts/${initial.id}/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }).catch(() => null)
+    const res = await fetch(`/api/workouts/${initial.id}/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(version ? { cut: sessionCutJson(version) } : {}) }).catch(() => null)
     if (!res || !res.ok) {
       toast('Impossible d\'enregistrer la séance', 'error')
       setLoggingSession(false)
@@ -775,6 +778,29 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     ? estimateWorkoutMinutes(editDurationMovements, editDurationBlocks)
     : estimateWorkoutMinutes(initial.movements.map(toDurationMovement), initial.blocks)
 
+  // ── Versions de la séance (lib/cuts.ts) ─────────────────────────────────────
+  // Calculées à l'affichage, rien en base : une version coupe la séance en blocs
+  // entiers. Types de travail et HIIT se cochent ensemble (Push + Pull), le reste
+  // se choisit seul. Hors édition seulement : en édition, on voit tout.
+  const cutW = cutWorkoutFrom(initial)
+  const versions = editMode ? [] : proposeVersions(cutW)
+  const pickedVersions = versions.filter(v => versionKeys.includes(v.key))
+  const version = pickedVersions.length ? combine(cutW, pickedVersions) : versions[0]
+  const isCut = !!version && version.rule.kind !== 'full'
+  const keptBlocks = new Set(isCut ? version.result.keptBlockIds : initial.blocks.map(b => b.id))
+  const droppedWhy = new Map(isCut ? version.result.dropped.map(d => [d.blockId, d.reason] as const) : [])
+  const versionMin = isCut ? Math.max(1, Math.round(version.result.seconds / 60)) : estimatedMin
+  const toggleVersion = (key: string) => {
+    const v = versions.find(x => x.key === key)
+    if (!v) return
+    if (!isCombinable(v)) { setVersionKeys([key]); return }
+    setVersionKeys(prev => {
+      const cur = prev.filter(k => { const x = versions.find(y => y.key === k); return !!x && isCombinable(x) })
+      const next = cur.includes(key) ? cur.filter(k => k !== key) : [...cur, key]
+      return next.length ? next : ['full']
+    })
+  }
+
   const hasBlocks = initial.blocks.length > 0
   const blockMovementsMap: Record<string, WorkoutMovement[]> = {}
   if (hasBlocks) {
@@ -851,9 +877,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                     « Démarrer » invisible. Terracotta plein : la palette la
                     réserve à « l'action, le maintenant » — elle était en or,
                     couleur de la marque et de la progression. */}
-                <button onClick={() => router.push(`/workouts/${initial.id}/active`)}
+                <button onClick={() => router.push(`/workouts/${initial.id}/active${isCut ? `?version=${encodeURIComponent(version.key)}` : ''}`)}
                   style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', background: 'var(--accent)', border: '1px solid transparent', borderRadius: 'var(--r-sm)', color: 'var(--on-accent)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--elev-1)' }}>
-                  <PlayCircle size={15} /> Démarrer
+                  <PlayCircle size={15} /> Démarrer{isCut ? ` · ${version.label}` : ''}
                 </button>
                 <button onClick={handleLogSession} disabled={loggingSession}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 15px', background: 'none', border: '1px solid var(--cypress-light)', borderRadius: 'var(--r-sm)', color: 'var(--green)', fontSize: 13, fontWeight: 600, cursor: loggingSession ? 'wait' : 'pointer' }}>
@@ -881,14 +907,43 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
           </div>
         </div>
 
+        {/* Versions — rangée de pastilles, rien n'est écrit en la touchant. */}
+        {!editMode && versions.length > 1 && (
+          <div style={{ marginBottom: 18 }}>
+            <div className="t-micro" style={{ color: 'var(--text-dim)', marginBottom: 8 }}>Versions</div>
+            <div role="group" aria-label="Versions de la séance" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+              {versions.map(v => {
+                const on = v.key === 'full' ? !isCut : versionKeys.includes(v.key)
+                return (
+                  <button key={v.key} onClick={() => toggleVersion(v.key)} aria-pressed={on}
+                    style={{
+                      flexShrink: 0, display: 'inline-flex', alignItems: 'baseline', gap: 6, padding: '6px 12px',
+                      borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                      border: `1px solid ${on ? 'var(--crimson)' : 'var(--border-plus)'}`,
+                      background: on ? 'var(--crimson-ghost)' : 'var(--bg-card)', color: 'var(--text-primary)',
+                    }}>
+                    {v.label}
+                    <span style={{ fontSize: 'var(--fs-micro)', fontWeight: 800, color: 'var(--orange)' }}>{fmtMin(Math.max(1, Math.round(v.result.seconds / 60)))}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {isCut && version.result.looseDropped > 0 && (
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>
+                {version.result.looseDropped} mouvement{version.result.looseDropped > 1 ? 's' : ''} hors bloc ne {version.result.looseDropped > 1 ? 'sont' : 'est'} pas dans cette version.
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stats */}
         <div className="r-detail-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, marginBottom: 18 }}>
-          <Stat value={initial.movements.length} label="Mouvements" color="var(--accent)" />
+          <Stat value={isCut ? initial.movements.filter(wm => !!wm.blockId && keptBlocks.has(wm.blockId)).length : initial.movements.length} label="Mouvements" color="var(--accent)" />
           <Stat value={bioTypes.length} label="Types" color="var(--blue)" />
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--orange)' }}>{fmtMin(estimatedMin)}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--orange)' }}>{fmtMin(versionMin)}</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-              {initial.duration ? `${initial.duration}min prévu` : 'Estimé'}
+              {isCut ? `Version ${version.label}` : initial.duration ? `${initial.duration}min prévu` : 'Estimé'}
             </div>
           </div>
         </div>
@@ -1066,6 +1121,17 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
               .slice()
               .sort((a, b) => (blockOrder[a.id] ?? a.order) - (blockOrder[b.id] ?? b.order))
               .map((block, bi) => {
+              // Bloc hors de la version choisie : une ligne en pointillé qui dit
+              // pourquoi, plutôt qu'une disparition sans explication.
+              if (!editMode && isCut && !keptBlocks.has(block.id)) {
+                return (
+                  <div key={block.id} style={{ marginTop: bi === 0 ? 0 : 10, padding: '8px 12px', border: '1px dashed var(--border-plus)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1 }}>BLOC {bi + 1}</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-dim)', textDecoration: 'line-through' }}>{block.bioType || 'Sans nom'}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{droppedWhy.get(block.id) ?? 'Hors de cette version'}</span>
+                  </div>
+                )
+              }
               const blockMovements = blockMovementsMap[block.id] || []
               const blockES = (blockEditStatesMap[block.id] || []).filter(({ orig }) => !removedWmIds.has(orig.id))
               const blockCollapsed = !editMode && !!collapsedViewBlocks[block.id]
@@ -1158,7 +1224,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                     </div>
                   )}
                   {/* Inter-block rest */}
-                  {!editMode && !blockCollapsed && bi < initial.blocks.length - 1 && (block.restAfter != null || initial.blockRest != null) && (
+                  {!editMode && !blockCollapsed && bi < initial.blocks.length - 1 && (block.restAfter != null || initial.blockRest != null)
+                    && (!isCut || initial.blocks.some(b2 => b2.order > block.order && keptBlocks.has(b2.id))) && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
                       <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
@@ -1207,7 +1274,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
               affichait ses en-têtes de bloc et pas un seul mouvement : la fiche
               paraissait vide alors que la séance était complète. Même défaut que
               celui déjà corrigé sur l'écran de séance active. */}
-          {!editMode && hasBlocks && orphanMovements.length > 0 && (
+          {!editMode && !isCut && hasBlocks && orphanMovements.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
               {orphanMovements.map((wm, i) => (
                 <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} lastPerf={lastPerf[wm.movement.id]} />
@@ -1382,6 +1449,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                     {new Date(s.doneAt).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}
                   </span>
+                  {parseSessionCut(s.cut) && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {parseSessionCut(s.cut)!.label}</span>}
                   <span style={{ fontSize: 12, color: 'var(--text-dim)', marginLeft: 'auto' }}>
                     {new Date(s.doneAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                   </span>

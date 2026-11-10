@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { inferRole, roleOf } from './block-role'
-import { applyCut, combine, focusOf, isCombinable, movementsOf, proposeVersions, workoutSeconds, type CutWorkout, type CutMovement, type CutRule } from './cuts'
+import { applyCut, combine, cutWorkoutFrom, focusOf, isCombinable, keepBlocks, movementsOf, parseSessionCut, proposeVersions, resolveVersion, sessionCutJson, workoutSeconds, type CutWorkout, type CutMovement, type CutRule } from './cuts'
 
 // Deux séances de référence, celles de la note de conception : Supermover
 // (un bloc par grand type de travail) et Warrior Day (HIIT entouré de
@@ -120,6 +120,35 @@ describe('combine — plusieurs pastilles ensemble', () => {
   it('une durée glissée dans une combinaison est ignorée', () => {
     const r = applyCut(SUPERMOVER, { kind: 'union', rules: [{ kind: 'focus', value: 'Push', keepWarmup: true }, { kind: 'duration', targetMin: 30, lever: true }] })
     expect(r.keptBlockIds).toEqual(['b1', 'b2'])
+  })
+})
+
+describe('branchement sur l’application', () => {
+  it('la clé d’une version se résout à l’identique, combinaison comprise', () => {
+    const v = resolveVersion(SUPERMOVER, 'focus:Push+focus:Pull')!
+    expect(v.label).toBe('Push + Pull')
+    expect(v.result.keptBlockIds).toEqual(['b1', 'b2', 'b3'])
+    expect(resolveVersion(SUPERMOVER, 'focus:Pull')!.label).toBe('Pull')
+  })
+  it('une version qui n’existe plus rend null', () => {
+    expect(resolveVersion(SUPERMOVER, 'focus:Boxing')).toBeNull()
+    expect(resolveVersion(SUPERMOVER, 'noprep+focus:Push')).toBeNull()   // non combinables
+  })
+  it('keepBlocks garde les blocs choisis et leurs mouvements, pas le hors bloc', () => {
+    const w = { blocks: [{ id: 'a' }, { id: 'b' }], movements: [{ blockId: 'a' }, { blockId: 'b' }, { blockId: null }] }
+    expect(keepBlocks(w, ['b'])).toEqual({ blocks: [{ id: 'b' }], movements: [{ blockId: 'b' }] })
+  })
+  it('cutWorkoutFrom lit le type sur la fiche du mouvement', () => {
+    const w = cutWorkoutFrom({ blocks: [{ id: 'a', order: 0, bioType: 'PUSH' }], movements: [{ blockId: 'a', sets: 3, movement: { bioType: 'Push' } }] })
+    expect(w.movements[0]).toMatchObject({ blockId: 'a', bioType: 'Push', sets: 3 })
+  })
+  it('la trace de session : rien pour la séance complète, clé et libellé sinon', () => {
+    const v = proposeVersions(SUPERMOVER)
+    expect(sessionCutJson(v[0])).toBeUndefined()
+    const raw = sessionCutJson(v[1])!
+    expect(parseSessionCut(raw)).toEqual({ key: 'focus:Push', label: 'Push' })
+    expect(parseSessionCut('pas du json')).toBeNull()
+    expect(parseSessionCut(null)).toBeNull()
   })
 })
 

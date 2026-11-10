@@ -269,3 +269,67 @@ export function proposeVersions(w: CutWorkout, tempo: Record<string, number> = B
   }
   return out
 }
+
+// ── Branchement sur l'application ─────────────────────────────────────────────
+
+// Une séance telle que l'API la renvoie (mouvements avec leur fiche).
+export interface CutSourceWorkout {
+  blocks: CutBlock[]
+  movements: {
+    blockId?: string | null; order?: number
+    sets?: number | null; reps?: string | null; rest?: number | null; duration?: number | null
+    movement: { bioType: string; equipment?: string | null }
+  }[]
+}
+
+export function cutWorkoutFrom(w: CutSourceWorkout): CutWorkout {
+  return {
+    blocks: w.blocks,
+    movements: w.movements.map(m => ({
+      blockId: m.blockId ?? null, order: m.order, sets: m.sets, reps: m.reps, rest: m.rest,
+      duration: m.duration, bioType: m.movement.bioType, equipment: m.movement.equipment ?? null,
+    })),
+  }
+}
+
+// La même séance, réduite aux blocs gardés. Les mouvements hors bloc partent
+// aussi : aucune version ne sait où les ranger (voir looseDropped).
+export function keepBlocks<T extends { blocks: { id: string }[]; movements: { blockId?: string | null }[] }>(
+  w: T, keptBlockIds: readonly string[],
+): T {
+  const kept = new Set(keptBlockIds)
+  return {
+    ...w,
+    blocks: w.blocks.filter(b => kept.has(b.id)),
+    movements: w.movements.filter(m => !!m.blockId && kept.has(m.blockId)),
+  }
+}
+
+// Une version se désigne par sa clé, ou par les clés de ses pastilles jointes
+// par « + » (« focus:Push+focus:Pull ») : c'est ce qui passe dans l'adresse de
+// la séance lancée. La version est recalculée à l'arrivée ; si la séance a
+// changé au point qu'elle n'existe plus, null, et l'appelant le dit.
+export function resolveVersion(w: CutWorkout, key: string, tempo: Record<string, number> = BIO_TYPE_TEMPO): ProposedVersion | null {
+  const all = proposeVersions(w, tempo)
+  const parts = key.split('+')
+  const picked = parts.map(k => all.find(v => v.key === k))
+  if (picked.some(v => !v)) return null
+  const list = picked as ProposedVersion[]
+  if (list.length > 1 && !list.every(isCombinable)) return null
+  return combine(w, list, tempo)
+}
+
+// La trace d'une version faite, posée sur WorkoutSession.cut.
+export interface SessionCut { key: string; label: string }
+
+export function sessionCutJson(v: { key: string; label: string; rule: CutRule }): string | undefined {
+  return v.rule.kind === 'full' ? undefined : JSON.stringify({ key: v.key, label: v.label } satisfies SessionCut)
+}
+
+export function parseSessionCut(raw: string | null | undefined): SessionCut | null {
+  if (!raw) return null
+  try {
+    const v = JSON.parse(raw)
+    return v && typeof v.key === 'string' && typeof v.label === 'string' ? { key: v.key, label: v.label } : null
+  } catch { return null }
+}

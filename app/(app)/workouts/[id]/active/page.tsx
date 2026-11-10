@@ -12,6 +12,7 @@ import YouTubeLoopEmbed from '@/components/YouTubeLoopEmbed'
 // et qui l'affiche, et il est monté sur le tableau de bord comme sur la page de
 // détail — là où l'on retombe juste après avoir terminé une séance.
 import { enqueuePendingSession, dequeuePendingSession } from '@/components/ResumeSessionBanner'
+import { cutWorkoutFrom, keepBlocks, resolveVersion, type SessionCut } from '@/lib/cuts'
 
 // `equipment` est deja renvoye par GET /api/workouts/[id] (include movement:
 // true) ; il n'etait simplement pas declare ici. « Poids corps » vaut pour 137
@@ -118,6 +119,9 @@ export default function ActivePage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [workout, setWorkout] = useState<Workout | null>(null)
+  // Version lancée depuis la fiche (?version=…) : la séance est réduite à ses
+  // blocs dès le chargement, et tout l'écran travaille sur cette séance réduite.
+  const [version, setVersion] = useState<SessionCut | null>(null)
   // Trois registres d'echec, parce qu'ils n'appellent pas la meme issue :
   // requireWorkoutReader (lib/authz.ts) repond 401 sans session et 404 pour une
   // seance absente ou privee d'un autre — reessayer donnerait exactement la meme
@@ -340,10 +344,29 @@ export default function ActivePage() {
 
   // load workout + restore session in progress
   useEffect(() => {
-    loadRef.current = () => loadWorkout().then(w => {
+    loadRef.current = () => loadWorkout().then(complete => {
       // null = echec deja signale par `loadWorkout` : rien a appliquer, et surtout
       // pas `w.blocks` sur un objet d'erreur.
-      if (!w) return
+      if (!complete) return
+      // La version vient de l'adresse, ou, à la reprise d'une séance interrompue
+      // (bannière, sans paramètre), de l'état sauvegardé.
+      let wanted = new URLSearchParams(window.location.search).get('version')
+      if (!wanted) {
+        try {
+          const s = JSON.parse(localStorage.getItem(storageKey) || 'null')
+          if (s?.startedAt && Date.now() - s.startedAt < 24 * 60 * 60 * 1000 && typeof s.version?.key === 'string') wanted = s.version.key
+        } catch {}
+      }
+      let w = complete
+      if (wanted) {
+        const v = resolveVersion(cutWorkoutFrom(complete), wanted)
+        if (v && v.rule.kind !== 'full') {
+          w = keepBlocks(complete, v.result.keptBlockIds)
+          setVersion({ key: v.key, label: v.label })
+        } else {
+          toast('Cette version n’existe plus : séance complète.', 'info')
+        }
+      }
       setWorkout(w)
 
       // Superset persistés sur le workout (colonne DB) → pré-activés
@@ -424,10 +447,11 @@ export default function ActivePage() {
       // (components/ResumeSessionBanner.tsx) l'affiche sans avoir à recharger
       // la séance complète — elle tirait tout le workout, ses blocs et tous ses
       // mouvements, juste pour ce libellé.
-      name: workout.name,
+      name: version ? `${workout.name} · ${version.label}` : workout.name,
+      version: version ?? undefined,
     }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [done, supersetBlocs, note, perfLog, started, workout])
+  }, [done, supersetBlocs, note, perfLog, started, workout, version])
 
   // Dernière perf (indices "la dernière fois" + PR)
   useEffect(() => {
@@ -771,8 +795,9 @@ export default function ActivePage() {
     enqueuePendingSession({
       key: pendingKey,
       workoutId: id,
-      workoutName: workout?.name ?? null,
+      workoutName: workout ? (version ? `${workout.name} · ${version.label}` : workout.name) : null,
       note: note || undefined,
+      cut: version ? JSON.stringify(version) : undefined,
       sets,
       finishedAt: Date.now(),
     })
@@ -789,7 +814,7 @@ export default function ActivePage() {
       signal: withTimeout(20000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note: note || undefined, sets }),
+      body: JSON.stringify({ note: note || undefined, cut: version ? JSON.stringify(version) : undefined, sets }),
     }).catch(() => null)
     // 201 strictement : un `res.ok` large accepterait le 200 d'un portail Wi-Fi
     // captif, et on retirerait de la file la seule copie de la séance.
@@ -877,7 +902,7 @@ export default function ActivePage() {
     // seance terminee — il n’y a rien a situer, et quand aucun mouvement n’a de
     // bloc le libelle s’afficherait sur les 27 sans rien dire. Dans ces deux
     // cas on montre le nom de la seance.
-    : (currentWm && hasBlocks && workout.movements.some(m => m.blockId)) ? 'Hors bloc' : workout.name
+    : (currentWm && hasBlocks && workout.movements.some(m => m.blockId)) ? 'Hors bloc' : (version ? `${workout.name} · ${version.label}` : workout.name)
   const nextWm = curIndex >= 0 ? (flatMovs[curIndex + 1] ?? null) : null
   const isTimed = currentWm?.duration != null
   const isCircuit = !!(curBlock && supersetBlocs.has(curBlock.id))
