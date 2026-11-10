@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { inferRole, roleOf } from './block-role'
-import { applyCut, combine, cutWorkoutFrom, focusOf, isCombinable, keepBlocks, movementsOf, parseSessionCut, proposeVersions, resolveVersion, sessionCutJson, workoutSeconds, type CutWorkout, type CutMovement, type CutRule } from './cuts'
+import { applyCut, blocksKey, combine, cutWorkoutFrom, durationKey, setsAfterCut, focusOf, isCombinable, keepBlocks, movementsOf, parseSessionCut, proposeVersions, resolveVersion, sessionCutJson, workoutSeconds, type CutWorkout, type CutMovement, type CutRule } from './cuts'
 
 // Deux séances de référence, celles de la note de conception : Supermover
 // (un bloc par grand type de travail) et Warrior Day (HIIT entouré de
@@ -129,6 +129,23 @@ describe('branchement sur l’application', () => {
     expect(v.label).toBe('Push + Pull')
     expect(v.result.keptBlockIds).toEqual(['b1', 'b2', 'b3'])
     expect(resolveVersion(SUPERMOVER, 'focus:Pull')!.label).toBe('Pull')
+  })
+  it('une durée visée et un choix de blocs se résolvent aussi', () => {
+    const d = resolveVersion(WARRIOR_DAY, durationKey(30, true))!
+    expect(d.label).toBe('30 min')
+    expect(d.result.lever).toBe(true)
+    expect(d.result.keptBlockIds).toEqual(['b3', 'b4'])
+    const b = resolveVersion(SUPERMOVER, blocksKey(['b2', 'b6']))!
+    expect(b.label).toBe('Sur mesure')
+    expect(b.result.keptBlockIds).toEqual(['b2', 'b6'])
+    expect(resolveVersion(SUPERMOVER, blocksKey(['disparu']))).toBeNull()
+    expect(resolveVersion(SUPERMOVER, 'focus:Push+' + durationKey(30, false))).toBeNull()
+  })
+  it('setsAfterCut : une série de moins sur le travail seulement, jamais sous 1', () => {
+    expect(setsAfterCut({ id: 'x', order: 0, bioType: 'PUSH' }, 4, true)).toBe(3)
+    expect(setsAfterCut({ id: 'x', order: 0, bioType: 'PUSH' }, 1, true)).toBe(1)
+    expect(setsAfterCut({ id: 'x', order: 0, bioType: 'ÉCHAUFFEMENT' }, 2, true)).toBe(2)
+    expect(setsAfterCut({ id: 'x', order: 0, bioType: 'PUSH' }, 4, false)).toBe(4)
   })
   it('une version qui n’existe plus rend null', () => {
     expect(resolveVersion(SUPERMOVER, 'focus:Boxing')).toBeNull()

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireWorkoutReader } from '@/lib/authz'
+import { loadForCopy, writeBlocks } from '@/lib/workout-copy'
 
 export async function POST(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -10,57 +11,27 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
   const authz = await requireWorkoutReader(id)
   if (!authz.ok) return authz.response
 
-  const original = await prisma.workout.findUnique({
-    where: { id },
-    include: {
-      blocks: { orderBy: { order: 'asc' } },
-      movements: { orderBy: { order: 'asc' } },
-    },
-  }) as ({
-    name: string; duration: number | null; notes: string | null; templateId: string | null
-    blocks: { id: string; order: number; bioType: string | null; instructions: string | null; restAfter: number | null; superset: boolean }[]
-    movements: { movementId: string; order: number; sets: number | null; reps: string | null; duration: number | null; blockId: string | null }[]
-  }) | null
+  const original = await loadForCopy(id)
   if (!original) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // Create the workout shell
-  const copy = await prisma.workout.create({
-    data: {
-      name: `${original.name} (copie)`,
-      duration: original.duration,
-      notes: original.notes,
-      templateId: original.templateId,
-      userId: authz.userId,
-    },
-  })
-
-  // Duplicate blocks and build old blockId → new blockId map
-  const blockIdMap: Record<string, string> = {}
-  for (const b of original.blocks) {
-    const newBlock = await prisma.workoutBlock.create({
+  // Une seule transaction : un échec à mi-chemin laissait une coquille de
+  // séance sans ses blocs. La copie des blocs et mouvements est celle de
+  // lib/workout-copy.ts, qui recopie aussi le repos entre séries et le rôle.
+  const copy = await prisma.$transaction(async txArg => {
+    // Même contournement que dans app/api/workouts/route.ts (type du client de
+    // transaction de Prisma 7 sous TS strict).
+    const tx = txArg as unknown as typeof prisma
+    const created = await tx.workout.create({
       data: {
-        workoutId: copy.id,
-        order: b.order,
-        bioType: b.bioType,
-        instructions: b.instructions,
-        restAfter: b.restAfter,
-        superset: b.superset,
+        name: `${original.name} (copie)`,
+        duration: original.duration,
+        notes: original.notes,
+        templateId: original.templateId,
+        userId: authz.userId,
       },
     })
-    blockIdMap[b.id] = newBlock.id
-  }
-
-  // Duplicate movements, remapping blockId
-  await prisma.workoutMovement.createMany({
-    data: original.movements.map(m => ({
-      workoutId: copy.id,
-      movementId: m.movementId,
-      order: m.order,
-      sets: m.sets,
-      reps: m.reps,
-      duration: m.duration,
-      blockId: m.blockId ? (blockIdMap[m.blockId] ?? null) : null,
-    })),
+    await writeBlocks(tx, created.id, original)
+    return created
   })
 
   return NextResponse.json(copy)

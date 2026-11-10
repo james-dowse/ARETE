@@ -34,7 +34,7 @@ export const WORKOUT_SELECT = {
   // `id` reste nécessaire : lien vers le profil, filtre « suivis uniquement »
   // et chargement de l'avatar via /api/users/[id]/avatar.
   user: { select: { id: true, firstName: true, lastName: true } },
-  _count: { select: { savedBy: true } },
+  _count: { select: { savedBy: true, versions: true } },
   blocks: { select: { id: true, superset: true, restAfter: true, order: true, bioType: true }, orderBy: { order: 'asc' } },
   movements: {
     orderBy: { order: 'asc' },

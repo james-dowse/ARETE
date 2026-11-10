@@ -40,7 +40,7 @@ interface Workout {
   blocks?: (DurationBlock & { order?: number; bioType?: string | null })[]
   public?: boolean
   difficultyOverride?: string | null
-  _count?: { savedBy: number }
+  _count?: { savedBy: number; versions?: number }
   user?: WorkoutUser | null
   isSaved?: boolean
   isFavorite?: boolean
@@ -407,6 +407,7 @@ function WorkoutCard({
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   {new Date(w.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
                   {w.duration ? ` · ${w.duration} min cible` : ''}
+                  {(w._count?.versions ?? 0) > 0 && ` · ${w._count!.versions} version${w._count!.versions! > 1 ? 's' : ''}`}
                   {w.user && (
                     <>
                       <span>·</span>

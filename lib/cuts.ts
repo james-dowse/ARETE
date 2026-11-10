@@ -305,6 +305,26 @@ export function keepBlocks<T extends { blocks: { id: string }[]; movements: { bl
   }
 }
 
+// Les versions faites à la main, qui ne figurent pas parmi les pastilles :
+//   duration:30     tenir 30 min            duration:30:L   avec une série de moins
+//   blocks:a,b      ces blocs (Sur mesure)  blocks:a,b:L    avec une série de moins
+export function parseVersionKey(key: string): { rule: CutRule; label: string } | null {
+  if (key === 'full') return { rule: { kind: 'full' }, label: 'Complète' }
+  let m = key.match(/^duration:(\d{1,3})(:L)?$/)
+  if (m) return { rule: { kind: 'duration', targetMin: Number(m[1]), lever: !!m[2] }, label: `${Number(m[1])} min` }
+  m = key.match(/^blocks:([^:+]+)(:L)?$/)
+  if (m) return { rule: { kind: 'blocks', ids: m[1].split(',').filter(Boolean), lever: !!m[2] }, label: 'Sur mesure' }
+  return null
+}
+
+export function durationKey(targetMin: number, lever: boolean): string {
+  return `duration:${Math.round(targetMin)}${lever ? ':L' : ''}`
+}
+
+export function blocksKey(ids: readonly string[], lever = false): string {
+  return `blocks:${ids.join(',')}${lever ? ':L' : ''}`
+}
+
 // Une version se désigne par sa clé, ou par les clés de ses pastilles jointes
 // par « + » (« focus:Push+focus:Pull ») : c'est ce qui passe dans l'adresse de
 // la séance lancée. La version est recalculée à l'arrivée ; si la séance a
@@ -312,11 +332,27 @@ export function keepBlocks<T extends { blocks: { id: string }[]; movements: { bl
 export function resolveVersion(w: CutWorkout, key: string, tempo: Record<string, number> = BIO_TYPE_TEMPO): ProposedVersion | null {
   const all = proposeVersions(w, tempo)
   const parts = key.split('+')
-  const picked = parts.map(k => all.find(v => v.key === k))
+  const picked: (ProposedVersion | null)[] = parts.map(k => {
+    const known = all.find(v => v.key === k)
+    if (known) return known
+    const parsed = parseVersionKey(k)
+    if (!parsed || (parsed.rule.kind !== 'duration' && parsed.rule.kind !== 'blocks')) return null
+    const result = applyCut(w, parsed.rule, tempo)
+    // Un choix de blocs dont plus aucun n'existe n'est plus une version.
+    if (!result.keptBlockIds.some(id => movementsOf(w, id).length > 0)) return null
+    return { key: k, label: parsed.label, rule: parsed.rule, result }
+  })
   if (picked.some(v => !v)) return null
   const list = picked as ProposedVersion[]
   if (list.length > 1 && !list.every(isCombinable)) return null
   return combine(w, list, tempo)
+}
+
+// Les séries d'un mouvement une fois la coupe faite : une de moins dans les
+// blocs de travail quand le levier est tiré, jamais moins d'une.
+export function setsAfterCut(block: CutBlock, sets: number | null | undefined, lever: boolean): number | null | undefined {
+  if (!lever || !WORK_ROLES.has(roleOf(block).role)) return sets
+  return Math.max(1, (sets ?? 3) - 1)
 }
 
 // La trace d'une version faite, posée sur WorkoutSession.cut.

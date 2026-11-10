@@ -15,6 +15,8 @@ export async function GET(req: NextRequest) {
   if (!currentUserId) return NextResponse.json([])
   const filter = req.nextUrl.searchParams.get('filter') // 'mine' | 'saved' | 'community'
   const tagFilter = req.nextUrl.searchParams.get('tag') // optional tag filter
+  // versions=1 : les versions enregistrées aussi (le planning doit pouvoir les poser).
+  const withVersions = req.nextUrl.searchParams.get('versions') === '1'
 
   // ── Workouts importés (SavedWorkout) ──────────────────────────────────────
   if (filter === 'saved') {
@@ -59,7 +61,9 @@ export async function GET(req: NextRequest) {
 
   if (filter === 'mine') {
     // Authentifié → ses workouts ; pas de session → workouts sans propriétaire (données legacy)
-    const base = currentUserId ? { userId: currentUserId } : { userId: null }
+    // Les versions enregistrées (derivedFromId) se rangent sous leur séance
+    // d'origine, qui en affiche le nombre : pas à plat dans la liste.
+    const base = currentUserId ? { userId: currentUserId, ...(withVersions ? {} : { derivedFromId: null }) } : { userId: null }
     where = tagFilter ? { ...base, tags: { contains: tagFilter } } : base
   } else if (filter === 'community') {
     // Workouts d'autres utilisateurs identifiés — jamais les siens, jamais les anonymes

@@ -20,6 +20,10 @@ export interface MenuItem {
 
 export default function OverflowMenu({ items, label = 'Plus d’actions' }: { items: MenuItem[]; label?: string }) {
   const [open, setOpen] = useState(false)
+  // Le menu s'ouvre vers le haut (il a été pensé pour des cartouches en bas
+  // d'écran) ; en haut de page il sortait de l'écran par le haut, sans moyen de
+  // remonter plus. Il s'ouvre donc vers le bas quand la place manque au-dessus.
+  const [dropDown, setDropDown] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -41,7 +45,13 @@ export default function OverflowMenu({ items, label = 'Plus d’actions' }: { it
   return (
     <div ref={ref} style={{ position: 'relative', display: 'flex' }}>
       <button
-        onClick={e => { e.preventDefault(); e.stopPropagation(); setOpen(o => !o) }}
+        onClick={e => {
+          e.preventDefault(); e.stopPropagation()
+          // ~34 px par entrée, plus les marges : la hauteur du menu sans le mesurer.
+          const top = ref.current?.getBoundingClientRect().top ?? Infinity
+          setDropDown(top < items.length * 34 + 24)
+          setOpen(o => !o)
+        }}
         title={label}
         aria-label={label}
         aria-expanded={open}
@@ -61,7 +71,8 @@ export default function OverflowMenu({ items, label = 'Plus d’actions' }: { it
         <div
           role="menu"
           style={{
-            position: 'absolute', right: 0, bottom: 'calc(100% + 6px)', zIndex: 40,
+            position: 'absolute', right: 0, zIndex: 40,
+            ...(dropDown ? { top: 'calc(100% + 6px)' } : { bottom: 'calc(100% + 6px)' }),
             minWidth: 186, padding: 5,
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border-plus)',

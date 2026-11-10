@@ -1007,10 +1007,10 @@ export default function ActivePage() {
             <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {curBlockLabel}
             </div>
-            <div className="tnum" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+            <div className="tnum" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {curIndex >= 0
-                ? `Mouvement ${curIndex + 1} / ${flatMovs.length} · série ${Math.min(curDone + 1, curTarget)} / ${curTarget}`
-                : `${flatMovs.length} mouvement${flatMovs.length > 1 ? 's' : ''} · terminé`}
+                ? `${version ? `${version.label} · ` : ''}Mouvement ${curIndex + 1} / ${flatMovs.length} · série ${Math.min(curDone + 1, curTarget)} / ${curTarget}`
+                : `${version ? `${version.label} · ` : ''}${flatMovs.length} mouvement${flatMovs.length > 1 ? 's' : ''} · terminé`}
             </div>
           </div>
           {/* Or : la progression et la marque. Jamais un bouton d'action — le
