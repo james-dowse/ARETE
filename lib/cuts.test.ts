@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { inferRole, roleOf } from './block-role'
-import { applyCut, focusOf, movementsOf, proposeVersions, workoutSeconds, type CutWorkout, type CutMovement, type CutRule } from './cuts'
+import { applyCut, combine, focusOf, isCombinable, movementsOf, proposeVersions, workoutSeconds, type CutWorkout, type CutMovement, type CutRule } from './cuts'
 
 // Deux séances de référence, celles de la note de conception : Supermover
 // (un bloc par grand type de travail) et Warrior Day (HIIT entouré de
@@ -92,6 +92,34 @@ describe('proposeVersions', () => {
   it('un seul bloc : rien d’autre que la séance complète', () => {
     const w: CutWorkout = { blocks: [SUPERMOVER.blocks[1]], movements: movementsOf(SUPERMOVER, 'b2') }
     expect(proposeVersions(w).map(x => x.label)).toEqual(['Complète'])
+  })
+})
+
+describe('combine — plusieurs pastilles ensemble', () => {
+  const v = proposeVersions(SUPERMOVER)
+  const pick = (...labels: string[]) => labels.map(l => v.find(x => x.label === l)!)
+  it('Push + Pull : échauffement, Push et Pull, pas le reste', () => {
+    const c = combine(SUPERMOVER, pick('Push', 'Pull'))
+    expect(c.label).toBe('Push + Pull')
+    expect(c.result.keptBlockIds).toEqual(['b1', 'b2', 'b3'])
+    expect(min(c.result.seconds)).toBe(28)
+    expect(c.result.dropped.map(d => d.blockId)).toEqual(['b4', 'b5', 'b6'])
+  })
+  it('Push + Finisher seul : un type de travail et le HIIT', () => {
+    expect(combine(SUPERMOVER, pick('Push', 'Finisher seul')).result.keptBlockIds).toEqual(['b1', 'b2', 'b5'])
+  })
+  it('l’ordre du choix ne change pas la coupe, seulement le libellé', () => {
+    expect(combine(SUPERMOVER, pick('Pull', 'Push')).result.keptBlockIds).toEqual(combine(SUPERMOVER, pick('Push', 'Pull')).result.keptBlockIds)
+  })
+  it('une seule pastille : la version elle-même', () => {
+    expect(combine(SUPERMOVER, pick('Pull'))).toBe(pick('Pull')[0])
+  })
+  it('seuls les types de travail et le HIIT se combinent', () => {
+    expect(v.filter(isCombinable).map(x => x.label)).toEqual(['Push', 'Pull', 'Compound', 'Finisher seul'])
+  })
+  it('une durée glissée dans une combinaison est ignorée', () => {
+    const r = applyCut(SUPERMOVER, { kind: 'union', rules: [{ kind: 'focus', value: 'Push', keepWarmup: true }, { kind: 'duration', targetMin: 30, lever: true }] })
+    expect(r.keptBlockIds).toEqual(['b1', 'b2'])
   })
 })
 

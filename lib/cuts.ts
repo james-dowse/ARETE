@@ -53,6 +53,9 @@ export type CutRule =
   | { kind: 'noprep' }
   | { kind: 'duration'; targetMin: number; lever: boolean }
   | { kind: 'blocks'; ids: string[]; lever?: boolean }
+  // Plusieurs pastilles choisies ensemble : les blocs de chacune, additionnés.
+  // « Push » + « Pull » garde l'échauffement, Push et Pull, et rien d'autre.
+  | { kind: 'union'; rules: CutRule[] }
 
 export interface CutResult {
   keptBlockIds: string[]
@@ -127,7 +130,16 @@ export function applyCut(w: CutWorkout, rule: CutRule, tempo: Record<string, num
   let lever = false
   let unreachable = false
 
-  if (rule.kind === 'focus') {
+  if (rule.kind === 'union') {
+    // Une durée ne s'additionne pas (« 30 min + Push » ne veut rien dire), et la
+    // séance complète contient déjà tout : seules les règles de sélection comptent.
+    const keep = new Set<string>()
+    for (const r of rule.rules) {
+      if (r.kind === 'duration' || r.kind === 'full' || r.kind === 'union') continue
+      for (const id of applyCut(w, r, tempo).keptBlockIds) keep.add(id)
+    }
+    for (const b of blocks) if (!keep.has(b.id)) drop(b, `${label(b)} hors de cette combinaison`)
+  } else if (rule.kind === 'focus') {
     for (const b of blocks) {
       const r = roleOf(b).role
       const f = focusOf(b, movementsOf(w, b.id))
@@ -173,6 +185,25 @@ export function applyCut(w: CutWorkout, rule: CutRule, tempo: Record<string, num
     keptBlockIds: blocks.filter(b => kept.has(b.id)).map(b => b.id),
     dropped, looseDropped, lever, unreachable, steps,
     seconds: secondsOf(w, kept, lever, full, tempo),
+  }
+}
+
+// ── Combiner des versions ─────────────────────────────────────────────────────
+
+// Les versions qu'on peut cocher ensemble : par type de travail et « HIIT seul ».
+// Complète, Sans préparation et les durées se choisissent seules.
+export function isCombinable(v: { rule: CutRule }): boolean {
+  return v.rule.kind === 'focus' || v.rule.kind === 'roles'
+}
+
+export function combine(w: CutWorkout, versions: ProposedVersion[], tempo: Record<string, number> = BIO_TYPE_TEMPO): ProposedVersion {
+  if (versions.length === 1) return versions[0]
+  const rule: CutRule = { kind: 'union', rules: versions.map(v => v.rule) }
+  return {
+    key: versions.map(v => v.key).join('+'),
+    label: versions.map(v => v.label).join(' + '),
+    rule,
+    result: applyCut(w, rule, tempo),
   }
 }
 
