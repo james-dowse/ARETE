@@ -8,6 +8,7 @@ import {
   COMPLEXITY_COLORS, EQUIPMENT_ICONS, FAILURE_REPS,
 } from '@/lib/types'
 import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
+import { BLOCK_ROLES, BLOCK_ROLE_LABEL, inferRole, roleOf } from '@/lib/block-role'
 import { useState, useRef } from 'react'
 import {
   RefreshCw, Search, X, Save, Undo2, Minus, Plus,
@@ -28,6 +29,7 @@ export interface WorkoutMovement {
 }
 export interface WorkoutBlock {
   id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean
+  role?: string | null
 }
 export interface Workout {
   id: string; name: string; createdAt: string
@@ -568,6 +570,7 @@ export function BlockHeaderView({ block, index, movements, collapsed, onToggle, 
                 : <><ChevronsDown size={10} /> Dropset</>}
             </span>
           )}
+          <BlockRoleTag block={block} />
           {movements.length > 0 && (
             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{fmtMin(estMin)}</span>
           )}
@@ -594,13 +597,33 @@ export function BlockHeaderView({ block, index, movements, collapsed, onToggle, 
   )
 }
 
+// ─── Rôle du bloc (lecture) ───────────────────────────────────────────────────
+// Pointillé et « ? » tant que le rôle est seulement déduit du nom : une
+// déduction ne se fait pas passer pour un choix.
+export function BlockRoleTag({ block }: { block: WorkoutBlock }) {
+  const r = roleOf(block)
+  return (
+    <span
+      title={r.confirmed ? 'Rôle du bloc' : 'Rôle déduit du nom du bloc, à confirmer en édition'}
+      style={{
+        fontSize: 10, padding: '1px 8px', borderRadius: 20, color: 'var(--text-dim)', fontWeight: 700,
+        letterSpacing: '0.06em', textTransform: 'uppercase',
+        border: `1px ${r.confirmed ? 'solid' : 'dashed'} var(--border-plus)`,
+      }}
+    >
+      {BLOCK_ROLE_LABEL[r.role]}{r.confirmed ? '' : ' ?'}
+    </span>
+  )
+}
+
 // ─── Block Header (edit) ──────────────────────────────────────────────────────
 export function BlockHeaderEdit({
-  block, index, title, onTitleChange, instructions, onChange, superset, canSuperset, onToggleSuperset, isDirty, onRemove,
+  block, index, title, onTitleChange, role, onRoleChange, instructions, onChange, superset, canSuperset, onToggleSuperset, isDirty, onRemove,
   onDragStart, onDragOver, onDrop, onDragEnd, isDragging,
 }: {
   block: WorkoutBlock; index: number
   title: string; onTitleChange: (v: string) => void
+  role: string; onRoleChange: (v: string) => void
   instructions: string; onChange: (v: string) => void
   superset: boolean; canSuperset: boolean; onToggleSuperset: () => void; isDirty: boolean; onRemove: () => void
   // Glisser-déposer pour réordonner les blocs entre eux — seule cette ligne
@@ -610,6 +633,7 @@ export function BlockHeaderEdit({
   isDragging?: boolean
 }) {
   const isTitleDirty = title !== (block.bioType ?? '')
+  const isRoleDirty = role !== (block.role ?? '')
   return (
     <div style={{ marginTop: index === 0 ? 0 : 14, marginBottom: 8 }}>
       <div
@@ -662,6 +686,26 @@ export function BlockHeaderEdit({
         >
           <Trash2 size={13} />
         </button>
+      </div>
+      {/* Le rôle sert à proposer des versions courtes de la séance (lib/cuts.ts).
+          « Auto » garde la déduction par le nom du bloc, et la montre. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+        <label htmlFor={`role-${block.id}`} style={{ fontSize: 11, color: isRoleDirty ? 'var(--dirty-text)' : 'var(--text-muted)', fontWeight: 600, letterSpacing: 0.4 }}>RÔLE</label>
+        <select
+          id={`role-${block.id}`}
+          value={role}
+          onChange={e => onRoleChange(e.target.value)}
+          style={{
+            fontSize: 13, fontWeight: 600, padding: '4px 8px', borderRadius: 8, outline: 'none',
+            background: isRoleDirty ? 'var(--dirty)' : 'var(--bg-elevated)',
+            border: `1px solid ${isRoleDirty ? 'var(--dirty-border)' : 'var(--border)'}`,
+            color: isRoleDirty ? 'var(--dirty-text)' : 'var(--text-primary)',
+          }}
+        >
+          <option value="">Auto · {BLOCK_ROLE_LABEL[inferRole(title).role]}</option>
+          {BLOCK_ROLES.map(r => <option key={r} value={r}>{BLOCK_ROLE_LABEL[r]}</option>)}
+        </select>
+        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Sert à proposer des versions courtes de la séance.</span>
       </div>
       <div style={{ marginBottom: 8 }}>
         <label style={{ fontSize: 11, color: isDirty ? 'var(--dirty-text)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5, fontWeight: 600, letterSpacing: 0.4 }}>

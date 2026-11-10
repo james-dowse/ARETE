@@ -47,6 +47,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const [blockSuperset, setBlockSuperset] = useState<Record<string, boolean>>({})
   const [blockTitle, setBlockTitle] = useState<Record<string, string>>({})
   const [blockRestAfter, setBlockRestAfter] = useState<Record<string, number | null>>({})
+  // Rôle choisi par bloc ; '' = « Auto », déduit du nom (lib/block-role.ts).
+  const [blockRole, setBlockRole] = useState<Record<string, string>>({})
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [imageUrl, setImageUrl] = useState<string | null>(initial.imageUrl ?? null)
@@ -75,11 +77,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   // pendingAdds pour les mouvements. Un mouvement ajouté dans un bloc pending
   // référence ce tempId comme blockId ; handleSave le remappe vers le vrai ID
   // une fois le bloc créé côté serveur.
-  interface PendingBlock { tempId: string; bioType: string; instructions: string; superset: boolean; restAfter: number | null }
+  interface PendingBlock { tempId: string; bioType: string; instructions: string; superset: boolean; restAfter: number | null; role: string }
   const [pendingBlocks, setPendingBlocks] = useState<PendingBlock[]>([])
   const handleAddBlock = () => {
     const tempId = `new-block-${Math.random().toString(36).slice(2)}`
-    setPendingBlocks(prev => [...prev, { tempId, bioType: '', instructions: '', superset: false, restAfter: null }])
+    setPendingBlocks(prev => [...prev, { tempId, bioType: '', instructions: '', superset: false, restAfter: null, role: '' }])
   }
   const [collapsedViewBlocks, setCollapsedViewBlocks] = useState<Record<string, boolean>>({})
   const toggleViewBlock = (id: string) => setCollapsedViewBlocks(prev => ({ ...prev, [id]: !prev[id] }))
@@ -440,7 +442,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     (blockInstructions[b.id] ?? '') !== (b.instructions ?? '') ||
     (blockSuperset[b.id] ?? false) !== !!b.superset ||
     (blockTitle[b.id] ?? '') !== (b.bioType ?? '') ||
-    (blockRestAfter[b.id] ?? null) !== (b.restAfter ?? null)
+    (blockRestAfter[b.id] ?? null) !== (b.restAfter ?? null) ||
+    (blockRole[b.id] ?? '') !== (b.role ?? '')
   const isDirtyBlocks = editMode && initial.blocks.some(blockChanged)
   // Champ vidé = pas un changement : on ne doit jamais envoyer un nom vide
   const isDirtyName = editMode && editName.trim() !== '' && editName.trim() !== initial.name
@@ -486,11 +489,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     const initBS: Record<string, boolean> = {}
     const initBT: Record<string, string> = {}
     const initRA: Record<string, number | null> = {}
-    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null })
+    const initRO: Record<string, string> = {}
+    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null; initRO[b.id] = b.role ?? '' })
     setBlockInstructions(initBI)
     setBlockSuperset(initBS)
     setBlockTitle(initBT)
     setBlockRestAfter(initRA)
+    setBlockRole(initRO)
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
@@ -512,11 +517,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     const initBS: Record<string, boolean> = {}
     const initBT: Record<string, string> = {}
     const initRA: Record<string, number | null> = {}
-    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null })
+    const initRO: Record<string, string> = {}
+    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null; initRO[b.id] = b.role ?? '' })
     setBlockInstructions(initBI)
     setBlockSuperset(initBS)
     setBlockTitle(initBT)
     setBlockRestAfter(initRA)
+    setBlockRole(initRO)
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
@@ -585,7 +592,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
       const created = await Promise.all(pendingBlocks.map(pb =>
         fetch(`/api/workouts/${initial.id}/blocks`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bioType: pb.bioType || null, instructions: pb.instructions || null, superset: pb.superset, restAfter: pb.restAfter }),
+          body: JSON.stringify({ bioType: pb.bioType || null, instructions: pb.instructions || null, superset: pb.superset, restAfter: pb.restAfter, role: pb.role || null }),
         }).then(r => r.ok ? r.json() : null).catch(() => null)
       ))
       if (created.some(c => !c)) {
@@ -638,6 +645,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
           body: JSON.stringify({
             instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false,
             bioType: blockTitle[b.id] || null, restAfter: blockRestAfter[b.id] ?? null,
+            role: blockRole[b.id] || null,
             ...(blockOrderChanged(b) ? { order: blockOrder[b.id] } : {}),
           }),
         }).catch(() => null)
@@ -1074,6 +1082,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                       block={block} index={bi}
                       title={blockTitle[block.id] ?? ''}
                       onTitleChange={v => setBlockTitle(prev => ({ ...prev, [block.id]: v }))}
+                      role={blockRole[block.id] ?? ''}
+                      onRoleChange={v => setBlockRole(prev => ({ ...prev, [block.id]: v }))}
                       instructions={blockInstructions[block.id] ?? ''}
                       onChange={v => setBlockInstructions(prev => ({ ...prev, [block.id]: v }))}
                       superset={blockSuperset[block.id] ?? false}
@@ -1255,6 +1265,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                   block={fakeBlock} index={initial.blocks.filter(b => !removedBlockIds.has(b.id)).length + pbi}
                   title={pb.bioType}
                   onTitleChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, bioType: v } : x))}
+                  role={pb.role}
+                  onRoleChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, role: v } : x))}
                   instructions={pb.instructions}
                   onChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, instructions: v } : x))}
                   superset={pb.superset}
