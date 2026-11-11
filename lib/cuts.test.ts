@@ -66,9 +66,19 @@ describe('focusOf — ce que le bloc fait travailler', () => {
   it('le nom du bloc d’abord', () => {
     expect(focusOf({ id: 'x', order: 0, bioType: 'PULL' }, [mv('Push')])).toBe('Pull')
   })
+  it('puis la section, quand le nom du bloc ne dit rien', () => {
+    // Le cas qui motive la section : des blocs nommés « Dropset 1 », « Dropset 2 »
+    // ne portent aucun axe. Sans elle, on retombait sur le type des mouvements.
+    expect(focusOf({ id: 'x', order: 0, bioType: 'DROPSET 1', section: 'PUSH' }, [mv('Core')])).toBe('Push')
+  })
+  it('le nom du bloc reste prioritaire sur celui de la section', () => {
+    expect(focusOf({ id: 'x', order: 0, bioType: 'PULL', section: 'PUSH' }, [mv('Core')])).toBe('Pull')
+  })
   it('sinon le type des mouvements, à 60 % au moins', () => {
     expect(focusOf({ id: 'x', order: 0, bioType: 'BLOC A' }, [mv('Pull'), mv('Pull'), mv('Push')])).toBe('Pull')
     expect(focusOf({ id: 'x', order: 0, bioType: 'BLOC A' }, [mv('Pull'), mv('Push'), mv('Lower body')])).toBe('Mixte')
+    // Une section qui ne désigne aucun axe ne doit pas court-circuiter ce repli.
+    expect(focusOf({ id: 'x', order: 0, bioType: 'BLOC A', section: 'JOUR 1' }, [mv('Pull'), mv('Pull'), mv('Push')])).toBe('Pull')
   })
 })
 

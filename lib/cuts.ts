@@ -26,6 +26,7 @@ export interface CutBlock {
   order: number
   bioType?: string | null      // le nom du bloc
   role?: string | null
+  section?: string | null      // le regroupement auquel il appartient, s'il y en a un
   superset?: boolean | null
   restAfter?: number | null
 }
@@ -84,8 +85,16 @@ export function movementsOf(w: CutWorkout, blockId: string): CutMovement[] {
 // 60 % au moins ; en dessous, « Mixte » — et un bloc mixte ne fait pas de
 // version par focus, plutôt que d'en inventer une.
 export function focusOf(block: CutBlock, movements: CutMovement[]): string {
+  // Le nom du bloc d'abord : c'est le plus précis. Puis le nom de SA SECTION —
+  // un regroupement « PUSH » dit explicitement ce que ses blocs ont en commun,
+  // là où il fallait auparavant le deviner. C'est ce qui rend utilisables des
+  // blocs nommés « Dropset 1 », « Dropset 2 » : sans section, ils tombaient sur
+  // la majorité des mouvements, donc sur un type anatomique et non sur un axe.
+  // Les mouvements ne servent qu'en dernier recours.
   const t = normTitle(block.bioType)
   for (const [re, f] of TITLE_FOCUS) if (re.test(t)) return f
+  const s = normTitle(block.section)
+  for (const [re, f] of TITLE_FOCUS) if (re.test(s)) return f
   if (!movements.length) return 'Vide'
   const count = new Map<string, number>()
   for (const m of movements) count.set(m.bioType, (count.get(m.bioType) ?? 0) + 1)

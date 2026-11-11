@@ -687,10 +687,49 @@ export default function ActivePage() {
     }
   }
 
-  const handleUndo = (wm: WM) => {
+  // Décocher. Hors bloc enchaîné, c'est un simple « une série de moins », sans
+  // conséquence et refaisable d'un geste : pas de confirmation.
+  //
+  // Dans un bloc enchaîné, c'est autre chose. Le portillon d'ordre refuse de
+  // valider un mouvement dont le compteur dépasse le tour courant, et ce refus
+  // est muet. Décocher le palier 1 alors que 2 et 3 sont faits ramène donc le
+  // tour courant à 0 et VERROUILLE 2 et 3 : les boutons répondent encore, il ne
+  // se passe plus rien, et rien ne le dit. On annule donc le TOUR entier —
+  // l'unité d'un bloc enchaîné est le tour, pas la station — ce qui laisse un
+  // état cohérent. Comme cela jette du travail validé, on demande d'abord.
+  const handleUndo = async (wm: WM) => {
     const current = done[wm.id] ?? 0
     if (current <= 0) return
-    setDone(d => ({ ...d, [wm.id]: current - 1 }))
+
+    const enchaine = !!(wm.blockId && supersetBlocs.has(wm.blockId))
+    if (!enchaine) {
+      setDone(d => ({ ...d, [wm.id]: current - 1 }))
+      setRest(null)
+      return
+    }
+
+    const blocMovs = workout!.movements.filter(m => m.blockId === wm.blockId)
+    const tour = tourCourantCircuit(blocMovs, done)
+    // Un tour entamé se défait jusqu'à son début ; un tour tout juste bouclé
+    // se défait d'un cran de plus, sinon « annuler » ne ferait rien.
+    const entame = blocMovs.some(m => (done[m.id] ?? 0) > tour)
+    const cible = entame ? tour : Math.max(0, tour - 1)
+    const perdus = blocMovs.reduce((n, m) => n + Math.max(0, (done[m.id] ?? 0) - cible), 0)
+    if (perdus === 0) return
+
+    const dropset = !!(wm.blockId && dropsetBlocs.has(wm.blockId))
+    const mot = dropset ? 'cette descente' : 'ce tour'
+    const ok = await confirm(
+      `${perdus} série${perdus > 1 ? 's' : ''} validée${perdus > 1 ? 's' : ''} ${perdus > 1 ? 'seront effacées' : 'sera effacée'}.`,
+      { title: `Annuler ${mot} ?`, confirmLabel: 'Annuler ' + mot, danger: true },
+    )
+    if (!ok) return
+
+    setDone(d => {
+      const n = { ...d }
+      for (const m of blocMovs) n[m.id] = Math.min(n[m.id] ?? 0, cible)
+      return n
+    })
     setRest(null)
   }
 
@@ -714,12 +753,27 @@ export default function ActivePage() {
   // « Precedent » recule sans confirmation et remet a zero le mouvement quitte :
   // revenir en arriere pour refaire est le seul motif de reculer, et laisser ses
   // series cochees obligerait a decocher n fois avant de pouvoir reprendre.
-  const goPrev = () => {
+  // « Précédent » remet à ZÉRO le mouvement qu'on quitte — c'est voulu : on y
+  // revient pour le refaire. Mais ça jette toutes ses séries validées sans
+  // jamais le dire, et dans une descente c'est le palier entier qui part. On
+  // demande donc, et uniquement quand il y a quelque chose à perdre : revenir
+  // sur un mouvement pas encore entamé reste un simple déplacement.
+  const goPrev = async () => {
     ensureAudio()
-    setSetup(null); setExerciseTimer(null); setRest(null)
     const i = flatMovs.findIndex(m => m.id === currentWm?.id)
     const prev = i > 0 ? flatMovs[i - 1] : null
     if (!prev) return
+
+    const faites = currentWm ? (done[currentWm.id] ?? 0) : 0
+    if (faites > 0) {
+      const ok = await confirm(
+        `${faites} série${faites > 1 ? 's' : ''} validée${faites > 1 ? 's' : ''} sur « ${currentWm!.movement.name} » ${faites > 1 ? 'seront effacées' : 'sera effacée'}.`,
+        { title: 'Revenir au mouvement précédent ?', confirmLabel: 'Revenir', danger: true },
+      )
+      if (!ok) return
+    }
+
+    setSetup(null); setExerciseTimer(null); setRest(null)
     if (currentWm) setDone(d => ({ ...d, [currentWm.id]: 0 }))
     setCursorWmId(prev.id)
   }
@@ -1307,7 +1361,9 @@ export default function ActivePage() {
                     {curDone > 0 && (
                       <button type="button" onClick={() => handleUndo(currentWm)}
                         style={{ minHeight: 44, marginTop: 'var(--sp-3)', padding: '0 var(--sp-3)', borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }}>
-                        ↩ Décocher la série {curDone}
+                        {currentWm.blockId && supersetBlocs.has(currentWm.blockId)
+                          ? (dropsetBlocs.has(currentWm.blockId) ? '↩ Annuler cette descente' : '↩ Annuler ce tour')
+                          : `↩ Décocher la série ${curDone}`}
                       </button>
                     )}
                   </div>
