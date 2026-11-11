@@ -12,7 +12,7 @@ export async function POST(
   const { id } = await params
   const authz = await requireWorkoutOwner(id)
   if (!authz.ok) return authz.response
-  const { bioType, instructions, superset, dropset, restAfter, role } = await req.json().catch(() => ({}))
+  const { bioType, instructions, superset, dropset, restAfter, role, section } = await req.json().catch(() => ({}))
   // Exclusif, comme au PATCH : le dropset l'emporte si les deux arrivent.
   const enDropset = !!dropset
   const enSuperset = !enDropset && !!superset
@@ -33,6 +33,7 @@ export async function POST(
       dropset: enDropset,
       restAfter: restAfter ?? null,
       role: isBlockRole(role) ? role : null,
+      section: typeof section === 'string' && section.trim() ? section.trim() : null,
     },
   })
 

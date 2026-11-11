@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, effectiveDifficulty } from '@/lib/types'
 import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
@@ -7,7 +7,7 @@ import { stripHtmlMultiline } from '@/lib/html'
 
 interface Movement { id: string; name: string; bioType: string; complexity: string }
 interface WorkoutMovement { id: string; order: number; sets?: number | null; reps?: string | null; duration?: number | null; rest?: number | null; blockId?: string | null; movement: Movement }
-interface Block { id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean; dropset?: boolean }
+interface Block { id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean; dropset?: boolean; section?: string | null }
 interface Workout {
   id: string; name: string; createdAt: string; duration?: number | null; tags?: string | null
   notes?: string | null; description?: string | null; imageUrl?: string | null; imagePosition?: string | null
@@ -104,8 +104,17 @@ export default function PrintPage() {
           const consignes = block.instructions ? stripHtmlMultiline(block.instructions) : ''
           const mode = modeDuBloc(block)
           const enchaine = mode !== 'classique'
+          // Même règle qu'à l'écran : une section est la suite de blocs
+          // consécutifs portant le même nom, et son intertitre s'imprime
+          // au premier d'entre eux.
+          const maSection = block.section ?? ''
+          const precedente = bi > 0 ? (workout.blocks[bi - 1].section ?? '') : ''
           return (
-            <div key={block.id} className={enchaine ? 'block enchaine' : 'block'}>
+            <Fragment key={block.id}>
+            {maSection && maSection !== precedente && (
+              <div className="section-bloc">{maSection}</div>
+            )}
+            <div className={enchaine ? 'block enchaine' : 'block'}>
               <div className="block-header">
                 <span>Bloc {bi + 1}{block.bioType ? ` · ${block.bioType}` : ''}</span>
                 {enchaine && (
@@ -127,6 +136,7 @@ export default function PrintPage() {
                 <div className="block-rest">⏸ {block.restAfter}s de repos avant le bloc suivant</div>
               )}
             </div>
+            </Fragment>
           )
         })
       ) : (

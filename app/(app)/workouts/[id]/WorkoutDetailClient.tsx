@@ -60,6 +60,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const [blockInstructions, setBlockInstructions] = useState<Record<string, string>>({})
   const [blockSuperset, setBlockSuperset] = useState<Record<string, boolean>>({})
   const [blockDropset, setBlockDropset] = useState<Record<string, boolean>>({})
+  // Section d'un bloc : '' = hors section. Une section est la suite de blocs
+  // CONSÉCUTIFS portant le même nom — il n'y a pas d'entité « section », donc
+  // rien à créer, à remapper ni à nettoyer.
+  const [blockSection, setBlockSection] = useState<Record<string, string>>({})
+  const [blocsSelectionnes, setBlocsSelectionnes] = useState<Set<string>>(new Set())
   const [blockTitle, setBlockTitle] = useState<Record<string, string>>({})
   const [blockRestAfter, setBlockRestAfter] = useState<Record<string, number | null>>({})
   // Rôle choisi par bloc ; '' = « Auto », déduit du nom (lib/block-role.ts).
@@ -97,11 +102,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   // pendingAdds pour les mouvements. Un mouvement ajouté dans un bloc pending
   // référence ce tempId comme blockId ; handleSave le remappe vers le vrai ID
   // une fois le bloc créé côté serveur.
-  interface PendingBlock { tempId: string; bioType: string; instructions: string; superset: boolean; dropset: boolean; restAfter: number | null; role: string }
+  interface PendingBlock { tempId: string; bioType: string; instructions: string; superset: boolean; dropset: boolean; restAfter: number | null; role: string; section: string }
   const [pendingBlocks, setPendingBlocks] = useState<PendingBlock[]>([])
   const handleAddBlock = () => {
     const tempId = `new-block-${Math.random().toString(36).slice(2)}`
-    setPendingBlocks(prev => [...prev, { tempId, bioType: '', instructions: '', superset: false, dropset: false, restAfter: null, role: '' }])
+    setPendingBlocks(prev => [...prev, { tempId, bioType: '', instructions: '', superset: false, dropset: false, restAfter: null, role: '', section: '' }])
   }
   const [collapsedViewBlocks, setCollapsedViewBlocks] = useState<Record<string, boolean>>({})
   const toggleViewBlock = (id: string) => setCollapsedViewBlocks(prev => ({ ...prev, [id]: !prev[id] }))
@@ -316,6 +321,71 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   // que doivent interroger toutes les règles de cohérence.
   const estEnchaine = (blockId: string): boolean => isSupersetBlock(blockId) || isDropsetBlock(blockId)
 
+  // ── Sections ────────────────────────────────────────────────────────────
+  const sectionDe = (b: { id: string; section?: string | null }): string =>
+    blockSection[b.id] ?? b.section ?? ''
+
+  const blocsOrdonnes = (): WorkoutBlock[] => initial.blocks
+    .filter(b => !removedBlockIds.has(b.id))
+    .slice()
+    .sort((a, b) => (blockOrder[a.id] ?? a.order) - (blockOrder[b.id] ?? b.order))
+
+  const basculerSelection = (id: string) => setBlocsSelectionnes(prev => {
+    const n = new Set(prev)
+    if (n.has(id)) n.delete(id); else n.add(id)
+    return n
+  })
+
+  // Regrouper, c'est rendre les blocs CONSÉCUTIFS puis leur poser le même nom.
+  // Sans le rassemblement, une sélection discontinue (blocs 2, 3 et 5) donnerait
+  // deux sections du même nom au lieu d'une — correct selon la règle, mais ce
+  // n'est pas ce que « regrouper » veut dire. Les blocs choisis remontent donc
+  // à la position du premier d'entre eux, dans leur ordre relatif.
+  const creerSection = (nom: string) => {
+    const choisis = blocsSelectionnes
+    if (choisis.size === 0) return
+    const ordre = blocsOrdonnes().map(b => b.id)
+    const premier = ordre.findIndex(id => choisis.has(id))
+    if (premier === -1) return
+    const pris = ordre.filter(id => choisis.has(id))
+    const reste = ordre.filter(id => !choisis.has(id))
+    // Le point d'insertion : le nombre de blocs non choisis qui se trouvaient
+    // avant le premier choisi.
+    const pivot = reste.filter(id => ordre.indexOf(id) < premier).length
+    const nouvel = [...reste.slice(0, pivot), ...pris, ...reste.slice(pivot)]
+
+    const rangs: Record<string, number> = {}
+    nouvel.forEach((id, i) => { rangs[id] = i })
+    setBlockOrder(prev => ({ ...prev, ...rangs }))
+    setBlockSection(prev => {
+      const n = { ...prev }
+      for (const id of pris) n[id] = nom
+      return n
+    })
+    setBlocsSelectionnes(new Set())
+  }
+
+  const retirerDeSection = () => {
+    setBlockSection(prev => {
+      const n = { ...prev }
+      for (const id of blocsSelectionnes) n[id] = ''
+      return n
+    })
+    setBlocsSelectionnes(new Set())
+  }
+
+  // Renommer une section = renommer tous les blocs de la suite. Il n'y a pas de
+  // ligne « section » à mettre à jour ailleurs.
+  const renommerSection = (ancien: string, nouveau: string) => {
+    setBlockSection(prev => {
+      const n = { ...prev }
+      for (const b of blocsOrdonnes()) {
+        if ((prev[b.id] ?? b.section ?? '') === ancien) n[b.id] = nouveau
+      }
+      return n
+    })
+  }
+
   // Ordre d'un bloc = mouvements existants (triés) puis mouvements en attente
   // (dans leur ordre d'ajout) — fonctionne aussi bien pour un bloc existant
   // que pour un bloc tout juste créé (où seuls des pendingAdds existent).
@@ -498,6 +568,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     (blockInstructions[b.id] ?? '') !== (b.instructions ?? '') ||
     (blockSuperset[b.id] ?? false) !== !!b.superset ||
     (blockDropset[b.id] ?? false) !== !!b.dropset ||
+    (blockSection[b.id] ?? b.section ?? '') !== (b.section ?? '') ||
     (blockTitle[b.id] ?? '') !== (b.bioType ?? '') ||
     (blockRestAfter[b.id] ?? null) !== (b.restAfter ?? null) ||
     (blockRole[b.id] ?? '') !== (b.role ?? '')
@@ -548,13 +619,16 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     const initBT: Record<string, string> = {}
     const initRA: Record<string, number | null> = {}
     const initRO: Record<string, string> = {}
-    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBD[b.id] = !!b.dropset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null; initRO[b.id] = b.role ?? '' })
+    const initSE: Record<string, string> = {}
+    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBD[b.id] = !!b.dropset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null; initRO[b.id] = b.role ?? ''; initSE[b.id] = b.section ?? '' })
     setBlockInstructions(initBI)
     setBlockSuperset(initBS)
     setBlockDropset(initBD)
     setBlockTitle(initBT)
     setBlockRestAfter(initRA)
     setBlockRole(initRO)
+    setBlockSection(initSE)
+    setBlocsSelectionnes(new Set())
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
@@ -578,13 +652,16 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     const initBT: Record<string, string> = {}
     const initRA: Record<string, number | null> = {}
     const initRO: Record<string, string> = {}
-    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBD[b.id] = !!b.dropset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null; initRO[b.id] = b.role ?? '' })
+    const initSE: Record<string, string> = {}
+    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBD[b.id] = !!b.dropset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null; initRO[b.id] = b.role ?? ''; initSE[b.id] = b.section ?? '' })
     setBlockInstructions(initBI)
     setBlockSuperset(initBS)
     setBlockDropset(initBD)
     setBlockTitle(initBT)
     setBlockRestAfter(initRA)
     setBlockRole(initRO)
+    setBlockSection(initSE)
+    setBlocsSelectionnes(new Set())
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
@@ -653,7 +730,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
       const created = await Promise.all(pendingBlocks.map(pb =>
         fetch(`/api/workouts/${initial.id}/blocks`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bioType: pb.bioType || null, instructions: pb.instructions || null, superset: pb.superset, dropset: pb.dropset, restAfter: pb.restAfter, role: pb.role || null }),
+          body: JSON.stringify({ bioType: pb.bioType || null, instructions: pb.instructions || null, superset: pb.superset, dropset: pb.dropset, restAfter: pb.restAfter, role: pb.role || null, section: pb.section || null }),
         }).then(r => r.ok ? r.json() : null).catch(() => null)
       ))
       if (created.some(c => !c)) {
@@ -704,7 +781,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
         fetch(`/api/workouts/${initial.id}/blocks/${b.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false, dropset: blockDropset[b.id] ?? false,
+            instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false, dropset: blockDropset[b.id] ?? false, section: blockSection[b.id] ?? b.section ?? '',
             bioType: blockTitle[b.id] || null, restAfter: blockRestAfter[b.id] ?? null,
             role: blockRole[b.id] || null,
             ...(blockOrderChanged(b) ? { order: blockOrder[b.id] } : {}),
@@ -1262,6 +1339,28 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
           )
         )}
 
+        {/* Barre de regroupement : elle n'existe que pendant une sélection, pour
+            ne pas ajouter un bandeau permanent à un écran déjà dense. */}
+        {editMode && blocsSelectionnes.size > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 'var(--sp-3)', padding: '8px 12px', borderRadius: 'var(--r-md)', background: 'var(--crimson-ghost)', border: '1px solid var(--crimson-border)' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--crimson-bright)' }}>
+              {blocsSelectionnes.size} bloc{blocsSelectionnes.size > 1 ? 's' : ''} sélectionné{blocsSelectionnes.size > 1 ? 's' : ''}
+            </span>
+            <button onClick={() => creerSection('NOUVELLE SECTION')}
+              style={{ minHeight: 32, padding: '0 12px', borderRadius: 'var(--r-sm)', cursor: 'pointer', border: '1px solid var(--crimson)', background: 'transparent', color: 'var(--crimson-bright)', fontSize: 12, fontWeight: 700 }}>
+              Créer une section
+            </button>
+            <button onClick={retirerDeSection}
+              style={{ minHeight: 32, padding: '0 12px', borderRadius: 'var(--r-sm)', cursor: 'pointer', border: '1px solid var(--border-plus)', background: 'transparent', color: 'var(--text-dim)', fontSize: 12, fontWeight: 700 }}>
+              Retirer de la section
+            </button>
+            <button onClick={() => setBlocsSelectionnes(new Set())}
+              style={{ minHeight: 32, padding: '0 10px', borderRadius: 'var(--r-sm)', cursor: 'pointer', border: 'none', background: 'transparent', color: 'var(--text-dim)', fontSize: 12 }}>
+              Annuler
+            </button>
+          </div>
+        )}
+
         {/* ── MOVEMENTS ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {hasBlocks ? (
@@ -1269,16 +1368,46 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
               .filter(block => !removedBlockIds.has(block.id))
               .slice()
               .sort((a, b) => (blockOrder[a.id] ?? a.order) - (blockOrder[b.id] ?? b.order))
-              .map((block, bi) => {
+              .map((block, bi, tousLesBlocs) => {
+              // Une section commence quand le nom change par rapport au bloc
+              // précédent. Rien d'autre à stocker : la suite EST la section.
+              const maSection = sectionDe(block)
+              const sectionPrecedente = bi > 0 ? sectionDe(tousLesBlocs[bi - 1]) : ''
+              const debutDeSection = maSection !== '' && maSection !== sectionPrecedente
+              const enteteSection = debutDeSection ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: bi === 0 ? 0 : 'var(--sp-5)', marginBottom: 'var(--sp-2)' }}>
+                  {editMode ? (
+                    <input
+                      value={maSection}
+                      onChange={e => renommerSection(maSection, e.target.value.toUpperCase())}
+                      aria-label="Nom de la section"
+                      style={{
+                        fontSize: 13, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+                        padding: '4px 10px', borderRadius: 'var(--r-sm)', outline: 'none',
+                        background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                        color: 'var(--text-primary)', minWidth: 0, flexShrink: 1,
+                      }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text-primary)' }}>
+                      {maSection}
+                    </span>
+                  )}
+                  <div style={{ flex: 1, height: 1, background: 'var(--border-plus)' }} />
+                </div>
+              ) : null
               // Bloc hors de la version choisie : une ligne en pointillé qui dit
               // pourquoi, plutôt qu'une disparition sans explication.
               if (!editMode && isCut && !keptBlocks.has(block.id)) {
                 return (
-                  <div key={block.id} style={{ marginTop: bi === 0 ? 0 : 10, padding: '8px 12px', border: '1px dashed var(--border-plus)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                  <React.Fragment key={block.id}>
+                  {enteteSection}
+                  <div style={{ marginTop: bi === 0 ? 0 : 10, padding: '8px 12px', border: '1px dashed var(--border-plus)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1 }}>BLOC {bi + 1}</span>
                     <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-dim)', textDecoration: 'line-through' }}>{block.bioType || 'Sans nom'}</span>
                     <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{droppedWhy.get(block.id) ?? 'Hors de cette version'}</span>
                   </div>
+                  </React.Fragment>
                 )
               }
               const blockMovements = blockMovementsMap[block.id] || []
@@ -1292,7 +1421,22 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                 !blockIsSuper ? 'none' : (id === lastInBlockId ? 'last' : 'linked')
               return (
                 <div key={block.id}>
+                  {enteteSection}
                   {editMode && zoneBloc(bi)}
+                  {editMode && (
+                    // Case de sélection : le seul ajout permanent à l'écran
+                    // d'édition. Regrouper se fait en deux gestes — cocher, puis
+                    // « Créer une section » dans la barre qui apparaît.
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 4, cursor: 'pointer', fontSize: 11, color: blocsSelectionnes.has(block.id) ? 'var(--crimson-bright)' : 'var(--text-dim)' }}>
+                      <input
+                        type="checkbox"
+                        checked={blocsSelectionnes.has(block.id)}
+                        onChange={() => basculerSelection(block.id)}
+                        style={{ width: 14, height: 14, accentColor: 'var(--accent)' }}
+                      />
+                      {sectionDe(block) ? `dans « ${sectionDe(block)} »` : 'sélectionner'}
+                    </label>
+                  )}
                   {editMode ? (
                     <BlockHeaderEdit
                       block={block} index={bi}

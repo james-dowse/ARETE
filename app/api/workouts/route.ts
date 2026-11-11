@@ -122,6 +122,7 @@ type BlocEntrant = {
   restAfter?: number | null
   superset?: boolean
   dropset?: boolean
+  section?: string | null
 }
 
 /** Un mouvement tel qu'il arrive dans le corps de la requête POST. */
@@ -241,7 +242,7 @@ export async function POST(req: NextRequest) {
       for (const [position, b] of blocsRecus.entries()) {
         const block = await tx.workoutBlock.create({
           // Exclusivité des régimes, comme sur les routes de bloc.
-          data: { workoutId: w.id, order: b.order != null ? Number(b.order) : position, bioType: b.bioType || null, instructions: b.instructions || null, restAfter: b.restAfter != null ? Number(b.restAfter) : null, superset: !b.dropset && !!b.superset, dropset: !!b.dropset },
+          data: { workoutId: w.id, order: b.order != null ? Number(b.order) : position, bioType: b.bioType || null, instructions: b.instructions || null, restAfter: b.restAfter != null ? Number(b.restAfter) : null, superset: !b.dropset && !!b.superset, dropset: !!b.dropset, section: b.section?.trim() || null },
         })
         idsBlocs[position] = block.id
       }

@@ -14,7 +14,7 @@ import { applyCut, cutWorkoutFrom, setsAfterCut, type CutBlock, type CutRule } f
 
 export interface CopyBlock {
   id: string; order: number; bioType: string | null; instructions: string | null
-  restAfter: number | null; superset: boolean; dropset: boolean; role: string | null
+  restAfter: number | null; superset: boolean; dropset: boolean; role: string | null; section: string | null
 }
 export interface CopyMovement {
   movementId: string; order: number; sets: number | null; reps: string | null
@@ -44,7 +44,7 @@ export async function loadForCopy(id: string): Promise<CopySource | null> {
 // séances aux mêmes blocs et aux mêmes mouvements ont la même. Les blocs sont
 // pris dans leur ordre, les mouvements dans leur ordre au sein de leur bloc.
 export function contentHash(w: {
-  blocks: { id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean | null; dropset?: boolean | null; role?: string | null }[]
+  blocks: { id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean | null; dropset?: boolean | null; role?: string | null; section?: string | null }[]
   movements: { movementId: string; order: number; sets?: number | null; reps?: string | null; rest?: number | null; duration?: number | null; blockId?: string | null }[]
 }): string {
   const blocks = [...w.blocks].sort((a, b) => a.order - b.order)
@@ -52,7 +52,7 @@ export function contentHash(w: {
   const mv = [...w.movements]
     .sort((a, b) => a.order - b.order)
     .map(m => [m.blockId != null ? (index.get(m.blockId) ?? -1) : -1, m.movementId, m.sets ?? null, m.reps ?? null, m.rest ?? null, m.duration ?? null])
-  const bl = blocks.map(b => [b.bioType ?? null, b.instructions ?? null, b.restAfter ?? null, !!b.superset, !!b.dropset, b.role ?? null])
+  const bl = blocks.map(b => [b.bioType ?? null, b.instructions ?? null, b.restAfter ?? null, !!b.superset, !!b.dropset, b.role ?? null, b.section ?? null])
   return createHash('sha256').update(JSON.stringify([bl, mv])).digest('hex').slice(0, 16)
 }
 
@@ -77,7 +77,7 @@ export async function writeBlocks(tx: Tx, workoutId: string, content: { blocks: 
     const created = await tx.workoutBlock.create({
       data: {
         workoutId, order: b.order, bioType: b.bioType, instructions: b.instructions,
-        restAfter: b.restAfter, superset: b.superset, dropset: b.dropset, role: b.role,
+        restAfter: b.restAfter, superset: b.superset, dropset: b.dropset, role: b.role, section: b.section,
       },
     })
     blockIdMap[b.id] = created.id

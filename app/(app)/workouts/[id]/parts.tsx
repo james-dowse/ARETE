@@ -29,7 +29,7 @@ export interface WorkoutMovement {
 }
 export interface WorkoutBlock {
   id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean; dropset?: boolean
-  role?: string | null
+  role?: string | null; section?: string | null
 }
 export interface Workout {
   id: string; name: string; createdAt: string

@@ -21,7 +21,7 @@ export async function PATCH(
   const { id, blockId } = await params
   const denied = await authorize(id, blockId)
   if (denied) return denied
-  const { instructions, superset, dropset, bioType, restAfter, order, role } = await req.json()
+  const { instructions, superset, dropset, bioType, restAfter, order, role, section } = await req.json()
   // Rôle : une clé de lib/block-role.ts, ou vide pour revenir à la déduction par le nom.
   if (role !== undefined && role !== null && role !== '' && !isBlockRole(role)) {
     return NextResponse.json({ error: 'Rôle de bloc inconnu' }, { status: 400 })
@@ -42,6 +42,8 @@ export async function PATCH(
   if (restAfter !== undefined) data.restAfter = restAfter === '' || restAfter === null ? null : Number(restAfter)
   if (order !== undefined) data.order = Number(order)
   if (role !== undefined) data.role = role || null
+  // Chaîne vide = sortir de sa section, et non « section nommée vide ».
+  if (section !== undefined) data.section = typeof section === 'string' && section.trim() ? section.trim() : null
 
   const updated = await prisma.workoutBlock.update({
     where: { id: blockId },

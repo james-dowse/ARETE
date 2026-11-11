@@ -93,6 +93,14 @@ model WorkoutBlock {
   // Rôle fonctionnel (lib/block-role.ts) : echauffement, mobilite, force,
   // conditionnement, accessoire, calme. null = déduit du nom, à confirmer.
   role         String?
+  // Regroupement facultatif de blocs, nommé par l'utilisateur (« PUSH »).
+  // Une SECTION est la suite de blocs CONSÉCUTIFS portant le même nom : pas de
+  // table, donc rien à remapper quand une séance est copiée ou coupée en
+  // version, et une section vidée par une coupe disparaît d'elle-même au lieu
+  // de laisser une ligne orpheline. Deux suites séparées du même nom restent
+  // deux sections distinctes, ce qui est le comportement voulu.
+  // Purement organisationnel : n'change rien au déroulé de la séance.
+  section      String?
   workout      Workout           @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   movements    WorkoutMovement[]
 

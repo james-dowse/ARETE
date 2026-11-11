@@ -35,7 +35,7 @@ export const WORKOUT_SELECT = {
   // et chargement de l'avatar via /api/users/[id]/avatar.
   user: { select: { id: true, firstName: true, lastName: true } },
   _count: { select: { savedBy: true, versions: true } },
-  blocks: { select: { id: true, superset: true, dropset: true, restAfter: true, order: true, bioType: true }, orderBy: { order: 'asc' } },
+  blocks: { select: { id: true, superset: true, dropset: true, section: true, restAfter: true, order: true, bioType: true }, orderBy: { order: 'asc' } },
   movements: {
     orderBy: { order: 'asc' },
     select: {

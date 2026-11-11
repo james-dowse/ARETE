@@ -70,6 +70,23 @@ for (const name of migrations) {
     }
   }
 }
+// Le journal que lit scripts/dev-db-sync.mjs. Sans lui, la base repart sans
+// trace : au prochain `db:sync-local`, le rattrapage initial inscrirait TOUTES
+// les migrations sans les jouer — y compris une migration écrite depuis, qui ne
+// serait alors jamais appliquée et laisserait le schéma local en retard en se
+// déclarant à jour. La base vient d'être reconstruite ici : on sait exactement
+// ce qui est appliqué, autant le dire.
+await dev.execute(`CREATE TABLE IF NOT EXISTS "_dev_migrations" (
+  "name" TEXT NOT NULL PRIMARY KEY,
+  "appliedAt" TEXT NOT NULL
+)`)
+for (const name of migrations) {
+  await dev.execute({
+    sql: 'INSERT OR IGNORE INTO "_dev_migrations" ("name","appliedAt") VALUES (?, ?)',
+    args: [name, new Date().toISOString()],
+  })
+}
+
 ok(`${migrations.length} migration(s) rejouée(s) — ${applied} instruction(s), ${skipped} déjà en place`)
 
 // ── 3. Copie des données (lecture seule côté production) ────────────────────
@@ -77,7 +94,9 @@ step('Copie des données de production')
 const src = createClient({ url: SRC_URL, authToken: SRC_TOK })
 
 const tables = (await dev.execute(
-  "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma%' ORDER BY name"
+  // `_dev_%` exclu comme `_prisma%` : le journal des migrations locales n'existe
+  // que sur ce poste, le chercher en production ne produit qu'un avertissement.
+  "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma%' AND name NOT LIKE '_dev_%' ORDER BY name"
 )).rows.map(r => String(r.name))
 
 // Les contraintes de clé étrangère sont désactivées le temps de l'import :
