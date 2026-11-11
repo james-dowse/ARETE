@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireWorkoutOwner } from '@/lib/authz'
+import { isBlockRole } from '@/lib/block-role'
 
 // Vérifie propriété du workout + appartenance du bloc à ce workout
 async function authorize(id: string, blockId: string) {
@@ -20,7 +21,11 @@ export async function PATCH(
   const { id, blockId } = await params
   const denied = await authorize(id, blockId)
   if (denied) return denied
-  const { instructions, superset, dropset, bioType, restAfter, order } = await req.json()
+  const { instructions, superset, dropset, bioType, restAfter, order, role } = await req.json()
+  // Rôle : une clé de lib/block-role.ts, ou vide pour revenir à la déduction par le nom.
+  if (role !== undefined && role !== null && role !== '' && !isBlockRole(role)) {
+    return NextResponse.json({ error: 'Rôle de bloc inconnu' }, { status: 400 })
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: Record<string, any> = {}
@@ -36,6 +41,7 @@ export async function PATCH(
   if (bioType !== undefined) data.bioType = bioType === '' ? null : bioType
   if (restAfter !== undefined) data.restAfter = restAfter === '' || restAfter === null ? null : Number(restAfter)
   if (order !== undefined) data.order = Number(order)
+  if (role !== undefined) data.role = role || null
 
   const updated = await prisma.workoutBlock.update({
     where: { id: blockId },

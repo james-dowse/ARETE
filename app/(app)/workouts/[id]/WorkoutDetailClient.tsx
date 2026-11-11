@@ -6,6 +6,8 @@ import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
 import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, COMPLEXITIES, FAILURE_REPS, effectiveDifficulty } from '@/lib/types'
 import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
+import { combine, cutWorkoutFrom, isCombinable, parseSessionCut, proposeVersions, sessionCutJson, whyNoVersions } from '@/lib/cuts'
+import CutModal from './CutModal'
 import { useToast } from '@/components/Toast'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
 import OverflowMenu from '@/components/OverflowMenu'
@@ -17,7 +19,7 @@ import { useState, useEffect } from 'react'
 import {
   ArrowLeft, Clock, Copy, X, Pencil, Plus,
   Trash2, ChevronDown, ChevronUp, CalendarPlus, CheckCircle2, History, FileText, PlayCircle,
-  Share2, UserPlus,
+  Share2, UserPlus, Scissors,
 } from 'lucide-react'
 import {
   Workout, WorkoutMovement, WorkoutBlock, Movement, EditState, LastPerf,
@@ -38,8 +40,19 @@ const modeDuBloc = (b: WorkoutBlock): ModeBloc =>
 // juste une destination de glisser-déposer et un groupe d'affichage.
 const HORS_BLOC = '__hors__'
 
+// Une séance qui est une version d'une autre (lib/cuts.ts, Workout.cut).
+export interface VersionInfo {
+  label: string
+  sourceId: string | null       // null : l'origine a été supprimée
+  sourceName: string
+  sourceChanged: boolean        // l'origine a changé depuis la copie
+  retouched: boolean            // la version a été modifiée depuis sa création
+}
+// Les versions enregistrées d'une séance, par l'utilisateur courant.
+export interface SavedVersion { id: string; label: string }
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin, passages = 0, dernierPassage = null }: { workout: Workout; backTo?: string; isAdmin?: boolean; passages?: number; dernierPassage?: string | null }) {
+export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin, passages = 0, dernierPassage = null, versionInfo = null, savedVersions = [] }: { workout: Workout; backTo?: string; isAdmin?: boolean; passages?: number; dernierPassage?: string | null; versionInfo?: VersionInfo | null; savedVersions?: SavedVersion[] }) {
   const router = useRouter()
 
   const [editMode, setEditMode] = useState(false)
@@ -49,6 +62,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const [blockDropset, setBlockDropset] = useState<Record<string, boolean>>({})
   const [blockTitle, setBlockTitle] = useState<Record<string, string>>({})
   const [blockRestAfter, setBlockRestAfter] = useState<Record<string, number | null>>({})
+  // Rôle choisi par bloc ; '' = « Auto », déduit du nom (lib/block-role.ts).
+  const [blockRole, setBlockRole] = useState<Record<string, string>>({})
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [imageUrl, setImageUrl] = useState<string | null>(initial.imageUrl ?? null)
@@ -63,7 +78,12 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const toast = useToast()
   const confirm = useConfirm()
   const [saving, setSaving] = useState(false)
-  const [sessions, setSessions] = useState<{ id: string; doneAt: string; note?: string | null }[]>([])
+  const [sessions, setSessions] = useState<{ id: string; doneAt: string; note?: string | null; cut?: string | null }[]>([])
+  // Pastilles « Versions » cochées ; ['full'] = la séance entière.
+  const [versionKeys, setVersionKeys] = useState<string[]>(['full'])
+  const [showCut, setShowCut] = useState<false | 'duree' | 'blocs'>(false)
+  const [savingVersion, setSavingVersion] = useState(false)
+  const [syncingVersion, setSyncingVersion] = useState(false)
   const [sessionsOpen, setSessionsOpen] = useState(false)
   const [loggingSession, setLoggingSession] = useState(false)
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null)
@@ -77,11 +97,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   // pendingAdds pour les mouvements. Un mouvement ajouté dans un bloc pending
   // référence ce tempId comme blockId ; handleSave le remappe vers le vrai ID
   // une fois le bloc créé côté serveur.
-  interface PendingBlock { tempId: string; bioType: string; instructions: string; superset: boolean; dropset: boolean; restAfter: number | null }
+  interface PendingBlock { tempId: string; bioType: string; instructions: string; superset: boolean; dropset: boolean; restAfter: number | null; role: string }
   const [pendingBlocks, setPendingBlocks] = useState<PendingBlock[]>([])
   const handleAddBlock = () => {
     const tempId = `new-block-${Math.random().toString(36).slice(2)}`
-    setPendingBlocks(prev => [...prev, { tempId, bioType: '', instructions: '', superset: false, dropset: false, restAfter: null }])
+    setPendingBlocks(prev => [...prev, { tempId, bioType: '', instructions: '', superset: false, dropset: false, restAfter: null, role: '' }])
   }
   const [collapsedViewBlocks, setCollapsedViewBlocks] = useState<Record<string, boolean>>({})
   const toggleViewBlock = (id: string) => setCollapsedViewBlocks(prev => ({ ...prev, [id]: !prev[id] }))
@@ -446,7 +466,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
 
   const handleLogSession = async () => {
     setLoggingSession(true)
-    const res = await fetch(`/api/workouts/${initial.id}/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }).catch(() => null)
+    const res = await fetch(`/api/workouts/${initial.id}/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(version ? { cut: sessionCutJson(version) } : {}) }).catch(() => null)
     if (!res || !res.ok) {
       toast('Impossible d\'enregistrer la séance', 'error')
       setLoggingSession(false)
@@ -479,7 +499,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     (blockSuperset[b.id] ?? false) !== !!b.superset ||
     (blockDropset[b.id] ?? false) !== !!b.dropset ||
     (blockTitle[b.id] ?? '') !== (b.bioType ?? '') ||
-    (blockRestAfter[b.id] ?? null) !== (b.restAfter ?? null)
+    (blockRestAfter[b.id] ?? null) !== (b.restAfter ?? null) ||
+    (blockRole[b.id] ?? '') !== (b.role ?? '')
   const isDirtyBlocks = editMode && initial.blocks.some(blockChanged)
   // Champ vidé = pas un changement : on ne doit jamais envoyer un nom vide
   const isDirtyName = editMode && editName.trim() !== '' && editName.trim() !== initial.name
@@ -526,12 +547,14 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     const initBD: Record<string, boolean> = {}
     const initBT: Record<string, string> = {}
     const initRA: Record<string, number | null> = {}
-    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBD[b.id] = !!b.dropset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null })
+    const initRO: Record<string, string> = {}
+    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBD[b.id] = !!b.dropset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null; initRO[b.id] = b.role ?? '' })
     setBlockInstructions(initBI)
     setBlockSuperset(initBS)
     setBlockDropset(initBD)
     setBlockTitle(initBT)
     setBlockRestAfter(initRA)
+    setBlockRole(initRO)
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
@@ -554,12 +577,14 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     const initBD: Record<string, boolean> = {}
     const initBT: Record<string, string> = {}
     const initRA: Record<string, number | null> = {}
-    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBD[b.id] = !!b.dropset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null })
+    const initRO: Record<string, string> = {}
+    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBD[b.id] = !!b.dropset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null; initRO[b.id] = b.role ?? '' })
     setBlockInstructions(initBI)
     setBlockSuperset(initBS)
     setBlockDropset(initBD)
     setBlockTitle(initBT)
     setBlockRestAfter(initRA)
+    setBlockRole(initRO)
     setEditName(initial.name)
     setEditDescription(initial.description ?? '')
     setImageUrl(initial.imageUrl ?? null); setImagePosition(initial.imagePosition ?? null)
@@ -628,7 +653,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
       const created = await Promise.all(pendingBlocks.map(pb =>
         fetch(`/api/workouts/${initial.id}/blocks`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bioType: pb.bioType || null, instructions: pb.instructions || null, superset: pb.superset, dropset: pb.dropset, restAfter: pb.restAfter }),
+          body: JSON.stringify({ bioType: pb.bioType || null, instructions: pb.instructions || null, superset: pb.superset, dropset: pb.dropset, restAfter: pb.restAfter, role: pb.role || null }),
         }).then(r => r.ok ? r.json() : null).catch(() => null)
       ))
       if (created.some(c => !c)) {
@@ -681,6 +706,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
           body: JSON.stringify({
             instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false, dropset: blockDropset[b.id] ?? false,
             bioType: blockTitle[b.id] || null, restAfter: blockRestAfter[b.id] ?? null,
+            role: blockRole[b.id] || null,
             ...(blockOrderChanged(b) ? { order: blockOrder[b.id] } : {}),
           }),
         }).catch(() => null)
@@ -810,6 +836,70 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     ? estimateWorkoutMinutes(editDurationMovements, editDurationBlocks)
     : estimateWorkoutMinutes(initial.movements.map(toDurationMovement), initial.blocks)
 
+  // ── Versions de la séance (lib/cuts.ts) ─────────────────────────────────────
+  // Calculées à l'affichage, rien en base : une version coupe la séance en blocs
+  // entiers. Types de travail et HIIT se cochent ensemble (Push + Pull), le reste
+  // se choisit seul. Hors édition seulement : en édition, on voit tout.
+  const cutW = cutWorkoutFrom(initial)
+  const versions = editMode ? [] : proposeVersions(cutW)
+  const pickedVersions = versions.filter(v => versionKeys.includes(v.key))
+  const version = pickedVersions.length ? combine(cutW, pickedVersions) : versions[0]
+  const isCut = !!version && version.rule.kind !== 'full'
+  const keptBlocks = new Set(isCut ? version.result.keptBlockIds : initial.blocks.map(b => b.id))
+  const droppedWhy = new Map(isCut ? version.result.dropped.map(d => [d.blockId, d.reason] as const) : [])
+  const versionMin = isCut ? Math.max(1, Math.round(version.result.seconds / 60)) : estimatedMin
+  // Blocs qui portent des mouvements : il en faut deux pour couper quoi que ce soit.
+  const cuttable = initial.blocks.filter(b => initial.movements.some(m => m.blockId === b.id)).length
+  const noVersionsWhy = editMode ? null : whyNoVersions(cutW)
+  const toggleVersion = (key: string) => {
+    const v = versions.find(x => x.key === key)
+    if (!v) return
+    if (!isCombinable(v)) { setVersionKeys([key]); return }
+    setVersionKeys(prev => {
+      const cur = prev.filter(k => { const x = versions.find(y => y.key === k); return !!x && isCombinable(x) })
+      const next = cur.includes(key) ? cur.filter(k => k !== key) : [...cur, key]
+      return next.length ? next : ['full']
+    })
+  }
+
+  const startVersion = (key: string | null) =>
+    router.push(`/workouts/${initial.id}/active${key ? `?version=${encodeURIComponent(key)}` : ''}`)
+
+  // Enregistre une version comme séance à part entière, puis l'ouvre.
+  const saveVersion = async (key: string) => {
+    setSavingVersion(true)
+    const res = await fetch(`/api/workouts/${initial.id}/versions`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }),
+    }).catch(() => null)
+    setSavingVersion(false)
+    if (!res || res.status !== 201) {
+      const err = await res?.json().catch(() => null)
+      toast(err?.error ?? 'Impossible d’enregistrer la version', 'error')
+      return
+    }
+    const created = await res.json() as { id: string; name: string }
+    setShowCut(false)
+    toast(`Version « ${created.name} » enregistrée`)
+    router.push(`/workouts/${created.id}`)
+  }
+
+  // Remet une version à jour depuis sa séance d'origine.
+  const syncVersion = async (force = false): Promise<void> => {
+    setSyncingVersion(true)
+    const res = await fetch(`/api/workouts/${initial.id}/version-sync`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force }),
+    }).catch(() => null)
+    setSyncingVersion(false)
+    if (res?.ok) { toast('Version remise à jour depuis la séance d’origine'); router.refresh(); return }
+    const err = await res?.json().catch(() => null)
+    if (err?.retouched && !force) {
+      const ok = await confirm('Cette version a été modifiée depuis sa création. La mettre à jour remplace ses blocs et ses mouvements par ceux de la séance d’origine. Les séances déjà faites ne changent pas.', { title: 'Remplacer vos modifications ?', confirmLabel: 'Mettre à jour', danger: true })
+      if (ok) return syncVersion(true)
+      return
+    }
+    toast(err?.error ?? 'Mise à jour impossible', 'error')
+  }
+
   const hasBlocks = initial.blocks.length > 0
   const blockMovementsMap: Record<string, WorkoutMovement[]> = {}
   if (hasBlocks) {
@@ -847,6 +937,28 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
         </Link>
 
         <ResumeSessionBanner workoutId={initial.id} />
+
+        {/* Cette séance est une version d'une autre : d'où elle vient, et si
+            l'origine a changé depuis la copie. */}
+        {versionInfo && !editMode && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 14px', marginBottom: 16, border: '1px solid var(--border-plus)', borderRadius: 'var(--r-md)', background: 'var(--bg-card)', fontSize: 13 }}>
+            <span style={{ color: 'var(--text-muted)' }}>
+              Version <b style={{ color: 'var(--text-primary)' }}>{versionInfo.label}</b> de{' '}
+              {versionInfo.sourceId
+                ? <Link href={`/workouts/${versionInfo.sourceId}`} style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{versionInfo.sourceName}</Link>
+                : <span>« {versionInfo.sourceName} » (séance d’origine supprimée)</span>}
+            </span>
+            {versionInfo.sourceChanged && (
+              <>
+                <span style={{ color: 'var(--dirty-text)', fontWeight: 600 }}>La séance d’origine a changé.</span>
+                <button onClick={() => syncVersion()} disabled={syncingVersion}
+                  style={{ marginLeft: 'auto', padding: '6px 12px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border-plus)', background: 'none', color: 'var(--text-primary)', fontWeight: 700, fontSize: 12.5, cursor: syncingVersion ? 'wait' : 'pointer' }}>
+                  {syncingVersion ? 'Mise à jour…' : 'Mettre à jour'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Header */}
         <div style={{ marginBottom: 22 }}>
@@ -886,9 +998,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                     « Démarrer » invisible. Terracotta plein : la palette la
                     réserve à « l'action, le maintenant » — elle était en or,
                     couleur de la marque et de la progression. */}
-                <button onClick={() => router.push(`/workouts/${initial.id}/active`)}
+                <button onClick={() => startVersion(isCut ? version.key : null)}
                   style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', background: 'var(--accent)', border: '1px solid transparent', borderRadius: 'var(--r-sm)', color: 'var(--on-accent)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--elev-1)' }}>
-                  <PlayCircle size={15} /> Démarrer
+                  <PlayCircle size={15} /> Démarrer{isCut ? ` · ${version.label}` : ''}
                 </button>
                 <button onClick={handleLogSession} disabled={loggingSession}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 15px', background: 'none', border: '1px solid var(--cypress-light)', borderRadius: 'var(--r-sm)', color: 'var(--green)', fontSize: 13, fontWeight: 600, cursor: loggingSession ? 'wait' : 'pointer' }}>
@@ -899,6 +1011,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                   <CalendarPlus size={14} /> Planning
                 </button>
                 <OverflowMenu items={[
+                  ...(hasBlocks ? [{ label: 'Raccourcir…', icon: <Scissors size={14} />, onClick: () => setShowCut('duree') }] : []),
                   { label: 'Recommander', icon: <Share2 size={14} />, onClick: () => setShowShare(true) },
                   ...(isAdmin ? [{ label: 'Assigner à un utilisateur', icon: <UserPlus size={14} />, onClick: () => setShowAssign(true) }] : []),
                   { label: 'Exporter en PDF', icon: <FileText size={14} />, onClick: () => window.open(`/workouts/${initial.id}/print`, '_blank') },
@@ -916,14 +1029,70 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
           </div>
         </div>
 
+        {/* Versions — rangée de pastilles, rien n'est écrit en la touchant. */}
+        {!editMode && initial.movements.length > 0 && (versions.length > 1 || savedVersions.length > 0 || cuttable >= 2 || !!noVersionsWhy) && (
+          <div style={{ marginBottom: 18 }}>
+            <div className="t-micro" style={{ color: 'var(--text-dim)', marginBottom: 8 }}>Versions</div>
+            <div role="group" aria-label="Versions de la séance" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+              {versions.map(v => {
+                const on = v.key === 'full' ? !isCut : versionKeys.includes(v.key)
+                return (
+                  <button key={v.key} onClick={() => toggleVersion(v.key)} aria-pressed={on}
+                    style={{
+                      flexShrink: 0, display: 'inline-flex', alignItems: 'baseline', gap: 6, padding: '6px 12px',
+                      borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                      border: `1px solid ${on ? 'var(--crimson)' : 'var(--border-plus)'}`,
+                      background: on ? 'var(--crimson-ghost)' : 'var(--bg-card)', color: 'var(--text-primary)',
+                    }}>
+                    {v.label}
+                    <span style={{ fontSize: 'var(--fs-micro)', fontWeight: 800, color: 'var(--orange)' }}>{fmtMin(Math.max(1, Math.round(v.result.seconds / 60)))}</span>
+                  </button>
+                )
+              })}
+              {cuttable >= 2 && (
+                <button onClick={() => setShowCut('blocs')}
+                  style={{
+                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px',
+                    borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                    border: '1px dashed var(--border-plus)', background: 'none', color: 'var(--text-muted)',
+                  }}>
+                  <Scissors size={12} /> Sur mesure…
+                </button>
+              )}
+            </div>
+            {noVersionsWhy && (
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6, maxWidth: '68ch' }}>{noVersionsWhy}</div>
+            )}
+            {isCut && (
+              <button onClick={() => saveVersion(version.key)} disabled={savingVersion}
+                style={{ marginTop: 8, padding: 0, border: 'none', background: 'none', color: 'var(--crimson-bright)', fontWeight: 700, fontSize: 12.5, textDecoration: 'underline', textUnderlineOffset: 3, cursor: savingVersion ? 'wait' : 'pointer' }}>
+                {savingVersion ? 'Enregistrement…' : `Enregistrer « ${version.label} » comme version`}
+              </button>
+            )}
+            {savedVersions.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', marginTop: 8, fontSize: 12.5 }}>
+                <span style={{ color: 'var(--text-dim)' }}>Enregistrées :</span>
+                {savedVersions.map(v => (
+                  <Link key={v.id} href={`/workouts/${v.id}`} style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{v.label}</Link>
+                ))}
+              </div>
+            )}
+            {isCut && version.result.looseDropped > 0 && (
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>
+                {version.result.looseDropped} mouvement{version.result.looseDropped > 1 ? 's' : ''} hors bloc ne {version.result.looseDropped > 1 ? 'sont' : 'est'} pas dans cette version.
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stats */}
         <div className="r-detail-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, marginBottom: 18 }}>
-          <Stat value={initial.movements.length} label="Mouvements" color="var(--accent)" />
+          <Stat value={isCut ? initial.movements.filter(wm => !!wm.blockId && keptBlocks.has(wm.blockId)).length : initial.movements.length} label="Mouvements" color="var(--accent)" />
           <Stat value={bioTypes.length} label="Types" color="var(--blue)" />
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-cartouche)', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--orange)' }}>{fmtMin(estimatedMin)}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--orange)' }}>{fmtMin(versionMin)}</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-              {initial.duration ? `${initial.duration}min prévu` : 'Estimé'}
+              {isCut ? `Version ${version.label}` : initial.duration ? `${initial.duration}min prévu` : 'Estimé'}
             </div>
           </div>
         </div>
@@ -1101,6 +1270,17 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
               .slice()
               .sort((a, b) => (blockOrder[a.id] ?? a.order) - (blockOrder[b.id] ?? b.order))
               .map((block, bi) => {
+              // Bloc hors de la version choisie : une ligne en pointillé qui dit
+              // pourquoi, plutôt qu'une disparition sans explication.
+              if (!editMode && isCut && !keptBlocks.has(block.id)) {
+                return (
+                  <div key={block.id} style={{ marginTop: bi === 0 ? 0 : 10, padding: '8px 12px', border: '1px dashed var(--border-plus)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', letterSpacing: 1 }}>BLOC {bi + 1}</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-dim)', textDecoration: 'line-through' }}>{block.bioType || 'Sans nom'}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{droppedWhy.get(block.id) ?? 'Hors de cette version'}</span>
+                  </div>
+                )
+              }
               const blockMovements = blockMovementsMap[block.id] || []
               const blockES = (blockEditStatesMap[block.id] || []).filter(({ orig }) => !removedWmIds.has(orig.id))
               const blockCollapsed = !editMode && !!collapsedViewBlocks[block.id]
@@ -1118,6 +1298,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                       block={block} index={bi}
                       title={blockTitle[block.id] ?? ''}
                       onTitleChange={v => setBlockTitle(prev => ({ ...prev, [block.id]: v }))}
+                      role={blockRole[block.id] ?? ''}
+                      onRoleChange={v => setBlockRole(prev => ({ ...prev, [block.id]: v }))}
                       instructions={blockInstructions[block.id] ?? ''}
                       onChange={v => setBlockInstructions(prev => ({ ...prev, [block.id]: v }))}
                       superset={blockSuperset[block.id] ?? false}
@@ -1195,7 +1377,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                     </div>
                   )}
                   {/* Inter-block rest */}
-                  {!editMode && !blockCollapsed && bi < initial.blocks.length - 1 && (block.restAfter != null || initial.blockRest != null) && (
+                  {!editMode && !blockCollapsed && bi < initial.blocks.length - 1 && (block.restAfter != null || initial.blockRest != null)
+                    && (!isCut || initial.blocks.some(b2 => b2.order > block.order && keptBlocks.has(b2.id))) && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
                       <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
@@ -1244,7 +1427,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
               affichait ses en-têtes de bloc et pas un seul mouvement : la fiche
               paraissait vide alors que la séance était complète. Même défaut que
               celui déjà corrigé sur l'écran de séance active. */}
-          {!editMode && hasBlocks && orphanMovements.length > 0 && (
+          {!editMode && !isCut && hasBlocks && orphanMovements.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
               {orphanMovements.map((wm, i) => (
                 <MovementRowView key={wm.id} wm={wm} index={i} onMovementClick={setSelectedMovementId} lastPerf={lastPerf[wm.movement.id]} />
@@ -1302,6 +1485,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                   block={fakeBlock} index={initial.blocks.filter(b => !removedBlockIds.has(b.id)).length + pbi}
                   title={pb.bioType}
                   onTitleChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, bioType: v } : x))}
+                  role={pb.role}
+                  onRoleChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, role: v } : x))}
                   instructions={pb.instructions}
                   onChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, instructions: v } : x))}
                   superset={pb.superset}
@@ -1421,6 +1606,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                     {new Date(s.doneAt).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}
                   </span>
+                  {parseSessionCut(s.cut) && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {parseSessionCut(s.cut)!.label}</span>}
                   <span style={{ fontSize: 12, color: 'var(--text-dim)', marginLeft: 'auto' }}>
                     {new Date(s.doneAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                   </span>
@@ -1429,6 +1615,17 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
             </div>
           )}
         </div>
+      )}
+
+      {showCut && (
+        <CutModal
+          workout={cutW}
+          initialMode={showCut}
+          saving={savingVersion}
+          onClose={() => setShowCut(false)}
+          onStart={key => { setShowCut(false); startVersion(key) }}
+          onSave={key => saveVersion(key)}
+        />
       )}
 
       <style>{`

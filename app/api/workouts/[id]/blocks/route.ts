@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireWorkoutOwner } from '@/lib/authz'
+import { isBlockRole } from '@/lib/block-role'
 
 // POST: ajoute un bloc vide en fin de séance. Les mouvements y sont ajoutés
 // ensuite via POST /api/workouts/[id]/movements avec ce blockId.
@@ -11,7 +12,7 @@ export async function POST(
   const { id } = await params
   const authz = await requireWorkoutOwner(id)
   if (!authz.ok) return authz.response
-  const { bioType, instructions, superset, dropset, restAfter } = await req.json().catch(() => ({}))
+  const { bioType, instructions, superset, dropset, restAfter, role } = await req.json().catch(() => ({}))
   // Exclusif, comme au PATCH : le dropset l'emporte si les deux arrivent.
   const enDropset = !!dropset
   const enSuperset = !enDropset && !!superset
@@ -31,6 +32,7 @@ export async function POST(
       superset: enSuperset,
       dropset: enDropset,
       restAfter: restAfter ?? null,
+      role: isBlockRole(role) ? role : null,
     },
   })
 

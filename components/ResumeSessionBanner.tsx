@@ -18,6 +18,7 @@ export interface PendingSession {
   workoutId: string
   workoutName: string | null
   note?: string
+  cut?: string // version faite (lib/cuts.ts), absente = séance complète
   sets: unknown[]
   finishedAt: number
 }
@@ -77,7 +78,7 @@ export async function flushPendingSessions(): Promise<{ pending: PendingSession[
         res = await fetch(`/api/workouts/${p.workoutId}/sessions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ note: p.note || undefined, sets: p.sets }),
+          body: JSON.stringify({ note: p.note || undefined, cut: p.cut, sets: p.sets }),
         })
       } catch { res = null }
       // 201 et rien d'autre. Un `res.ok` large accepterait le 200 d'un portail

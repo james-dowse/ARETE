@@ -45,6 +45,13 @@ model Workout {
   // (computeWorkoutDifficulty) à partir des mouvements. Valeur libre parmi
   // COMPLEXITIES (Admin > Référentiels).
   difficultyOverride String?
+  // Version de séance (voir lib/cuts.ts) : la séance d'origine, et la règle de
+  // coupe en JSON ({ rule, label, sourceHash, ownHash }). null = séance ordinaire.
+  // SetNull : supprimer l'origine ne supprime ni la version ni ses sessions.
+  derivedFromId String?
+  cut           String?
+  derivedFrom   Workout?          @relation("WorkoutVersions", fields: [derivedFromId], references: [id], onDelete: SetNull)
+  versions      Workout[]         @relation("WorkoutVersions")
   movements   WorkoutMovement[]
   blocks      WorkoutBlock[]
   shares      WorkoutShare[]
@@ -62,13 +69,14 @@ model Workout {
   @@index([userId, createdAt])
   @@index([public, createdAt])
   @@index([templateId])
+  @@index([derivedFromId])
 }
 
 model WorkoutBlock {
   id           String            @id @default(cuid())
   workoutId    String
   order        Int
-  bioType      String?
+  bioType      String? // le NOM du bloc (saisi en capitales), pas un type anatomique
   instructions String?
   restAfter    Int?
   superset     Boolean           @default(false)
@@ -79,7 +87,12 @@ model WorkoutBlock {
   // dropset  : une descente = tous les paliers sans repos, répétée `sets` fois.
   // Même forme en base, même exécution ; ce qui change est l'intention affichée
   // et les règles de cohérence appliquées en édition.
+  // À ne pas confondre avec `role` ci-dessous : le régime dit COMMENT on
+  // enchaîne, le rôle dit À QUOI SERT le bloc. Les deux cohabitent.
   dropset      Boolean           @default(false)
+  // Rôle fonctionnel (lib/block-role.ts) : echauffement, mobilite, force,
+  // conditionnement, accessoire, calme. null = déduit du nom, à confirmer.
+  role         String?
   workout      Workout           @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   movements    WorkoutMovement[]
 
@@ -270,6 +283,7 @@ model WorkoutSession {
   workoutId String
   doneAt    DateTime     @default(now())
   note      String?
+  cut       String? // version faite (règle de coupe en JSON), null = séance complète
   user      InvitedUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
   workout   Workout      @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   sets      SessionSet[]

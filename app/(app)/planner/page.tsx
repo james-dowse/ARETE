@@ -61,7 +61,7 @@ function WorkoutPickerModal({ dayLabel, onPick, onClose }: {
   const [difficultyFilters, setDifficultyFilters] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    fetch('/api/workouts?filter=mine')
+    fetch('/api/workouts?filter=mine&versions=1')
       .then(r => r.json())
       .then(d => { setWorkouts(Array.isArray(d) ? d : []); setLoading(false) })
       .catch(() => setLoading(false))
