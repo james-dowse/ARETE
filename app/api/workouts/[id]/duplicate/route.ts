@@ -18,8 +18,13 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
     },
   }) as ({
     name: string; duration: number | null; notes: string | null; templateId: string | null
-    blocks: { id: string; order: number; bioType: string | null; instructions: string | null; restAfter: number | null; superset: boolean }[]
-    movements: { movementId: string; order: number; sets: number | null; reps: string | null; duration: number | null; blockId: string | null }[]
+    blocks: { id: string; order: number; bioType: string | null; instructions: string | null; restAfter: number | null; superset: boolean; dropset: boolean }[]
+    // `rest` était absent de cette liste comme du createMany plus bas : dupliquer
+    // une séance remettait tous les repos à null. Anodin sur un bloc ordinaire,
+    // destructeur sur un bloc enchaîné, où la convention « 0 partout sauf sur le
+    // dernier » EST la déclaration du régime : la copie repartait à 45s par
+    // défaut dans l'estimation et 60s dans le moteur.
+    movements: { movementId: string; order: number; sets: number | null; reps: string | null; rest: number | null; duration: number | null; blockId: string | null }[]
   }) | null
   if (!original) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
@@ -45,6 +50,7 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
         instructions: b.instructions,
         restAfter: b.restAfter,
         superset: b.superset,
+        dropset: b.dropset,
       },
     })
     blockIdMap[b.id] = newBlock.id
@@ -58,6 +64,7 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
       order: m.order,
       sets: m.sets,
       reps: m.reps,
+      rest: m.rest,
       duration: m.duration,
       blockId: m.blockId ? (blockIdMap[m.blockId] ?? null) : null,
     })),

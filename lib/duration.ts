@@ -35,6 +35,12 @@ export interface DurationMovement {
 export interface DurationBlock {
   id: string
   superset?: boolean | null
+  // Un dropset se calcule exactement comme un superset : le « tour » est la
+  // descente, le travail est la somme des paliers, et le repos ne tombe
+  // qu'entre deux descentes. Aucune troisième branche n'est donc nécessaire —
+  // sans ce drapeau en revanche, le bloc retombait dans le cas indépendant et
+  // se voyait facturer un repos par palier ET par série.
+  dropset?: boolean | null
   restAfter?: number | null  // secondes avant le bloc suivant
 }
 
@@ -91,7 +97,7 @@ export function estimateWorkoutSeconds(
     const block = blocks.find(b => b.id === blockId)
     const ordered = [...mvs].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
-    if (block?.superset) {
+    if (block?.superset || block?.dropset) {
       const sets = ordered[0].sets ?? 3
       const workPerRound = ordered.reduce((s, m) => s + secondsPerSet(m, tempo) + SETUP_SEC_PER_SET, 0)
       const interRoundRest = ordered[ordered.length - 1].rest ?? DEFAULT_REST_SEC

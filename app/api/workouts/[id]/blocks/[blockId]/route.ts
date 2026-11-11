@@ -20,12 +20,19 @@ export async function PATCH(
   const { id, blockId } = await params
   const denied = await authorize(id, blockId)
   if (denied) return denied
-  const { instructions, superset, bioType, restAfter, order } = await req.json()
+  const { instructions, superset, dropset, bioType, restAfter, order } = await req.json()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: Record<string, any> = {}
   if (instructions !== undefined) data.instructions = instructions === '' ? null : instructions
   if (superset !== undefined) data.superset = !!superset
+  if (dropset !== undefined) data.dropset = !!dropset
+  // Exclusivité : un bloc ne peut pas être les deux à la fois, et ce PATCH est
+  // partiel — un client qui n'envoie qu'un champ pourrait sinon laisser l'autre
+  // à vrai. Le régime qui vient d'être activé gagne ; si les deux arrivent à
+  // vrai dans la même requête, le dropset gagne (le plus spécifique).
+  if (data.dropset === true) data.superset = false
+  else if (data.superset === true) data.dropset = false
   if (bioType !== undefined) data.bioType = bioType === '' ? null : bioType
   if (restAfter !== undefined) data.restAfter = restAfter === '' || restAfter === null ? null : Number(restAfter)
   if (order !== undefined) data.order = Number(order)

@@ -4,7 +4,7 @@ import RichEditor from '@/components/RichEditor'
 import MovementModal from '@/components/MovementModal'
 import ResumeSessionBanner from '@/components/ResumeSessionBanner'
 import LibraryPicker, { type PickableMovement } from '@/components/LibraryPicker'
-import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, COMPLEXITIES, effectiveDifficulty } from '@/lib/types'
+import { BIO_TYPE_COLORS, BIO_TYPE_ICONS, COMPLEXITY_COLORS, COMPLEXITIES, FAILURE_REPS, effectiveDifficulty } from '@/lib/types'
 import { estimateWorkoutMinutes, type DurationMovement } from '@/lib/duration'
 import { useToast } from '@/components/Toast'
 import CreatorBadge, { creatorName } from '@/components/CreatorBadge'
@@ -31,7 +31,8 @@ import { ShareModal } from '@/components/ShareModal'
 // Le régime d'un bloc. `dropset` n'a pas encore de champ en base : la valeur
 // existe dans le type et dans le rendu, et ce sera le seul endroit à changer
 // quand la colonne sera là.
-const modeDuBloc = (b: WorkoutBlock): ModeBloc => (b.superset ? 'superset' : 'classique')
+const modeDuBloc = (b: WorkoutBlock): ModeBloc =>
+  b.dropset ? 'dropset' : (b.superset ? 'superset' : 'classique')
 
 // Casier des mouvements rattachés à aucun bloc. Ce n'est pas un bloc en base :
 // juste une destination de glisser-déposer et un groupe d'affichage.
@@ -45,6 +46,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const [editStates, setEditStates] = useState<EditState[]>([])
   const [blockInstructions, setBlockInstructions] = useState<Record<string, string>>({})
   const [blockSuperset, setBlockSuperset] = useState<Record<string, boolean>>({})
+  const [blockDropset, setBlockDropset] = useState<Record<string, boolean>>({})
   const [blockTitle, setBlockTitle] = useState<Record<string, string>>({})
   const [blockRestAfter, setBlockRestAfter] = useState<Record<string, number | null>>({})
   const [editName, setEditName] = useState('')
@@ -75,11 +77,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   // pendingAdds pour les mouvements. Un mouvement ajouté dans un bloc pending
   // référence ce tempId comme blockId ; handleSave le remappe vers le vrai ID
   // une fois le bloc créé côté serveur.
-  interface PendingBlock { tempId: string; bioType: string; instructions: string; superset: boolean; restAfter: number | null }
+  interface PendingBlock { tempId: string; bioType: string; instructions: string; superset: boolean; dropset: boolean; restAfter: number | null }
   const [pendingBlocks, setPendingBlocks] = useState<PendingBlock[]>([])
   const handleAddBlock = () => {
     const tempId = `new-block-${Math.random().toString(36).slice(2)}`
-    setPendingBlocks(prev => [...prev, { tempId, bioType: '', instructions: '', superset: false, restAfter: null }])
+    setPendingBlocks(prev => [...prev, { tempId, bioType: '', instructions: '', superset: false, dropset: false, restAfter: null }])
   }
   const [collapsedViewBlocks, setCollapsedViewBlocks] = useState<Record<string, boolean>>({})
   const toggleViewBlock = (id: string) => setCollapsedViewBlocks(prev => ({ ...prev, [id]: !prev[id] }))
@@ -282,6 +284,18 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const isSupersetBlock = (blockId: string): boolean =>
     blockSuperset[blockId] ?? pendingBlocks.find(pb => pb.tempId === blockId)?.superset ?? false
 
+  // Un dropset obéit EXACTEMENT aux deux mêmes règles de cohérence : un seul
+  // nombre de séries pour tout le bloc (ici : le nombre de descentes), et repos
+  // 0 partout sauf sur le dernier palier. Ce qui change est le vocabulaire, et
+  // une règle de plus — les répétitions valent « Échec » par défaut, puisqu'un
+  // palier se mène à l'échec par définition.
+  const isDropsetBlock = (blockId: string): boolean =>
+    blockDropset[blockId] ?? pendingBlocks.find(pb => pb.tempId === blockId)?.dropset ?? false
+
+  // « Enchaîné » = superset OU dropset. C'est ce prédicat, et non `isSupersetBlock`,
+  // que doivent interroger toutes les règles de cohérence.
+  const estEnchaine = (blockId: string): boolean => isSupersetBlock(blockId) || isDropsetBlock(blockId)
+
   // Ordre d'un bloc = mouvements existants (triés) puis mouvements en attente
   // (dans leur ordre d'ajout) — fonctionne aussi bien pour un bloc existant
   // que pour un bloc tout juste créé (où seuls des pendingAdds existent).
@@ -349,16 +363,40 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     setPendingAdds(prev => prev.map(p => (p.blockId === blockId && p.tempId !== lastId) ? { ...p, es: { ...p.es, rest: 0 } } : p))
   }
 
-  const handleToggleSuperset = (blockId: string, isPending: boolean) => {
-    const turningOn = !isSupersetBlock(blockId)
-    if (isPending) setPendingBlocks(prev => prev.map(x => x.tempId === blockId ? { ...x, superset: turningOn } : x))
-    else setBlockSuperset(prev => ({ ...prev, [blockId]: turningOn }))
+  // Les répétitions d'un palier : « Échec » par défaut. On ne touche QUE les
+  // lignes laissées à la valeur par défaut (« 10 ») — écraser une prescription
+  // que l'utilisateur a saisie serait une perte silencieuse.
+  const echecParDefaut = (blockId: string) => {
+    const ids = new Set(getBlockOrderedIds(blockId))
+    setEditStates(prev => prev.map((es, i) => {
+      const o = originals[i]
+      return (o && ids.has(o.id) && (es.reps === '10' || es.reps === '')) ? { ...es, reps: FAILURE_REPS } : es
+    }))
+    setPendingAdds(prev => prev.map(p =>
+      (ids.has(p.tempId) && (p.es.reps === '10' || p.es.reps === '')) ? { ...p, es: { ...p.es, reps: FAILURE_REPS } } : p))
+  }
+
+  // Un seul point d'entrée pour les deux régimes : ils sont exclusifs, et les
+  // activer séparément laissait la porte ouverte à un bloc marqué les deux.
+  const handleToggleRegime = (blockId: string, isPending: boolean, regime: 'superset' | 'dropset') => {
+    const dejaActif = regime === 'superset' ? isSupersetBlock(blockId) : isDropsetBlock(blockId)
+    const turningOn = !dejaActif
+    const superset = turningOn && regime === 'superset'
+    const dropset = turningOn && regime === 'dropset'
+
+    if (isPending) {
+      setPendingBlocks(prev => prev.map(x => x.tempId === blockId ? { ...x, superset, dropset } : x))
+    } else {
+      setBlockSuperset(prev => ({ ...prev, [blockId]: superset }))
+      setBlockDropset(prev => ({ ...prev, [blockId]: dropset }))
+    }
 
     if (turningOn) {
       const orderedIds = getBlockOrderedIds(blockId)
       if (orderedIds.length > 0) {
         syncSupersetSets(blockId, getRowSets(orderedIds[0]))
         zeroRestExceptLast(blockId)
+        if (dropset) echecParDefaut(blockId)
       }
     }
   }
@@ -369,7 +407,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     const movement: Movement = { id: m.id, name: m.name, bioType: m.bioType, complexity: m.complexity, equipment: m.equipment, description: m.description, videoUrl: m.videoUrl }
     // Dans un bloc superset, le nouveau mouvement hérite du nombre de séries commun
     // et n'a pas de repos éditable tant qu'il n'est pas le dernier du bloc.
-    const isSuper = !!resolvedBlockId && isSupersetBlock(resolvedBlockId)
+    const isSuper = !!resolvedBlockId && estEnchaine(resolvedBlockId)
     const existingIds = resolvedBlockId ? getBlockOrderedIds(resolvedBlockId) : []
     const previousLastId = existingIds[existingIds.length - 1] ?? null
     const sets = isSuper && existingIds.length > 0 ? getRowSets(existingIds[0]) : 2
@@ -439,6 +477,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   const blockChanged = (b: WorkoutBlock) =>
     (blockInstructions[b.id] ?? '') !== (b.instructions ?? '') ||
     (blockSuperset[b.id] ?? false) !== !!b.superset ||
+    (blockDropset[b.id] ?? false) !== !!b.dropset ||
     (blockTitle[b.id] ?? '') !== (b.bioType ?? '') ||
     (blockRestAfter[b.id] ?? null) !== (b.restAfter ?? null)
   const isDirtyBlocks = editMode && initial.blocks.some(blockChanged)
@@ -484,11 +523,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     setEditStates(initial.movements.map(toEditState))
     const initBI: Record<string, string> = {}
     const initBS: Record<string, boolean> = {}
+    const initBD: Record<string, boolean> = {}
     const initBT: Record<string, string> = {}
     const initRA: Record<string, number | null> = {}
-    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null })
+    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBD[b.id] = !!b.dropset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null })
     setBlockInstructions(initBI)
     setBlockSuperset(initBS)
+    setBlockDropset(initBD)
     setBlockTitle(initBT)
     setBlockRestAfter(initRA)
     setEditName(initial.name)
@@ -510,11 +551,13 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     setEditStates(initial.movements.map(toEditState))
     const initBI: Record<string, string> = {}
     const initBS: Record<string, boolean> = {}
+    const initBD: Record<string, boolean> = {}
     const initBT: Record<string, string> = {}
     const initRA: Record<string, number | null> = {}
-    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null })
+    initial.blocks.forEach(b => { initBI[b.id] = b.instructions ?? ''; initBS[b.id] = !!b.superset; initBD[b.id] = !!b.dropset; initBT[b.id] = b.bioType ?? ''; initRA[b.id] = b.restAfter ?? null })
     setBlockInstructions(initBI)
     setBlockSuperset(initBS)
+    setBlockDropset(initBD)
     setBlockTitle(initBT)
     setBlockRestAfter(initRA)
     setEditName(initial.name)
@@ -538,7 +581,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
     if (patch.sets !== undefined) {
       const o = originals[idx]
       const blockId = o ? blocDe(o) : null
-      if (blockId && isSupersetBlock(blockId)) syncSupersetSets(blockId, patch.sets)
+      if (blockId && estEnchaine(blockId)) syncSupersetSets(blockId, patch.sets)
     }
   }
 
@@ -546,7 +589,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   // (pendingAdds) — utilisé par les lignes ajoutées en édition avant sauvegarde.
   const handlePendingUpdate = (tempId: string, patch: Partial<EditState>, blockId: string | null) => {
     setPendingAdds(prev => prev.map(x => x.tempId === tempId ? { ...x, es: { ...x.es, ...patch } } : x))
-    if (patch.sets !== undefined && blockId && isSupersetBlock(blockId)) syncSupersetSets(blockId, patch.sets)
+    if (patch.sets !== undefined && blockId && estEnchaine(blockId)) syncSupersetSets(blockId, patch.sets)
   }
 
   const handleRevert = (idx: number) =>
@@ -566,7 +609,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
       ...pendingBlocks.map(pb => pb.tempId),
     ])
     allBlockIds.forEach(blockId => {
-      if (!isSupersetBlock(blockId)) return
+      if (!estEnchaine(blockId)) return
       const ordered = getBlockOrderedIds(blockId)
       if (ordered.length === 0) return
       const targetSets = getRowSets(ordered[0])
@@ -585,7 +628,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
       const created = await Promise.all(pendingBlocks.map(pb =>
         fetch(`/api/workouts/${initial.id}/blocks`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bioType: pb.bioType || null, instructions: pb.instructions || null, superset: pb.superset, restAfter: pb.restAfter }),
+          body: JSON.stringify({ bioType: pb.bioType || null, instructions: pb.instructions || null, superset: pb.superset, dropset: pb.dropset, restAfter: pb.restAfter }),
         }).then(r => r.ok ? r.json() : null).catch(() => null)
       ))
       if (created.some(c => !c)) {
@@ -636,7 +679,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
         fetch(`/api/workouts/${initial.id}/blocks/${b.id}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false,
+            instructions: blockInstructions[b.id], superset: blockSuperset[b.id] ?? false, dropset: blockDropset[b.id] ?? false,
             bioType: blockTitle[b.id] || null, restAfter: blockRestAfter[b.id] ?? null,
             ...(blockOrderChanged(b) ? { order: blockOrder[b.id] } : {}),
           }),
@@ -759,9 +802,9 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
   ]
   const editDurationBlocks = [
     ...initial.blocks.filter(b => !removedBlockIds.has(b.id)).map(b => ({
-      id: b.id, superset: blockSuperset[b.id] ?? b.superset, restAfter: blockRestAfter[b.id] ?? b.restAfter,
+      id: b.id, superset: blockSuperset[b.id] ?? b.superset, dropset: blockDropset[b.id] ?? b.dropset, restAfter: blockRestAfter[b.id] ?? b.restAfter,
     })),
-    ...pendingBlocks.map(pb => ({ id: pb.tempId, superset: pb.superset, restAfter: pb.restAfter })),
+    ...pendingBlocks.map(pb => ({ id: pb.tempId, superset: pb.superset, dropset: pb.dropset, restAfter: pb.restAfter })),
   ]
   const estimatedMin = editMode
     ? estimateWorkoutMinutes(editDurationMovements, editDurationBlocks)
@@ -1061,7 +1104,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
               const blockMovements = blockMovementsMap[block.id] || []
               const blockES = (blockEditStatesMap[block.id] || []).filter(({ orig }) => !removedWmIds.has(orig.id))
               const blockCollapsed = !editMode && !!collapsedViewBlocks[block.id]
-              const blockIsSuper = isSupersetBlock(block.id)
+              const blockIsSuper = estEnchaine(block.id)
+              const regimeBloc: 'superset' | 'dropset' = isDropsetBlock(block.id) ? 'dropset' : 'superset'
               const blockOrderedIds = editMode && blockIsSuper ? getBlockOrderedIds(block.id) : []
               const lastInBlockId = blockOrderedIds[blockOrderedIds.length - 1]
               const roleFor = (id: string): 'none' | 'linked' | 'last' =>
@@ -1077,8 +1121,11 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                       instructions={blockInstructions[block.id] ?? ''}
                       onChange={v => setBlockInstructions(prev => ({ ...prev, [block.id]: v }))}
                       superset={blockSuperset[block.id] ?? false}
-                      canSuperset={blockMovements.length > 1}
-                      onToggleSuperset={() => handleToggleSuperset(block.id, false)}
+                      canSuperset={getBlockOrderedIds(block.id).length > 1}
+                      onToggleSuperset={() => handleToggleRegime(block.id, false, 'superset')}
+                      dropset={blockDropset[block.id] ?? false}
+                      canDropset={getBlockOrderedIds(block.id).length >= 1}
+                      onToggleDropset={() => handleToggleRegime(block.id, false, 'dropset')}
                       isDirty={blockChanged(block)}
                       onRemove={() => setRemovedBlockIds(prev => new Set([...prev, block.id]))}
                       isDragging={draggedBlockId === block.id}
@@ -1102,7 +1149,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                               <React.Fragment key={orig.id}>
                               {zoneDepot(block.id, pos)}
                               <MovementRowEdit es={es} original={orig} index={absIdx} displayNumber={pos + 1} allMovementIds={allMovementIds} onUpdate={handleUpdate} onRevert={handleRevert} onMovementClick={setSelectedMovementId}
-                                supersetRole={roleFor(orig.id)}
+                                supersetRole={roleFor(orig.id)} regime={regimeBloc}
                                 onRemove={() => setRemovedWmIds(prev => new Set([...prev, orig.id]))}
                                 isDragging={draggedWmId === orig.id}
                                 onDragStart={() => setDraggedWmId(orig.id)}
@@ -1118,7 +1165,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                             {zoneDepot(block.id, blockES.length)}
                             {pendingAdds.filter(p => p.blockId === block.id).map((p, pos) => (
                               <MovementRowEdit key={p.tempId} es={p.es} original={p.orig} index={-1} displayNumber={blockES.length + pos + 1} allMovementIds={allMovementIds} onMovementClick={setSelectedMovementId}
-                                supersetRole={roleFor(p.tempId)}
+                                supersetRole={roleFor(p.tempId)} regime={regimeBloc}
                                 onUpdate={(_, patch) => handlePendingUpdate(p.tempId, patch, block.id)}
                                 onRevert={() => setPendingAdds(prev => prev.map(x => x.tempId === p.tempId ? { ...x, es: toEditState(x.orig) } : x))}
                                 onRemove={() => setPendingAdds(prev => prev.filter(x => x.tempId !== p.tempId))}
@@ -1247,7 +1294,7 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
 
           {/* Blocs ajoutés en édition, pas encore persistés */}
           {editMode && pendingBlocks.map((pb, pbi) => {
-            const fakeBlock: WorkoutBlock = { id: pb.tempId, order: 0, bioType: '', instructions: '', superset: false, restAfter: null }
+            const fakeBlock: WorkoutBlock = { id: pb.tempId, order: 0, bioType: '', instructions: '', superset: false, dropset: false, restAfter: null }
             const blockAdds = pendingAdds.filter(p => p.blockId === pb.tempId)
             return (
               <div key={pb.tempId}>
@@ -1259,7 +1306,10 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                   onChange={v => setPendingBlocks(prev => prev.map(x => x.tempId === pb.tempId ? { ...x, instructions: v } : x))}
                   superset={pb.superset}
                   canSuperset={blockAdds.length > 1}
-                  onToggleSuperset={() => handleToggleSuperset(pb.tempId, true)}
+                  onToggleSuperset={() => handleToggleRegime(pb.tempId, true, 'superset')}
+                  dropset={pb.dropset}
+                  canDropset={blockAdds.length >= 1}
+                  onToggleDropset={() => handleToggleRegime(pb.tempId, true, 'dropset')}
                   isDirty={false}
                   onRemove={() => {
                     setPendingBlocks(prev => prev.filter(x => x.tempId !== pb.tempId))
@@ -1269,7 +1319,8 @@ export default function WorkoutDetailClient({ workout: initial, backTo, isAdmin,
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {blockAdds.map((p, pos) => (
                     <MovementRowEdit key={p.tempId} es={p.es} original={p.orig} index={-1} displayNumber={pos + 1} allMovementIds={allMovementIds} onMovementClick={setSelectedMovementId}
-                      supersetRole={!pb.superset ? 'none' : (pos === blockAdds.length - 1 ? 'last' : 'linked')}
+                      supersetRole={!pb.superset && !pb.dropset ? 'none' : (pos === blockAdds.length - 1 ? 'last' : 'linked')}
+                      regime={pb.dropset ? 'dropset' : 'superset'}
                       onUpdate={(_, patch) => handlePendingUpdate(p.tempId, patch, pb.tempId)}
                       onRevert={() => setPendingAdds(prev => prev.map(x => x.tempId === p.tempId ? { ...x, es: toEditState(x.orig) } : x))}
                       onRemove={() => setPendingAdds(prev => prev.filter(x => x.tempId !== p.tempId))}

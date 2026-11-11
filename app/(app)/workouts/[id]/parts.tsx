@@ -27,7 +27,7 @@ export interface WorkoutMovement {
   blockId?: string | null
 }
 export interface WorkoutBlock {
-  id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean
+  id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean; dropset?: boolean
 }
 export interface Workout {
   id: string; name: string; createdAt: string
@@ -259,7 +259,7 @@ export function MovementRowView({ wm, index, onMovementClick, lastPerf }: { wm: 
 }
 
 // ─── Edit Row ─────────────────────────────────────────────────────────────────
-export function MovementRowEdit({ es, original, index, displayNumber, allMovementIds, onUpdate, onRevert, onMovementClick, onRemove, onDragStart, onDragOver, onDrop, onDragEnd, isDragging, supersetRole = 'none' }: {
+export function MovementRowEdit({ es, original, index, displayNumber, allMovementIds, onUpdate, onRevert, onMovementClick, onRemove, onDragStart, onDragOver, onDrop, onDragEnd, isDragging, supersetRole = 'none', regime = 'superset' }: {
   es: EditState; original: WorkoutMovement; index: number; displayNumber: number; allMovementIds: string[]
   onUpdate: (idx: number, patch: Partial<EditState>) => void; onRevert: (idx: number) => void
   onMovementClick: (id: string) => void; onRemove: () => void
@@ -269,6 +269,10 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
   // dernier — s'enchaîne sans repos, le champ est donc verrouillé à 0. 'last' :
   // dernier du bloc — son repos sépare la fin d'un tour du début du suivant.
   supersetRole?: 'none' | 'linked' | 'last'
+  // Le régime du bloc ne change RIEN à la mécanique de la ligne — mêmes séries
+  // partout, repos 0 sauf sur le dernier — seulement les mots. Dire « tour »
+  // à quelqu'un qui descend des paliers lui fait chercher un tour qui n'existe pas.
+  regime?: 'superset' | 'dropset'
 }) {
   const [showPicker, setShowPicker] = useState(false)
   const m = es.movement
@@ -383,9 +387,11 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
           <span style={{ fontSize: 11, color: isDirtyRest ? 'var(--dirty-text)' : 'var(--text-muted)', width: 46, flexShrink: 0, fontWeight: isDirtyRest ? 600 : 400 }}>Repos</span>
           {supersetRole === 'linked' ? (
-            <span title="Superset : les mouvements s'enchaînent sans repos — seul le dernier du bloc en a un, avant le tour suivant."
+            <span title={regime === 'dropset'
+              ? "Dropset : les paliers s'enchaînent sans repos — seul le dernier en a un, avant la descente suivante."
+              : "Superset : les mouvements s'enchaînent sans repos — seul le dernier du bloc en a un, avant le tour suivant."}
               style={{ fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic' }}>
-              0s — enchaîné (superset)
+              {regime === 'dropset' ? '0s — palier enchaîné' : '0s — enchaîné (superset)'}
             </span>
           ) : (
             <>
@@ -396,8 +402,10 @@ export function MovementRowEdit({ es, original, index, displayNumber, allMovemen
                 onChange={e => onUpdate(index, { rest: e.target.value === '' ? null : Number(e.target.value) })}
                 style={{ width: 56, background: isDirtyRest ? 'var(--dirty)' : 'var(--bg-elevated)', border: `1px solid ${isDirtyRest ? 'var(--dirty-border)' : 'var(--border)'}`, borderRadius: 8, padding: '4px 8px', color: isDirtyRest ? 'var(--dirty-text)' : 'var(--text-primary)', fontSize: 13, fontWeight: 700, outline: 'none', textAlign: 'center' }}
               />
-              <span style={{ fontSize: 11, color: 'var(--text-dim)' }} title={supersetRole === 'last' ? 'Repos entre la fin de ce tour et le début du suivant' : undefined}>
-                {supersetRole === 'last' ? 'sec avant le tour suivant' : 'sec entre séries'}
+              <span style={{ fontSize: 11, color: 'var(--text-dim)' }} title={supersetRole === 'last' ? (regime === 'dropset' ? 'Repos entre la fin de cette descente et le début de la suivante' : 'Repos entre la fin de ce tour et le début du suivant') : undefined}>
+                {supersetRole === 'last'
+                  ? (regime === 'dropset' ? 'sec avant la descente suivante' : 'sec avant le tour suivant')
+                  : 'sec entre séries'}
               </span>
               <div style={{ display: 'flex', gap: 3 }}>
                 {[15, 30, 45, 60, 90, 120].map(s => (
@@ -596,13 +604,16 @@ export function BlockHeaderView({ block, index, movements, collapsed, onToggle, 
 
 // ─── Block Header (edit) ──────────────────────────────────────────────────────
 export function BlockHeaderEdit({
-  block, index, title, onTitleChange, instructions, onChange, superset, canSuperset, onToggleSuperset, isDirty, onRemove,
+  block, index, title, onTitleChange, instructions, onChange, superset, canSuperset, onToggleSuperset,
+  dropset = false, canDropset = false, onToggleDropset, isDirty, onRemove,
   onDragStart, onDragOver, onDrop, onDragEnd, isDragging,
 }: {
   block: WorkoutBlock; index: number
   title: string; onTitleChange: (v: string) => void
   instructions: string; onChange: (v: string) => void
-  superset: boolean; canSuperset: boolean; onToggleSuperset: () => void; isDirty: boolean; onRemove: () => void
+  superset: boolean; canSuperset: boolean; onToggleSuperset: () => void
+  dropset?: boolean; canDropset?: boolean; onToggleDropset?: () => void
+  isDirty: boolean; onRemove: () => void
   // Glisser-déposer pour réordonner les blocs entre eux — seule cette ligne
   // d'en-tête est draggable, pas tout le bloc (pour ne pas gêner le clic sur
   // les mouvements en dessous).
@@ -642,6 +653,13 @@ export function BlockHeaderEdit({
           }}
         />
         {isDirty && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 20, background: 'var(--dirty)', color: 'var(--dirty-text)', fontWeight: 600, flexShrink: 0 }}>modifié</span>}
+        {/* Deux régimes exclusifs, deux pastilles. Elles restent en terracotta
+            parce que ce sont des INTERRUPTEURS — une action, pas une étiquette
+            d'état ; l'étiquette, elle, est neutre en vue lecture.
+            Les portes diffèrent : un circuit exige plusieurs stations, un
+            dropset de charge n'a qu'un seul mouvement et autant de paliers que
+            de séries. Fermer le dropset à ≥ 2 rendrait cette forme-là
+            inatteignable depuis l'interface. */}
         {canSuperset && (
           <button onClick={onToggleSuperset}
             title={superset ? 'Bloc en superset : enchaîner les mouvements sans repos entre eux' : 'Passer ce bloc en superset'}
@@ -652,7 +670,20 @@ export function BlockHeaderEdit({
               background: superset ? 'var(--crimson-ghost)' : 'transparent',
               color: superset ? 'var(--crimson-bright)' : 'var(--text-dim)',
             }}>
-            ⚡ Superset
+            <Repeat size={11} /> Superset
+          </button>
+        )}
+        {canDropset && onToggleDropset && (
+          <button onClick={onToggleDropset}
+            title={dropset ? 'Bloc en dropset : une descente, paliers enchaînés sans repos' : 'Passer ce bloc en dropset'}
+            style={{
+              flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '2px 9px', borderRadius: 20, cursor: 'pointer',
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+              border: `1px solid ${dropset ? 'var(--crimson)' : 'var(--border)'}`,
+              background: dropset ? 'var(--crimson-ghost)' : 'transparent',
+              color: dropset ? 'var(--crimson-bright)' : 'var(--text-dim)',
+            }}>
+            <ChevronsDown size={11} /> Dropset
           </button>
         )}
         <button onClick={onRemove} title="Supprimer ce bloc"

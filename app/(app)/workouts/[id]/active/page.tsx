@@ -18,7 +18,7 @@ import { enqueuePendingSession, dequeuePendingSession } from '@/components/Resum
 // des 377 mouvements du referentiel et decide si un champ de charge a un sens.
 interface Movement { id: string; name: string; bioType: string; videoUrl?: string | null; equipment?: string | null }
 interface WM { id: string; order: number; sets?: number | null; reps?: string | null; rest?: number | null; duration?: number | null; blockId?: string | null; movement: Movement }
-interface Block { id: string; order: number; bioType?: string | null; instructions?: string | null; superset?: boolean }
+interface Block { id: string; order: number; bioType?: string | null; instructions?: string | null; superset?: boolean; dropset?: boolean }
 interface Workout { id: string; name: string; duration?: number | null; movements: WM[]; blocks: Block[] }
 
 const REST_OPTIONS = [30, 60, 90, 120]
@@ -142,6 +142,9 @@ export default function ActivePage() {
   const [note, setNote] = useState('')
   const [showFinish, setShowFinish] = useState(false)
   const [supersetBlocs, setSupersetBlocs] = useState<Set<string>>(new Set())
+  // Purement cosmétique : sert à nommer le régime à l'écran. L'exécution, elle,
+  // passe entièrement par `supersetBlocs`, qui contient les deux.
+  const [dropsetBlocs, setDropsetBlocs] = useState<Set<string>>(new Set())
   const [exerciseTimer, setExerciseTimer] = useState<{ wmId: string; sec: number; total: number; endsAt: number } | null>(null)
   // Mise en place : decompte en gros chiffres avant le chrono d'exercice. Meme
   // ancrage horloge, meme raison.
@@ -346,9 +349,17 @@ export default function ActivePage() {
       if (!w) return
       setWorkout(w)
 
-      // Superset persistés sur le workout (colonne DB) → pré-activés
-      const dbSuper = (w.blocks as Block[]).filter(b => b.superset).map(b => b.id)
+      // Régimes enchaînés persistés sur le workout (colonnes DB) → pré-activés.
+      // Le dropset entre ici DÉLIBÉRÉMENT dans le même ensemble que le superset :
+      // à l'exécution, les deux sont le même parcours. Le repos ne part qu'une
+      // fois le tour bouclé (`roundDone && !allComplete`), c'est-à-dire après le
+      // dernier membre du bloc, et le portillon d'ordre impose déjà 1 → 2 → 3.
+      // Un « tour » de circuit EST une descente. Rien à écrire de plus ; en
+      // revanche, les ensembles distincts auraient dupliqué quatre décisions de
+      // repos et deux portillons, pour un comportement identique.
+      const dbSuper = (w.blocks as Block[]).filter(b => b.superset || b.dropset).map(b => b.id)
       if (dbSuper.length > 0) setSupersetBlocs(prev => new Set([...prev, ...dbSuper]))
+      setDropsetBlocs(new Set((w.blocks as Block[]).filter(b => b.dropset).map(b => b.id)))
 
       // Reprise d'une séance interrompue (refresh, onglet fermé) — expire après 24h
       const savedRaw = localStorage.getItem(storageKey)
@@ -881,6 +892,13 @@ export default function ActivePage() {
   const nextWm = curIndex >= 0 ? (flatMovs[curIndex + 1] ?? null) : null
   const isTimed = currentWm?.duration != null
   const isCircuit = !!(curBlock && supersetBlocs.has(curBlock.id))
+
+  // Les blocs que l'utilisateur peut basculer lui-même dans les réglages :
+  // plusieurs mouvements, et pas de régime déclaré dans le plan.
+  const blocsBasculables = workout
+    ? workout.blocks.filter(b => !dropsetBlocs.has(b.id) && workout.movements.filter(m => m.blockId === b.id).length > 1)
+    : []
+  const blocsDropset = workout ? workout.blocks.filter(b => dropsetBlocs.has(b.id)) : []
   const circuitMovs = curBlock ? workout.movements.filter(m => m.blockId === curBlock.id) : []
   // Ecran de preparation : tant qu'aucune station n'a ete validee et que
   // l'utilisateur n'a pas dit « c'est bon ». Pure derivation, pas un etat —
@@ -1354,15 +1372,27 @@ export default function ActivePage() {
               ))}
             </div>
 
-            {workout.blocks.filter(b => workout.movements.filter(m => m.blockId === b.id).length > 1).length > 0 && (
+            {/* Ce réglage ne filtrait que sur le nombre de mouvements, sans
+                jamais lire le régime du bloc. Un bloc dropset y serait donc
+                apparu libellé « une à une », et un appui aurait défait la
+                descente en silence. Un dropset est une propriété du PLAN, pas
+                une préférence de séance : on le nomme, on ne le bascule pas. */}
+            {(blocsBasculables.length > 0 || blocsDropset.length > 0) && (
               <>
-                <div style={{ fontSize: 'var(--fs-micro)', fontWeight: 800, letterSpacing: 'var(--ls-caps)', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 'var(--sp-2)' }}>Circuits</div>
-                {workout.blocks.filter(b => workout.movements.filter(m => m.blockId === b.id).length > 1).map(b => (
+                <div style={{ fontSize: 'var(--fs-micro)', fontWeight: 800, letterSpacing: 'var(--ls-caps)', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 'var(--sp-2)' }}>Enchaînements</div>
+                {blocsBasculables.map(b => (
                   <button key={b.id} onClick={() => toggleSuperset(b.id)}
                     style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', minHeight: 44, marginBottom: 'var(--sp-2)', padding: '0 var(--sp-3)', borderRadius: 'var(--r-sm)', cursor: 'pointer', border: `1px solid ${supersetBlocs.has(b.id) ? 'var(--crimson)' : 'var(--border-plus)'}`, background: supersetBlocs.has(b.id) ? 'var(--crimson-ghost)' : 'transparent', color: supersetBlocs.has(b.id) ? 'var(--crimson-bright)' : 'var(--text-dim)', fontSize: 'var(--fs-body)', fontWeight: 700 }}>
                     <span>Bloc {workout.blocks.indexOf(b) + 1}{b.bioType ? ` · ${b.bioType}` : ''}</span>
                     <span>{supersetBlocs.has(b.id) ? 'en circuit' : 'une à une'}</span>
                   </button>
+                ))}
+                {blocsDropset.map(b => (
+                  <div key={b.id}
+                    style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', minHeight: 44, marginBottom: 'var(--sp-2)', padding: '0 var(--sp-3)', borderRadius: 'var(--r-sm)', border: '1px solid var(--border-plus)', color: 'var(--text-dim)', fontSize: 'var(--fs-body)', fontWeight: 700 }}>
+                    <span>Bloc {workout.blocks.indexOf(b) + 1}{b.bioType ? ` · ${b.bioType}` : ''}</span>
+                    <span>dropset</span>
+                  </div>
                 ))}
               </>
             )}

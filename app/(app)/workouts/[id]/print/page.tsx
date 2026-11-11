@@ -7,7 +7,7 @@ import { stripHtmlMultiline } from '@/lib/html'
 
 interface Movement { id: string; name: string; bioType: string; complexity: string }
 interface WorkoutMovement { id: string; order: number; sets?: number | null; reps?: string | null; duration?: number | null; rest?: number | null; blockId?: string | null; movement: Movement }
-interface Block { id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean }
+interface Block { id: string; order: number; bioType?: string | null; instructions?: string | null; restAfter?: number | null; superset?: boolean; dropset?: boolean }
 interface Workout {
   id: string; name: string; createdAt: string; duration?: number | null; tags?: string | null
   notes?: string | null; description?: string | null; imageUrl?: string | null; imagePosition?: string | null
@@ -18,7 +18,7 @@ interface Workout {
 
 // Même régime qu'à l'écran. `dropset` n'a pas encore de champ en base.
 const modeDuBloc = (b: Block): 'classique' | 'superset' | 'dropset' =>
-  b.superset ? 'superset' : 'classique'
+  b.dropset ? 'dropset' : (b.superset ? 'superset' : 'classique')
 
 const toDurationMovement = (wm: WorkoutMovement): DurationMovement => ({
   sets: wm.sets, reps: wm.reps, duration: wm.duration, rest: wm.rest,

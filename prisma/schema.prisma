@@ -72,6 +72,14 @@ model WorkoutBlock {
   instructions String?
   restAfter    Int?
   superset     Boolean           @default(false)
+  // Régime d'enchaînement du bloc, exclusif de `superset` — l'exclusion est
+  // tenue par les routes (POST /api/workouts, POST et PATCH de bloc), pas par
+  // une contrainte SQL que SQLite ne saurait pas exprimer simplement.
+  // superset : un tour = tous les mouvements, répété `sets` fois.
+  // dropset  : une descente = tous les paliers sans repos, répétée `sets` fois.
+  // Même forme en base, même exécution ; ce qui change est l'intention affichée
+  // et les règles de cohérence appliquées en édition.
+  dropset      Boolean           @default(false)
   workout      Workout           @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   movements    WorkoutMovement[]
 

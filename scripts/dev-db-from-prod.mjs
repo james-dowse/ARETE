@@ -98,7 +98,22 @@ for (const table of tables) {
   }
   if (rows.length === 0) { console.log(`  ${C.d}${String(0).padStart(6)} ${table}${C.x}`); continue }
 
-  const columns = Object.keys(rows[0])
+  // Les colonnes de la copie locale, et non celles de la production : les deux
+  // schémas dérivent. La production porte par exemple `Workout.derivedFromId`,
+  // qui n'existe dans aucune migration ni dans schema.prisma — un reste
+  // d'expérience abandonnée. Insérer la liste de la production faisait alors
+  // échouer tout le script sur « table Workout has no column named … », donc
+  // aucune restauration possible tant que la dérive n'était pas résorbée.
+  // On copie l'intersection, et on dit ce qu'on laisse de côté.
+  const colonnesLocales = new Set(
+    (await dev.execute(`SELECT name FROM pragma_table_info('${table}')`)).rows.map(r => String(r.name)),
+  )
+  const colonnesProd = Object.keys(rows[0])
+  const columns = colonnesProd.filter(c => colonnesLocales.has(c))
+  const ignorees = colonnesProd.filter(c => !colonnesLocales.has(c))
+  if (ignorees.length) {
+    console.warn(`  ${C.y}! ${table} : colonne(s) de production absente(s) du schéma local, non copiée(s) — ${ignorees.join(', ')}${C.x}`)
+  }
   const placeholders = columns.map(() => '?').join(', ')
   const quoted = columns.map(c => `"${c}"`).join(', ')
   const redact = REDACT[table]

@@ -11,7 +11,10 @@ export async function POST(
   const { id } = await params
   const authz = await requireWorkoutOwner(id)
   if (!authz.ok) return authz.response
-  const { bioType, instructions, superset, restAfter } = await req.json().catch(() => ({}))
+  const { bioType, instructions, superset, dropset, restAfter } = await req.json().catch(() => ({}))
+  // Exclusif, comme au PATCH : le dropset l'emporte si les deux arrivent.
+  const enDropset = !!dropset
+  const enSuperset = !enDropset && !!superset
 
   const last = await prisma.workoutBlock.findFirst({
     where: { workoutId: id },
@@ -25,7 +28,8 @@ export async function POST(
       order: (last?.order ?? -1) + 1,
       bioType: bioType || null,
       instructions: instructions || null,
-      superset: !!superset,
+      superset: enSuperset,
+      dropset: enDropset,
       restAfter: restAfter ?? null,
     },
   })
